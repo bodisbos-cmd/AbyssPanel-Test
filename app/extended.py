@@ -105,6 +105,60 @@ def install_extended(app, namespace):
     p=type("PanelNamespace",(),namespace)
     _init(p)
 
+    @app.get("/api/admin/users")
+    async def list_admin_users(request:Request):
+        _role(request,p,"owner")
+        with p.db() as c:
+            rows=[dict(x) for x in c.execute("SELECT id,username,role,enabled,created_at,password_changed_at FROM panel_admins ORDER BY created_at")]
+        for row in rows: row["enabled"]=bool(row["enabled"])
+        return {"users":rows}
+
+    @app.post("/api/admin/users")
+    async def create_admin_user(request:Request):
+        _role(request,p,"owner"); _csrf(request,p); body=await request.json()
+        if not isinstance(body,dict): raise HTTPException(422,"JSON object required")
+        username=str(body.get("username","")).strip()
+        password=str(body.get("password",""))
+        role=body.get("role","admin")
+        if not 3<=len(username)<=32 or any(not (ch.isalnum() or ch in "._-") for ch in username):
+            raise HTTPException(422,"Username must be 3–32 letters, numbers, dots, dashes or underscores")
+        if role not in {"admin","viewer"}: raise HTTPException(422,"Role must be admin or viewer")
+        if len(password)<14 or len(password)>256 or not any(ch.isalpha() for ch in password) or not any(ch.isdigit() for ch in password):
+            raise HTTPException(422,"Password must be 14–256 characters and include letters and numbers")
+        now=_utc(); uid=uuid.uuid4().hex
+        try:
+            with p.db() as c:
+                c.execute("INSERT INTO panel_admins(id,username,password_hash,role,enabled,created_at,password_changed_at) VALUES(?,?,?,?,1,?,?)",
+                    (uid,username,p.password_hash(password),role,now,now))
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(409,"Username already exists") from exc
+        p.event("INFO",f"Created panel account {username!r} with role {role}.")
+        return {"id":uid,"username":username,"role":role,"enabled":True,"created_at":now}
+
+    @app.patch("/api/admin/users/{user_id}")
+    async def update_admin_user(user_id:str,request:Request):
+        _role(request,p,"owner"); _csrf(request,p); body=await request.json()
+        if not isinstance(body,dict) or not body or set(body)-{"role","enabled"}:
+            raise HTTPException(422,"Supported fields: role, enabled")
+        if "role" in body and body["role"] not in {"admin","viewer"}:
+            raise HTTPException(422,"Role must be admin or viewer")
+        if "enabled" in body and not isinstance(body["enabled"],bool):
+            raise HTTPException(422,"enabled must be true or false")
+        if user_id==request.session.get("admin_id","owner-admin") and body.get("enabled") is False:
+            raise HTTPException(400,"You cannot disable your own account")
+        with p.db() as c:
+            row=c.execute("SELECT id,username,role,enabled FROM panel_admins WHERE id=?",(user_id,)).fetchone()
+            if not row: raise HTTPException(404,"Panel account not found")
+            if row["role"]=="owner" and (body.get("enabled") is False or "role" in body):
+                raise HTTPException(400,"The owner account cannot be disabled or demoted here")
+            updates=[]
+            values=[]
+            if "role" in body: updates.append("role=?"); values.append(body["role"])
+            if "enabled" in body: updates.append("enabled=?"); values.append(int(body["enabled"]))
+            c.execute("UPDATE panel_admins SET "+",".join(updates)+" WHERE id=?",tuple(values)+(user_id,))
+        p.event("WARNING",f"Updated panel account {row['username']!r}.")
+        return {"ok":True,"id":user_id}
+
     @app.get("/api/system/metrics")
     async def system_metrics(request:Request):
         _admin(request,p)
