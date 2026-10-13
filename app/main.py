@@ -201,6 +201,13 @@ async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
 def require_admin(r):
     if r.session.get("admin") is not True: raise HTTPException(401,"Authentication required")
+    admin_id=r.session.get("admin_id","owner-admin")
+    with db() as c: account=c.execute("SELECT role,enabled FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
+    if not account or not account["enabled"]:
+        r.session.clear()
+        raise HTTPException(401,"Account is disabled or no longer exists")
+    if r.session.get("admin_role")!=account["role"]:
+        r.session["admin_role"]=account["role"]
 def require_role(r,*roles):
     require_admin(r)
     role=r.session.get("admin_role","owner")
