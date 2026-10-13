@@ -46,12 +46,12 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at DESC);
         """)
         if not c.execute("SELECT id FROM admins WHERE id=1").fetchone():
-            # Easy first login; change this default password immediately after deployment.
-            pw="admin"; c.execute("INSERT INTO admins VALUES(1,?,?)",(password_hash(pw),utc_now()))
-            p=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"; p.write_text("Username: admin\nPassword: admin\n",encoding="utf-8")
+            # Generate a unique first-login credential; never ship admin/admin defaults.
+            pw=secrets.token_urlsafe(18); c.execute("INSERT INTO admins VALUES(1,?,?)",(password_hash(pw),utc_now()))
+            p=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"; p.write_text(f"Username: admin\\nPassword: {pw}\\n",encoding="utf-8")
             try: p.chmod(0o600)
             except OSError: pass
-            if os.getenv("ABYSS_TEST_MODE")!="1": LOG.warning("DEFAULT ADMIN CREDENTIAL username=admin password=admin; change immediately in Settings")
+            if os.getenv("ABYSS_TEST_MODE")!="1": LOG.warning("INITIAL ADMIN CREDENTIAL username=admin password=%s; change immediately in Settings",pw)
         # Safe in-place migration for persistent databases created by older releases.
         cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
         for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0")):
@@ -91,6 +91,10 @@ async def start_xray():
         validate_and_write_xray()
         if not Path(XRAY_BIN).exists(): event("WARNING","Xray is not installed; control panel remains available."); return
         if xray_proc and xray_proc.poll() is None:
+            # Flush counters before every Xray restart so client create/pause/edit
+            # operations do not silently discard traffic accumulated since the last poll.
+            try: apply_xray_stats(read_xray_stats())
+            except Exception as e: event("WARNING",f"Could not flush Xray usage before restart: {e}")
             xray_proc.terminate()
             try: xray_proc.wait(timeout=4)
             except subprocess.TimeoutExpired: xray_proc.kill()
@@ -115,22 +119,21 @@ def read_xray_stats():
             stats.setdefault(cid,0); stats[cid]+=max(0,value)
     return stats
 
+def apply_xray_stats(stats):
+    if not stats: return
+    with db() as c:
+        for key,delta in stats.items():
+            if delta>0:
+                c.execute("UPDATE clients SET used_bytes=used_bytes+? WHERE substr(id,1,8)=?",(int(delta),key))
+
 async def enforce_client_limits():
     if not Path(XRAY_BIN).exists() or not xray_proc or xray_proc.poll() is not None: return
     stats=read_xray_stats()
+    apply_xray_stats(stats)
     with db() as c:
         rows=[dict(x) for x in c.execute("SELECT id,name,enabled,created_at,expires_at,quota_bytes,used_bytes FROM clients")]
         for row in rows:
             if not row["enabled"]: continue
-            key=row["id"][:8]
-            # Xray stats are cumulative per generated email; persist only positive deltas.
-            total=stats.get(key)
-            if total is not None:
-                old=int(row["used_bytes"] or 0)
-                # Stats are reset after each successful query, so each result is an interval delta.
-                used=old+total
-                c.execute("UPDATE clients SET used_bytes=? WHERE id=?",(used,row["id"]))
-                row["used_bytes"]=used
             expired=bool(row["expires_at"] and row["expires_at"]<=utc_now())
             exhausted=bool(row["quota_bytes"] is not None and int(row["used_bytes"] or 0)>=int(row["quota_bytes"]))
             if expired or exhausted:
@@ -312,7 +315,10 @@ async def reset_client_usage(cid:str,r:Request):
     with db() as c:
         row=c.execute("SELECT name FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
-        c.execute("UPDATE clients SET used_bytes=0 WHERE id=?",(cid,))
+    if Path(XRAY_BIN).exists() and xray_proc and xray_proc.poll() is None:
+        try: apply_xray_stats(read_xray_stats())
+        except Exception as e: raise HTTPException(503,"Could not synchronize live usage before resetting it") from e
+    with db() as c: c.execute("UPDATE clients SET used_bytes=0 WHERE id=?",(cid,))
     event("INFO",f"Reset usage for client {row['name']!r} ({cid[:8]}).")
     return {"ok":True}
 @app.delete("/api/clients/{cid}")
