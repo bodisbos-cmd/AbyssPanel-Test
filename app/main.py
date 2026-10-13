@@ -18,6 +18,8 @@ PROFILES=[
     {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
     {"key":"xhttp_auto","label":"XHTTP · auto","network":"xhttp","path":"/xhttp","port":10003,"mode":"auto"},
     {"key":"xhttp_packet_up","label":"XHTTP · packet-up","network":"xhttp","path":"/xhttp-packet","port":10004,"mode":"packet-up"},
+    {"key":"xhttp_stream_up","label":"XHTTP · stream-up","network":"xhttp","path":"/xhttp-stream-up","port":10005,"mode":"stream-up"},
+    {"key":"xhttp_stream_one","label":"XHTTP · stream-one","network":"xhttp","path":"/xhttp-stream-one","port":10006,"mode":"stream-one"},
 ]
 DATA_DIR=Path(os.getenv("DATA_DIR","/data")); DATA_DIR.mkdir(parents=True,exist_ok=True)
 DB_PATH=DATA_DIR/"panel.sqlite3"; XRAY_CONFIG=DATA_DIR/"xray.json"
