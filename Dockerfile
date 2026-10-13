@@ -10,7 +10,7 @@ RUN set -eu; \
     url="https://github.com/XTLS/Xray-core/releases/download/${tag}"; \
     curl -fsSL --retry 3 --retry-delay 2 "${url}/Xray-linux-64.zip" -o /tmp/xray.zip; \
     curl -fsSL --retry 3 --retry-delay 2 "${url}/Xray-linux-64.zip.dgst" -o /tmp/xray.dgst; \
-    expected="$(awk -F= '$1 == "SHA256" {print $2}' /tmp/xray.dgst | tr -d '\r')"; \
+    expected="$(grep -i "SHA256" /tmp/xray.dgst | grep -oE "[0-9a-fA-F]{64}" | head -n 1)"; \
     test -n "$expected"; printf '%s  %s\n' "$expected" /tmp/xray.zip | sha256sum -c -; \
     unzip -q /tmp/xray.zip xray -d /usr/local/bin; chmod 0755 /usr/local/bin/xray; \
     rm -f /tmp/xray.zip /tmp/xray.dgst; /usr/local/bin/xray version
