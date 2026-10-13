@@ -505,5 +505,7 @@ async def change_password(r: Request):
         if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
             raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
         c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1", (password_hash(new), utc_now()))
+    try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
+    except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Administrator password changed.")
     return {"ok": True}
