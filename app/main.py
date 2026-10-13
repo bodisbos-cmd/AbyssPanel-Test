@@ -98,7 +98,7 @@ async def start_xray():
         if xray_proc.poll() is not None: raise RuntimeError("Xray exited; inspect /data/xray-stderr.log")
 def read_xray_stats():
     if not Path(XRAY_BIN).exists(): return {}
-    result=subprocess.run([XRAY_BIN,"api","statsquery","--server=127.0.0.1:10085","--pattern","user>>>client-"],capture_output=True,text=True,timeout=8)
+    result=subprocess.run([XRAY_BIN,"api","statsquery","--server=127.0.0.1:10085","--pattern","user>>>client-","--reset"],capture_output=True,text=True,timeout=8)
     if result.returncode: raise RuntimeError((result.stderr or result.stdout)[-500:])
     try: payload=json.loads(result.stdout)
     except json.JSONDecodeError: raise RuntimeError("Xray stats API returned invalid JSON")
@@ -124,8 +124,8 @@ async def enforce_client_limits():
             total=stats.get(key)
             if total is not None:
                 old=int(row["used_bytes"] or 0)
-                # The stored value is the last observed cumulative count; keep it monotonic.
-                used=max(old,total)
+                # Stats are reset after each successful query, so each result is an interval delta.
+                used=old+total
                 c.execute("UPDATE clients SET used_bytes=? WHERE id=?",(used,row["id"]))
                 row["used_bytes"]=used
             expired=bool(row["expires_at"] and row["expires_at"]<=utc_now())
