@@ -252,6 +252,33 @@ def test_failed_revoke_restores_usage_and_limits(client, monkeypatch):
     assert after["used_bytes"] == 34567
 
 
+def test_expiry_monitor_disables_expired_client(client, monkeypatch, tmp_path):
+    csrf = admin_client(client)
+    created = client.post(
+        "/api/clients",
+        json={"name": "Expired test"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    cid = created.json()["id"]
+    with panel.db() as conn:
+        conn.execute("UPDATE clients SET expires_at='2000-01-01T00:00:00+00:00' WHERE id=?", (cid,))
+
+    fake_xray = tmp_path / "xray-expiry"
+    fake_xray.write_text("test", encoding="utf-8")
+    monkeypatch.setattr(panel, "XRAY_BIN", str(fake_xray))
+    class RunningProcess:
+        def poll(self): return None
+        def terminate(self): return None
+    monkeypatch.setattr(panel, "xray_proc", RunningProcess())
+    monkeypatch.setattr(panel, "read_xray_stats", lambda: {})
+    async def fake_restart(): return None
+    monkeypatch.setattr(panel, "start_xray", fake_restart)
+
+    asyncio.run(panel.enforce_client_limits())
+    row = client.get("/api/overview").json()["clients"][0]
+    assert not row["enabled"]
+
+
 def test_profile_settings_update_xray_and_subscription(client):
     csrf = admin_client(client)
     headers = {"X-CSRF-Token": csrf}
