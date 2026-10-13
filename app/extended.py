@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 import hashlib, hmac, io, json, os, shutil, sqlite3, tempfile, time, zipfile, secrets, uuid, http.client
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -95,6 +96,22 @@ def _metrics(p):
     _HISTORY.append({k:snap[k] for k in ("at","cpu_percent","memory_used_percent","traffic_bytes_per_second")})
     del _HISTORY[:-60]
     return snap
+
+def _probe_profile(profile):
+    started=time.monotonic()
+    result={"key":profile["key"],"label":profile["label"],"path":profile["path"],"latency_ms":None,"http_status":None,"route_ok":False,"error":None}
+    try:
+        req=urllib.request.Request("http://127.0.0.1:8080"+profile["path"],headers={"Host":"localhost","Connection":"close"})
+        try:
+            with urllib.request.urlopen(req,timeout=0.8) as response:
+                result["http_status"]=response.status
+        except urllib.error.HTTPError as exc:
+            result["http_status"]=exc.code
+        result["route_ok"]=result["http_status"] not in {502,503,504}
+    except (urllib.error.URLError,TimeoutError,OSError) as exc:
+        result["error"]="Gateway/route did not respond: "+str(exc)[:120]
+    result["latency_ms"]=round((time.monotonic()-started)*1000,1)
+    return result
 
 def _download_items():
     return [
@@ -427,12 +444,15 @@ def install_extended(app, namespace):
         expires=client.get("expires_at"); expired=bool(expires and expires<=_utc())
         quota=client.get("quota_bytes"); used=int(client.get("used_bytes") or 0)
         remaining=None if quota is None else max(0,int(quota)-used)
+        selected=[x for x in p.PROFILES if flags[x["key"]]]
+        route_checks=await asyncio.gather(*(asyncio.to_thread(_probe_profile,profile) for profile in selected))
         return {"ok":not expired and (remaining is None or remaining>0) and bool(links),
           "service_enabled":bool(client["enabled"]),"expiry_ok":not expired,"quota_ok":remaining is None or remaining>0,
           "xray_installed":Path(p.XRAY_BIN).exists(),"xray_running":bool(p.xray_proc and p.xray_proc.poll() is None),
-          "subscription_fetchable":True,"enabled_profiles":[x["key"] for x in p.PROFILES if flags[x["key"]]],
+          "subscription_fetchable":True,"enabled_profiles":[x["key"] for x in selected],
           "profile_count":len(links),"used_bytes":used,"remaining_bytes":remaining,"expires_at":expires,
-          "note":"A successful page check cannot prove a working VPN tunnel or measure real client latency."}
+          "route_checks":route_checks,
+          "note":"Route checks test the HTTP gateway from inside the server only; they cannot prove a working VPN tunnel or measure real client latency."}
 
     @app.get("/s/{token}/help",response_class=HTMLResponse)
     async def subscription_help(token:str):
