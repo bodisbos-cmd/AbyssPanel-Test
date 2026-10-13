@@ -78,13 +78,15 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 4
+    assert len(configs) == 6
     assert all(line.startswith("vless://") for line in configs)
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
-    assert sum("type=xhttp" in line for line in configs) == 2
+    assert sum("type=xhttp" in line for line in configs) == 4
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
+    assert any("mode=stream-up" in line for line in configs)
+    assert any("mode=stream-one" in line for line in configs)
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
@@ -136,14 +138,14 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 5  # Stats API + WS + HTTPUpgrade + XHTTP auto + XHTTP packet-up
+    assert len(inbounds) == 7  # Stats API + WS + HTTPUpgrade + four XHTTP modes
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
 
 
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
@@ -288,7 +290,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 4
+    assert len(settings.json()["profiles"]) == 6
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -297,7 +299,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -305,13 +307,13 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 2
+    assert len(links) == 4
     assert all("type=ws" not in line for line in links)
     assert all("packet-up" not in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False}},
         headers=headers,
     )
     assert rejected.status_code == 422
@@ -405,6 +407,8 @@ def test_nginx_xhttp_uses_prefix_locations():
     config = (Path(__file__).resolve().parents[1] / "nginx" / "default.conf").read_text(encoding="utf-8")
     assert "location ^~ /xhttp {" in config
     assert "location ^~ /xhttp-packet {" in config
+    assert "location ^~ /xhttp-stream-up {" in config
+    assert "location ^~ /xhttp-stream-one {" in config
     assert "location = /xhttp {" not in config
     assert "location = /xhttp-packet {" not in config
 
