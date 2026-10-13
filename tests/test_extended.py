@@ -85,6 +85,8 @@ def test_api_key_scopes_and_bot_client_lifecycle(client):
 
 def test_api_key_requires_scopes_and_rejects_invalid_payloads(client):
     csrf = admin_login(client)
+    no_csrf = client.post("/api/admin/api-keys", json={"name": "no csrf", "scopes": ["clients:read"]})
+    assert no_csrf.status_code == 403
     made = client.post("/api/admin/api-keys", json={
         "name": "read only", "scopes": ["clients:read"]
     }, headers={"X-CSRF-Token": csrf})
@@ -167,3 +169,21 @@ def test_dashboard_injects_hamburger_api_backup_and_metrics(client):
     assert 'id="apiPanel"' in page.text or "API و اتصال ربات" in page.text
     assert "پشتیبان‌گیری و بازیابی" in page.text
     assert "پایش زنده سرویس" in page.text
+
+
+def test_subscription_html_escapes_names_and_shows_friendly_disabled_state(client):
+    csrf = admin_login(client)
+    created = client.post("/api/clients", json={"name": '<img src=x onerror="alert(1)">'}, headers={"X-CSRF-Token": csrf})
+    assert created.status_code == 200
+    cid = created.json()["id"]
+    info = client.get(f"/api/clients/{cid}/subscription").json()
+    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
+    assert page.status_code == 200
+    assert "&lt;img" in page.text
+    assert '<img src=x onerror="alert(1)">' not in page.text
+
+    paused = client.patch(f"/api/clients/{cid}", json={"enabled": False}, headers={"X-CSRF-Token": csrf})
+    assert paused.status_code == 200
+    unavailable = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
+    assert unavailable.status_code == 404
+    assert "اشتراک در دسترس نیست" in unavailable.text
