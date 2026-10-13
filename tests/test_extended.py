@@ -170,6 +170,8 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
     assert "https://github.com/2dust/v2rayNG/releases" in help_page.text
+    assert "https://apps.apple.com/app/hiddify-proxy-vpn/id6596777532" in help_page.text
+    assert "https://github.com/2dust/v2rayN/releases" in help_page.text
     page = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
     assert page.status_code == 200
     assert "بررسی اتصال" in page.text
