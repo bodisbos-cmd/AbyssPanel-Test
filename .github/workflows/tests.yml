@@ -17,6 +17,8 @@ jobs:
       - run: pip install -r requirements.txt pytest httpx
       - run: python -m compileall -q app tests
       - run: pytest -q
+      - name: Check dashboard JavaScript syntax
+        run: DATA_DIR=/tmp/abyss-js-check COOKIE_SECURE=0 python -c "import app.main as m; open('/tmp/abyss-dashboard.js','w').write(m.DASH_JS)" && node --check /tmp/abyss-dashboard.js
       - name: Build deployment image
         run: docker build --pull -t abysspanel-test:ci .
       - name: Smoke test the real container and Xray routes
