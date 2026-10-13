@@ -3,7 +3,7 @@ import html
 import os
 import re
 import sys
-import urllib.request
+import http.client
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -255,10 +255,14 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
 
     class FakeResponse:
         status = 404
-        def __enter__(self): return self
-        def __exit__(self, *args): return False
+        def read(self, size=-1): return b""
+    class FakeConnection:
+        def __init__(self, *args, **kwargs): pass
+        def request(self, *args, **kwargs): pass
+        def getresponse(self): return FakeResponse()
+        def close(self): pass
 
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *args, **kwargs: FakeResponse())
+    monkeypatch.setattr(http.client, "HTTPConnection", FakeConnection)
     response = client.get("/api/system/profiles/check")
     assert response.status_code == 200, response.text
     data = response.json()
