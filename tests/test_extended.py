@@ -287,3 +287,18 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     assert len(customer_diag.json()["route_checks"]) == 6
     assert all(item["http_status"] == 404 for item in customer_diag.json()["route_checks"])
     assert "cannot prove" in customer_diag.json()["note"]
+
+
+def test_interactive_api_docs_require_an_admin_session(client):
+    assert client.get("/api-docs").status_code == 401
+    assert client.get("/api-docs/openapi.json").status_code == 401
+    admin_login(client)
+    page = client.get("/api-docs")
+    assert page.status_code == 200
+    assert "/api-docs/openapi.json" in page.text
+    schema = client.get("/api-docs/openapi.json")
+    assert schema.status_code == 200
+    paths = schema.json()["paths"]
+    assert "/api/v1/clients" in paths
+    assert "/api/v1/clients/{client_id}/reset-usage" in paths
+    assert "/api/v1/system/metrics" in paths
