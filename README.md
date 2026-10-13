@@ -62,7 +62,7 @@ API base: /api/v1/
 
 ## تست محلی
 ~~~sh
-pip install -r requirements.txt pytest httpx
+pip install -r requirements.txt pytest httpx2
 python -m compileall -q app tests
 pytest -q
 docker build -t abysspanel-test .
