@@ -254,7 +254,7 @@ def test_multi_admin_roles_and_owner_only_controls(client):
 
 
 def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, monkeypatch):
-    admin_login(client)
+    csrf = admin_login(client)
 
     class FakeResponse:
         status = 404
@@ -272,3 +272,12 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     assert len(data["checks"]) == 6
     assert all(item["route_ok"] for item in data["checks"])
     assert "پینگ واقعی تونل" in data["note"]
+
+    made = client.post("/api/clients", json={"name": "route diagnostic"},
+                       headers={"X-CSRF-Token": csrf})
+    token = client.get(f"/api/clients/{made.json()['id']}/subscription").json()["page_url"].rsplit("/", 1)[1]
+    customer_diag = client.get(f"/s/{token}/diagnostics")
+    assert customer_diag.status_code == 200, customer_diag.text
+    assert len(customer_diag.json()["route_checks"]) == 6
+    assert all(item["http_status"] == 404 for item in customer_diag.json()["route_checks"])
+    assert "cannot prove" in customer_diag.json()["note"]
