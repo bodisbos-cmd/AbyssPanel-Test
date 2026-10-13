@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib, hmac, io, json, os, shutil, sqlite3, tempfile, time, zipfile, secrets, uuid
+import hashlib, hmac, io, json, os, shutil, sqlite3, tempfile, time, zipfile, secrets, uuid, urllib.request, urllib.error
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -162,6 +162,28 @@ def install_extended(app, namespace):
     async def system_metrics(request:Request):
         _admin(request,p)
         return {"current":_metrics(p),"history":list(_HISTORY)}
+
+    @app.get("/api/system/profiles/check")
+    async def check_profile_routes(request:Request):
+        _admin(request,p)
+        results=[]
+        for profile in p.PROFILES:
+            started=time.monotonic()
+            result={"key":profile["key"],"label":profile["label"],"path":profile["path"],"latency_ms":None,"http_status":None,"route_ok":False,"error":None}
+            try:
+                req=urllib.request.Request("http://127.0.0.1:8080"+profile["path"],headers={"Host":"localhost","Connection":"close"})
+                try:
+                    with urllib.request.urlopen(req,timeout=1.5) as resp:
+                        result["http_status"]=resp.status
+                except urllib.error.HTTPError as exc:
+                    result["http_status"]=exc.code
+                result["latency_ms"]=round((time.monotonic()-started)*1000,1)
+                result["route_ok"]=result["http_status"] not in {502,503,504}
+            except (urllib.error.URLError,TimeoutError,OSError) as exc:
+                result["latency_ms"]=round((time.monotonic()-started)*1000,1)
+                result["error"]="Nginx/route did not respond: "+str(exc)[:140]
+            results.append(result)
+        return {"checks":results,"note":"این تست فقط مسیر HTTP داخل کانتینر تا Nginx/Xray را می‌سنجد؛ پینگ واقعی تونل یا سرعت اینترنت مشتری نیست."}
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):
