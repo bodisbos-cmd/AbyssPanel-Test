@@ -79,8 +79,12 @@ def event(level,message):
             c.execute("DELETE FROM events WHERE id NOT IN (SELECT id FROM events ORDER BY id DESC LIMIT 250)")
     except Exception: LOG.exception("event storage failed")
 def get_clients(include_client_uuid=False):
-    cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes"
-    with db() as c: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
+    with db() as c:
+        if include_client_uuid:
+            rows=c.execute("SELECT id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes FROM clients ORDER BY created_at DESC")
+        else:
+            rows=c.execute("SELECT id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes FROM clients ORDER BY created_at DESC")
+        return [dict(r) for r in rows]
 def get_profile_flags():
     with db() as c:
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
@@ -388,7 +392,8 @@ async def update_client(cid:str,r:Request):
             updates["expires_at"]=(datetime.now(timezone.utc)+timedelta(days=int(b["duration_days"]))).isoformat(timespec="seconds") if b["duration_days"] is not None else None
         if "quota_gb" in b: updates["quota_bytes"]=int(float(b["quota_gb"])*1024**3) if b["quota_gb"] is not None else None
         if not updates: raise HTTPException(422,"No fields to update")
-        c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))
+        c.execute("UPDATE clients SET name=?,note=?,enabled=?,expires_at=?,quota_bytes=? WHERE id=?",
+            (updates.get("name",previous["name"]),updates.get("note",previous["note"]),updates.get("enabled",previous["enabled"]),updates.get("expires_at",previous["expires_at"]),updates.get("quota_bytes",previous["quota_bytes"]),cid))
     if "enabled" in updates and updates["enabled"] != previous["enabled"]:
         try:
             await start_xray()
