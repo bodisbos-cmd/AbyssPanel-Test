@@ -31,6 +31,8 @@
 
 راهنمای مرحله‌به‌مرحله نصب و عملیات: [راهنمای استقرار فارسی](docs/DEPLOY_FA.md)
 
+ماتریس کامل امکانات و موارد باقی‌مانده: [FEATURE_MATRIX_FA.md](docs/FEATURE_MATRIX_FA.md)
+
 مستندات کامل:
 - [راهنمای API فارسی](docs/API_FA.md)
 - [راهنمای اتصال و عیب‌یابی](docs/CONNECT_FA.md)
