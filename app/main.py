@@ -508,7 +508,7 @@ async def change_password(r: Request):
     try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
     except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Administrator password changed.")
-    return {"ok": True
+    return {"ok": True}
 
 # Load extension by package name in production and by file path in isolated test imports.
 try:
