@@ -37,8 +37,14 @@ jobs:
           test "$ready" = "1"
           curl -fsS http://127.0.0.1:18080/health | grep -q '"ok":true'
           curl -fsS http://127.0.0.1:18080/login | grep -q 'خوش برگشتی'
-          status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Connection: Upgrade' -H 'Upgrade: websocket' http://127.0.0.1:18080/ws)
-          test "$status" != "502"
+          for path in /ws /httpupgrade; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -H 'Connection: Upgrade' -H 'Upgrade: websocket' "http://127.0.0.1:18080$path")
+            test "$status" != "502"
+          done
+          for path in /xhttp /xhttp-packet; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080$path")
+            test "$status" != "502"
+          done
           if docker logs abysspanel-smoke 2>&1 | grep -q 'Xray startup failed'; then
             echo "Xray failed to start; see container logs above."
             exit 1
