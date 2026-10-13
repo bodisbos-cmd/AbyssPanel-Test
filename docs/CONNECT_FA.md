@@ -12,6 +12,7 @@
 در صفحه اشتراک روی یکی از کارت‌های پروفایل بزن. اگر برنامه روی دستگاه برای بازکردن لینک نصب باشد، باید درخواست واردکردن لینک را نشان دهد. در غیر این صورت از گزینه کپی لینک اشتراک استفاده کن.
 
 ## دانلودهای رسمی
+- Android از Google Play: [Hiddify](https://play.google.com/store/apps/details?id=app.hiddify.com)
 - Android: [v2rayNG Releases](https://github.com/2dust/v2rayNG/releases)
 - چندسکویی: [Hiddify Releases](https://github.com/hiddify/hiddify-app/releases)
 - Android: [NekoBox for Android Releases](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases)
