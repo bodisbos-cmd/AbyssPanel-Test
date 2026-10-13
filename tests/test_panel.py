@@ -128,6 +128,22 @@ def test_failed_xray_update_rolls_back_new_client(client, monkeypatch):
     assert calls["count"] == 2
 
 
+def test_xray_config_has_unique_inbounds_and_stats_api(client):
+    admin_client(client)
+    csrf = client.get("/api/overview").json()["csrf"]
+    created = client.post("/api/clients", json={"name": "Config test"}, headers={"X-CSRF-Token": csrf})
+    assert created.status_code == 200
+    config = panel.make_xray_config()
+    inbounds = config["inbounds"]
+    assert len(inbounds) == 5  # Stats API + WS + HTTPUpgrade + XHTTP auto + XHTTP packet-up
+    assert len({item["tag"] for item in inbounds}) == len(inbounds)
+    assert len({item["port"] for item in inbounds}) == len(inbounds)
+    assert config["api"]["services"] == ["StatsService"]
+    assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
+    assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
+    xhttp = [item for item in inbounds if item["streamSettings"].get("network") == "xhttp"]
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+
 def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
