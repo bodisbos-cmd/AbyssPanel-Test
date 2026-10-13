@@ -274,12 +274,15 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
     if not rate_check(r,"login:"+ip):
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","تلاش‌های زیادی انجام شده؛ پنج دقیقه صبر کن.").replace("{{CSRF}}",token),status_code=429)
-    with db() as c: row=c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
-    if not row or username!="admin" or not verify_password(password,row["password_hash"]):
+    if len(username)>64 or len(password)>256:
+        row=None
+    else:
+        with db() as c: row=c.execute("SELECT id,username,password_hash,role,enabled FROM panel_admins WHERE username=?",(username.strip(),)).fetchone()
+    if not row or not row["enabled"] or not verify_password(password,row["password_hash"]):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","نام کاربری یا رمز عبور اشتباه است.").replace("{{CSRF}}",token),status_code=401)
-    r.session.clear(); r.session["admin"]=True; r.session["csrf"]=secrets.token_urlsafe(32); event("INFO","Administrator signed in.")
+    r.session.clear(); r.session["admin"]=True; r.session["admin_id"]=row["id"]; r.session["admin_username"]=row["username"]; r.session["admin_role"]=row["role"]; r.session["csrf"]=secrets.token_urlsafe(32); event("INFO","Administrator signed in as "+row["username"]+" ("+row["role"]+").")
     return RedirectResponse("/",303)
 @app.get("/logout")
 async def logout(r:Request): r.session.clear(); return RedirectResponse("/login",303)
@@ -289,7 +292,7 @@ async def overview(r:Request):
     with db() as c:
         total=c.execute("SELECT COUNT(*) n FROM clients").fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE enabled=1").fetchone()["n"]
         events=[dict(x) for x in c.execute("SELECT at,level,message FROM events ORDER BY id DESC LIMIT 8")]
-    return {"csrf":r.session.get("csrf",""),"total":total,"active":active,"clients":get_clients(),"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
+    return {"csrf":r.session.get("csrf",""),"user":{"id":r.session.get("admin_id","owner-admin"),"username":r.session.get("admin_username","admin"),"role":r.session.get("admin_role","owner")},"total":total,"active":active,"clients":get_clients(),"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
 @app.get("/api/settings")
 async def read_settings(r:Request):
     require_admin(r)
