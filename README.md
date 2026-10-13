@@ -42,6 +42,8 @@ API base: /api/v1/
 - PATCH /clients/{id}
 - DELETE /clients/{id}
 - GET /clients/{id}/subscription
+- POST /clients/{id}/reset-usage
+- GET /system/metrics (requires metrics:read)
 
 هر درخواست API به کلید Authorization: Bearer ... نیاز دارد. برای ساخت مشتری و دریافت لینک اشتراک، مجوز مناسب لازم است.
 
