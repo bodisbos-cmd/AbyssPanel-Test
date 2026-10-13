@@ -13,6 +13,12 @@ _LAST_TRAFFIC = None
 def _utc():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+def _global(panel, name):
+    return panel.db.__globals__.get(name, getattr(panel, name, None))
+
+def _db_path(panel):
+    return Path(_global(panel, "DB_PATH"))
+
 def _init(panel):
     with panel.db() as c:
         c.execute("""CREATE TABLE IF NOT EXISTS api_keys(
