@@ -199,7 +199,7 @@ def install_extended(app, namespace):
         if not isinstance(body,dict): raise HTTPException(422,"JSON object required")
         name=p.valid_name(body.get("name"))
         if len(name)>48: raise HTTPException(422,"API key name must be at most 48 characters")
-        allowed={"clients:read","clients:write","subscriptions:read"}
+        allowed={"clients:read","clients:write","subscriptions:read","metrics:read"}
         scopes=body.get("scopes",sorted(allowed))
         if not isinstance(scopes,list) or not scopes or any(x not in allowed for x in scopes):
             raise HTTPException(422,"Choose supported API permissions")
@@ -224,6 +224,11 @@ def install_extended(app, namespace):
         _api_auth(request,p,"clients:read")
         return {"ok":True,"service":"AbyssPanel","time":_utc()}
 
+    @app.get("/api/v1/system/metrics")
+    async def bot_api_metrics(request:Request):
+        _api_auth(request,p,"metrics:read")
+        return {"current":_metrics(p),"history":list(_HISTORY)}
+
     @app.get("/api/v1/clients")
     async def bot_api_list_clients(request:Request):
         _api_auth(request,p,"clients:read")
@@ -232,6 +237,7 @@ def install_extended(app, namespace):
     @app.post("/api/v1/clients")
     async def bot_api_create_client(request:Request):
         _api_auth(request,p,"clients:write"); b=await request.json()
+        if not isinstance(b,dict): raise HTTPException(422,"JSON object required")
         name=p.valid_name(b.get("name")); note=b.get("note",""); days=b.get("duration_days"); quota=b.get("quota_gb")
         if not isinstance(note,str) or len(note)>300: raise HTTPException(422,"Note must be at most 300 characters")
         if days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or not float(days).is_integer() or days<1 or days>3650):
@@ -259,17 +265,28 @@ def install_extended(app, namespace):
     @app.patch("/api/v1/clients/{client_id}")
     async def bot_api_update_client(client_id:str,request:Request):
         _api_auth(request,p,"clients:write"); b=await request.json()
-        if not isinstance(b,dict) or not b or set(b)-{"enabled","name","note"}:
-            raise HTTPException(422,"Supported fields: enabled, name, note")
+        allowed={"enabled","name","note","duration_days","quota_gb"}
+        if not isinstance(b,dict) or not b or set(b)-allowed:
+            raise HTTPException(422,"Supported fields: enabled, name, note, duration_days, quota_gb")
         if "enabled" in b and not isinstance(b["enabled"],bool): raise HTTPException(422,"enabled must be boolean")
         if "name" in b: b["name"]=p.valid_name(b["name"])
         if "note" in b and (not isinstance(b["note"],str) or len(b["note"])>300): raise HTTPException(422,"Note too long")
+        days=b.get("duration_days"); quota=b.get("quota_gb")
+        if "duration_days" in b and days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or not float(days).is_integer() or not 1<=days<=3650):
+            raise HTTPException(422,"duration_days must be a whole number from 1 to 3650, or null")
+        if "quota_gb" in b and quota is not None and (not isinstance(quota,(int,float)) or isinstance(quota,bool) or not 1<=quota<=100000):
+            raise HTTPException(422,"quota_gb must be 1–100000, or null")
         with p.db() as c:
             old=c.execute("SELECT * FROM clients WHERE id=?",(client_id,)).fetchone()
             if not old: raise HTTPException(404,"Client not found")
             old=dict(old)
-            c.execute("UPDATE clients SET name=?,note=?,enabled=? WHERE id=?",
-                (b.get("name",old["name"]),b.get("note",old["note"]),int(b.get("enabled",bool(old["enabled"]))),client_id))
+            expires=old["expires_at"]
+            if "duration_days" in b:
+                expires=(datetime.now(timezone.utc)+timedelta(days=int(days))).isoformat(timespec="seconds") if days is not None else None
+            quota_bytes=old["quota_bytes"]
+            if "quota_gb" in b: quota_bytes=int(float(quota)*1024**3) if quota is not None else None
+            c.execute("UPDATE clients SET name=?,note=?,enabled=?,expires_at=?,quota_bytes=? WHERE id=?",
+                (b.get("name",old["name"]),b.get("note",old["note"]),int(b.get("enabled",bool(old["enabled"]))),expires,quota_bytes,client_id))
         try: await p.start_xray()
         except Exception as exc:
             with p.db() as c:
@@ -297,6 +314,21 @@ def install_extended(app, namespace):
             raise HTTPException(503,"Xray could not apply the deletion") from exc
         p.event("INFO",f"Bot API revoked client {client_id[:8]}.")
         return {"ok":True}
+
+    @app.post("/api/v1/clients/{client_id}/reset-usage")
+    async def bot_api_reset_usage(client_id:str,request:Request):
+        _api_auth(request,p,"clients:write")
+        with p.db() as c:
+            if not c.execute("SELECT id FROM clients WHERE id=?",(client_id,)).fetchone():
+                raise HTTPException(404,"Client not found")
+        try:
+            pending=p.read_xray_stats()
+            p.apply_xray_stats(pending)
+        except Exception as exc:
+            p.event("WARNING",f"Usage reset for {client_id[:8]} proceeded with uncollected Xray stats: {exc}")
+        with p.db() as c: c.execute("UPDATE clients SET used_bytes=0 WHERE id=?",(client_id,))
+        p.event("INFO",f"Bot API reset usage for client {client_id[:8]}.")
+        return {"ok":True,"id":client_id,"used_bytes":0}
 
     @app.get("/api/v1/clients/{client_id}/subscription")
     async def bot_api_subscription(client_id:str,request:Request):
