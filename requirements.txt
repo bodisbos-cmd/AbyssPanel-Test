@@ -1,5 +1,5 @@
-fastapi==0.115.12
+fastapi==0.143.0
 uvicorn[standard]==0.34.2
 itsdangerous==2.2.0
-python-multipart==0.0.20
+python-multipart==0.0.32
 qrcode==8.2
