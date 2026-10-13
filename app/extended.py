@@ -62,7 +62,7 @@ def _metrics(p):
         mt=m.get("MemTotal"); ma=m.get("MemAvailable",m.get("MemFree"))
     except (OSError,ValueError,IndexError): pass
     try:
-        disk=shutil.disk_usage(p.DATA_DIR); dt,du,df=disk.total,disk.used,disk.free
+        disk=shutil.disk_usage(_global(p,"DATA_DIR")); dt,du,df=disk.total,disk.used,disk.free
     except OSError: dt=du=df=None
     try: load=[round(float(x),2) for x in Path("/proc/loadavg").read_text().split()[:3]]
     except (OSError,ValueError): load=[]
@@ -81,7 +81,7 @@ def _metrics(p):
       "disk_used_percent":round(100*du/dt,1) if dt else None,"load_average":load,
       "traffic_bytes_per_second":speed,"recorded_traffic_bytes":total_bytes,
       "clients_total":len(rows),"clients_active":sum(bool(x["enabled"]) for x in rows),
-      "xray_installed":Path(p.XRAY_BIN).exists(),"xray_running":bool(p.xray_proc and p.xray_proc.poll() is None),
+      "xray_installed":Path(_global(p,"XRAY_BIN")).exists(),"xray_running":bool(_global(p,"xray_proc") and _global(p,"xray_proc").poll() is None),
       "metrics_scope":"container"}
     _HISTORY.append({k:snap[k] for k in ("at","cpu_percent","memory_used_percent","traffic_bytes_per_second")})
     del _HISTORY[:-60]
@@ -225,7 +225,7 @@ def install_extended(app, namespace):
 
     @app.get("/api/backup")
     async def download_backup(request:Request):
-        _admin(request,p); path=Path(p.DB_PATH)
+        _admin(request,p); path=_db_path(p)
         if not path.exists(): raise HTTPException(503,"Database is not initialized yet")
         with tempfile.TemporaryDirectory(prefix="abyss-backup-") as temp:
             target_path=Path(temp)/"panel.sqlite3"
@@ -264,7 +264,7 @@ def install_extended(app, namespace):
                 if integrity!="ok" or not {"admins","clients","settings","events"}.issubset(tables):
                     raise HTTPException(400,"Backup database failed integrity/schema validation: integrity="+str(integrity)+", tables="+",".join(sorted(tables)))
             finally: check.close()
-            path=Path(p.DB_PATH); path.parent.mkdir(parents=True,exist_ok=True)
+            path=_db_path(p); path.parent.mkdir(parents=True,exist_ok=True)
             if path.exists():
                 src=sqlite3.connect(str(path),timeout=15); dst=sqlite3.connect(str(previous),timeout=15)
                 try: src.execute("PRAGMA wal_checkpoint(FULL)"); src.backup(dst)
