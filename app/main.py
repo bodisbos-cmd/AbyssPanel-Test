@@ -10,6 +10,8 @@ import qrcode
 from qrcode.image.svg import SvgPathImage
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+from fastapi.openapi.utils import get_openapi
 from starlette.middleware.sessions import SessionMiddleware
 
 APP_NAME="AbyssPanel-Test"
@@ -542,6 +544,21 @@ async def subscription_page(token:str,r:Request):
     base=get_base_url(r); sub_url=f"{base}/sub/{token}"
     page=render_subscription_page(client,links,sub_url,f"{base}/sub/{token}/qr")
     return HTMLResponse(page,headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/api-docs",response_class=HTMLResponse)
+async def protected_api_docs(r:Request):
+    require_admin(r)
+    return get_swagger_ui_html(openapi_url="/api-docs/openapi.json",title="Abyss Tunnel API",swagger_ui_parameters={"persistAuthorization":False})
+
+@app.get("/api-docs/redoc",response_class=HTMLResponse)
+async def protected_api_redoc(r:Request):
+    require_admin(r)
+    return get_redoc_html(openapi_url="/api-docs/openapi.json",title="Abyss Tunnel API")
+
+@app.get("/api-docs/openapi.json")
+async def protected_openapi_schema(r:Request):
+    require_admin(r)
+    return get_openapi(title="Abyss Tunnel API",version="1.0.0",routes=app.routes)
 
 @app.get("/health")
 async def health():
