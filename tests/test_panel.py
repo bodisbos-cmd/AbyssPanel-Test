@@ -59,13 +59,16 @@ def test_create_pause_subscription_and_revoke(client):
     csrf = admin_client(client)
     headers = {"X-CSRF-Token": csrf}
 
-    created = client.post("/api/clients", json={"name": "Test client"}, headers=headers)
+    created = client.post("/api/clients", json={"name": "Test client", "duration_days": 30, "quota_gb": 10}, headers=headers)
     assert created.status_code == 200, created.text
     client_id = created.json()["id"]
 
     overview = client.get("/api/overview").json()
     assert overview["total"] == 1
     assert overview["active"] == 1
+    row = overview["clients"][0]
+    assert row["quota_bytes"] == 10 * 1024**3
+    assert row["expires_at"]
 
     link = client.get(f"/api/clients/{client_id}/subscription")
     assert link.status_code == 200
@@ -74,11 +77,13 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 3
+    assert len(configs) == 4
     assert all(line.startswith("vless://") for line in configs)
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
-    assert any("type=xhttp" in line for line in configs)
+    assert sum("type=xhttp" in line for line in configs) == 2
+    assert any("mode=auto" in line for line in configs)
+    assert any("mode=packet-up" in line for line in configs)
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
