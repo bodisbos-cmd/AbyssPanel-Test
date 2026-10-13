@@ -45,7 +45,7 @@ def test_api_key_scopes_and_bot_client_lifecycle(client):
     csrf = admin_login(client)
     created = client.post("/api/admin/api-keys", json={
         "name": "test bot",
-        "scopes": ["clients:read", "clients:write", "subscriptions:read"],
+        "scopes": ["clients:read", "clients:write", "subscriptions:read", "metrics:read"],
     }, headers={"X-CSRF-Token": csrf})
     assert created.status_code == 200, created.text
     token = created.json()["token"]
@@ -73,6 +73,20 @@ def test_api_key_scopes_and_bot_client_lifecycle(client):
     assert sub.status_code == 200
     assert sub.json()["subscription_url"] == item["subscription_url"]
 
+    # Renewal and quota changes are available to the sales bot without replacing the client UUID.
+    renewed = client.patch(f"/api/v1/clients/{cid}",
+        json={"duration_days": 30, "quota_gb": 7}, headers=auth)
+    assert renewed.status_code == 200, renewed.text
+    current = next(x for x in client.get("/api/v1/clients", headers=auth).json()["clients"] if x["id"] == cid)
+    assert current["quota_bytes"] == 7 * 1024**3
+    with panel.db() as c:
+        c.execute("UPDATE clients SET used_bytes=12345 WHERE id=?", (cid,))
+    reset = client.post(f"/api/v1/clients/{cid}/reset-usage", headers=auth)
+    assert reset.status_code == 200, reset.text
+    assert next(x for x in client.get("/api/v1/clients", headers=auth).json()["clients"] if x["id"] == cid)["used_bytes"] == 0
+    metrics = client.get("/api/v1/system/metrics", headers=auth)
+    assert metrics.status_code == 200 and "traffic_bytes_per_second" in metrics.json()["current"]
+
     paused = client.patch(f"/api/v1/clients/{cid}", json={"enabled": False}, headers=auth)
     assert paused.status_code == 200
     deleted = client.delete(f"/api/v1/clients/{cid}", headers=auth)
@@ -94,6 +108,7 @@ def test_api_key_requires_scopes_and_rejects_invalid_payloads(client):
     assert made.status_code == 200
     auth = {"Authorization": "Bearer " + made.json()["token"]}
     assert client.get("/api/v1/clients", headers=auth).status_code == 200
+    assert client.get("/api/v1/system/metrics", headers=auth).status_code == 403
     assert client.post("/api/v1/clients", json={"name": "blocked"}, headers=auth).status_code == 403
     invalid = client.post("/api/admin/api-keys", json={
         "name": "bad", "scopes": ["root:all"]
