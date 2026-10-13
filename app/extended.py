@@ -151,11 +151,9 @@ def install_extended(app, namespace):
             if not row: raise HTTPException(404,"Panel account not found")
             if row["role"]=="owner" and (body.get("enabled") is False or "role" in body):
                 raise HTTPException(400,"The owner account cannot be disabled or demoted here")
-            updates=[]
-            values=[]
-            if "role" in body: updates.append("role=?"); values.append(body["role"])
-            if "enabled" in body: updates.append("enabled=?"); values.append(int(body["enabled"]))
-            c.execute("UPDATE panel_admins SET "+",".join(updates)+" WHERE id=?",tuple(values)+(user_id,))
+            new_role=body.get("role",row["role"])
+            new_enabled=int(body.get("enabled",bool(row["enabled"])))
+            c.execute("UPDATE panel_admins SET role=?,enabled=? WHERE id=?",(new_role,new_enabled,user_id))
         p.event("WARNING",f"Updated panel account {row['username']!r}.")
         return {"ok":True,"id":user_id}
 
@@ -246,8 +244,9 @@ def install_extended(app, namespace):
         with p.db() as c:
             old=c.execute("SELECT * FROM clients WHERE id=?",(client_id,)).fetchone()
             if not old: raise HTTPException(404,"Client not found")
-            old=dict(old); assignments=",".join(k+"=?" for k in b)
-            c.execute("UPDATE clients SET "+assignments+" WHERE id=?",tuple(b.values())+(client_id,))
+            old=dict(old)
+            c.execute("UPDATE clients SET name=?,note=?,enabled=? WHERE id=?",
+                (b.get("name",old["name"]),b.get("note",old["note"]),int(b.get("enabled",bool(old["enabled"]))),client_id))
         try: await p.start_xray()
         except Exception as exc:
             with p.db() as c:
