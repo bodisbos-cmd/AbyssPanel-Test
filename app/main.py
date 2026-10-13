@@ -61,6 +61,11 @@ def init_db():
             try: p.chmod(0o600)
             except OSError: pass
             if os.getenv("ABYSS_TEST_MODE")!="1": LOG.warning("INITIAL ADMIN CREDENTIAL username=admin password=%s; change immediately in Settings",pw)
+        # Migrate the legacy single-admin credential into the multi-admin table.
+        legacy=c.execute("SELECT password_hash,password_changed_at FROM admins WHERE id=1").fetchone()
+        if legacy and not c.execute("SELECT id FROM panel_admins WHERE username='admin'").fetchone():
+            c.execute("INSERT INTO panel_admins(id,username,password_hash,role,enabled,created_at,password_changed_at) VALUES(?,?,?,?,1,?,?)",
+                ("owner-admin","admin",legacy["password_hash"],"owner",legacy["password_changed_at"],legacy["password_changed_at"]))
         # Safe in-place migration for persistent databases created by older releases.
         cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
         for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0")):
@@ -196,6 +201,10 @@ async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
 def require_admin(r):
     if r.session.get("admin") is not True: raise HTTPException(401,"Authentication required")
+def require_role(r,*roles):
+    require_admin(r)
+    role=r.session.get("admin_role","owner")
+    if role not in roles: raise HTTPException(403,"Insufficient permissions")
 def require_csrf(r):
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
