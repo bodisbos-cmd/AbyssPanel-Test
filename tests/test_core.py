@@ -25,7 +25,7 @@ class CoreTests(unittest.TestCase):
 
     def test_xray_config_has_loopback_only_inbounds(self):
         config = mod.make_xray_config()
-        self.assertEqual(len(config["inbounds"]), 5)
+        self.assertEqual(len(config["inbounds"]), 7)
         self.assertTrue(all(i["listen"] == "127.0.0.1" for i in config["inbounds"]))
         client_inbounds = [i for i in config["inbounds"] if "clients" in i["settings"]]
         self.assertEqual(len(client_inbounds), 4)
