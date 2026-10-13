@@ -173,7 +173,7 @@ def install_extended(app, namespace):
             try:
                 req=urllib.request.Request("http://127.0.0.1:8080"+profile["path"],headers={"Host":"localhost","Connection":"close"})
                 try:
-                    with urllib.request.urlopen(req,timeout=1.5) as resp:
+                    with urllib.request.urlopen(req,timeout=1.5) as resp:  # nosec B310 - fixed loopback host and static profile paths only
                         result["http_status"]=resp.status
                 except urllib.error.HTTPError as exc:
                     result["http_status"]=exc.code
