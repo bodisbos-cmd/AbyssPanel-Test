@@ -175,6 +175,11 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     assert "بررسی اتصال" in page.text
     assert "دانلود برنامه‌های رسمی" in page.text
     assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
+    assert 'id="carrierSelect"' in page.text
+    assert 'data-profile-choice="ws"' in page.text
+    assert 'data-mark="ok"' in page.text and 'data-mark="fail"' in page.text
+    assert "abyss-profile-results:" in page.text
+    assert "نتیجه فقط روی همین دستگاه ذخیره می‌شود" in page.text
 
 
 def test_dashboard_injects_hamburger_api_backup_and_metrics(client):
