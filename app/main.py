@@ -13,6 +13,12 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Red
 from starlette.middleware.sessions import SessionMiddleware
 
 APP_NAME="AbyssPanel-Test"
+PROFILES=[
+    {"key":"ws","label":"WebSocket","network":"ws","path":"/ws","port":10001,"mode":None},
+    {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
+    {"key":"xhttp_auto","label":"XHTTP · auto","network":"xhttp","path":"/xhttp","port":10003,"mode":"auto"},
+    {"key":"xhttp_packet_up","label":"XHTTP · packet-up","network":"xhttp","path":"/xhttp-packet","port":10004,"mode":"packet-up"},
+]
 DATA_DIR=Path(os.getenv("DATA_DIR","/data")); DATA_DIR.mkdir(parents=True,exist_ok=True)
 DB_PATH=DATA_DIR/"panel.sqlite3"; XRAY_CONFIG=DATA_DIR/"xray.json"
 XRAY_BIN=os.getenv("XRAY_BIN","/usr/local/bin/xray"); PUBLIC_DOMAIN=os.getenv("RAILWAY_PUBLIC_DOMAIN","").strip()
@@ -67,6 +73,11 @@ def event(level,message):
 def get_clients(include_client_uuid=False):
     cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes"
     with db() as c: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
+def get_profile_flags():
+    with db() as c:
+        saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
+    return {p["key"]:saved.get("profile:"+p["key"],"1")=="1" for p in PROFILES}
+
 def valid_name(name:Any):
     if not isinstance(name,str): raise HTTPException(422,"Client name must be text")
     name=" ".join(name.strip().split())
@@ -75,9 +86,12 @@ def valid_name(name:Any):
 def make_xray_config():
     clients=[{"id":x["client_uuid"],"email":f"client-{x['id'][:8]}"} for x in get_clients(True) if x["enabled"]]
     ins=[{"tag":"api","listen":"127.0.0.1","port":10085,"protocol":"dokodemo-door","settings":{"address":"127.0.0.1","port":10085,"network":"tcp"}}]
-    for port,network,path in [(10001,"ws","/ws"),(10002,"httpupgrade","/httpupgrade"),(10003,"xhttp","/xhttp"),(10004,"xhttp","/xhttp-packet")]:
+    flags=get_profile_flags()
+    for profile in PROFILES:
+        if not flags[profile["key"]]: continue
+        port,network,path=profile["port"],profile["network"],profile["path"]
         stream={"network":network,"security":"none"}
-        stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":"packet-up" if path.endswith("packet") else "auto"} if network=="xhttp" else {})}
+        stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":profile["mode"]} if network=="xhttp" else {})}
         ins.append({"tag":f"in-{network}-{port}","listen":"127.0.0.1","port":port,"protocol":"vless","settings":{"clients":clients,"decryption":"none"},"streamSettings":stream})
     return {"log":{"loglevel":"warning"},"api":{"tag":"api","services":["StatsService"]},"stats":{},"policy":{"levels":{"0":{"statsUserUplink":True,"statsUserDownlink":True}}},"inbounds":ins,"outbounds":[{"protocol":"freedom","tag":"direct"},{"protocol":"blackhole","tag":"block"},{"protocol":"freedom","tag":"api"}],"routing":{"domainStrategy":"AsIs","rules":[{"type":"field","inboundTag":["api"],"outboundTag":"api"}]}}
 def validate_and_write_xray():
@@ -257,6 +271,41 @@ async def overview(r:Request):
         total=c.execute("SELECT COUNT(*) n FROM clients").fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE enabled=1").fetchone()["n"]
         events=[dict(x) for x in c.execute("SELECT at,level,message FROM events ORDER BY id DESC LIMIT 8")]
     return {"csrf":r.session.get("csrf",""),"total":total,"active":active,"clients":get_clients(),"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
+@app.get("/api/settings")
+async def read_settings(r:Request):
+    require_admin(r)
+    flags=get_profile_flags()
+    return {"profiles":[{"key":p["key"],"label":p["label"],"enabled":flags[p["key"]]} for p in PROFILES]}
+
+@app.patch("/api/settings/profiles")
+async def update_profile_settings(r:Request):
+    require_admin(r); require_csrf(r); body=await r.json()
+    profiles=body.get("profiles") if isinstance(body,dict) else None
+    keys={p["key"] for p in PROFILES}
+    if not isinstance(profiles,dict) or not profiles or set(profiles)-keys or any(not isinstance(v,bool) for v in profiles.values()):
+        raise HTTPException(422,"profiles must contain supported profile keys and boolean values")
+    current=get_profile_flags()
+    updated={**current,**profiles}
+    if not any(updated.values()): raise HTTPException(422,"At least one connection profile must remain enabled")
+    with db() as c:
+        previous={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
+        for key,value in profiles.items():
+            c.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",("profile:"+key,"1" if value else "0"))
+    try:
+        await start_xray()
+    except Exception as e:
+        with db() as c:
+            for key in profiles:
+                setting="profile:"+key
+                if setting in previous: c.execute("UPDATE settings SET value=? WHERE key=?",(previous[setting],setting))
+                else: c.execute("DELETE FROM settings WHERE key=?",(setting,))
+        try: await start_xray()
+        except Exception as restore_error: event("ERROR",f"Xray recovery after failed profile update also failed: {restore_error}")
+        event("ERROR",f"Profile update rolled back because Xray update failed: {e}")
+        raise HTTPException(503,"Profile settings were not saved because Xray could not apply the configuration")
+    event("INFO","Updated enabled connection profiles.")
+    return {"profiles":[{"key":p["key"],"label":p["label"],"enabled":updated[p["key"]]} for p in PROFILES]}
+
 @app.post("/api/clients")
 async def create_client(r:Request):
     require_admin(r); require_csrf(r); b=await r.json(); name=valid_name(b.get("name")); note=b.get("note","")
@@ -359,10 +408,13 @@ def make_subscription_links(client, r):
     base=get_base_url(r)
     host=urlsplit(base).hostname or PUBLIC_DOMAIN or "YOUR-RAILWAY-DOMAIN"
     links=[]
-    for network,path,mode in [("ws","/ws",None),("httpupgrade","/httpupgrade",None),("xhttp","/xhttp","auto"),("xhttp","/xhttp-packet","packet-up")]:
+    flags=get_profile_flags()
+    for profile in PROFILES:
+        if not flags[profile["key"]]: continue
+        network,path,mode=profile["network"],profile["path"],profile["mode"]
         q=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}&encryption=none"
         if mode: q+=f"&mode={quote(mode)}"
-        label={"ws":"ws","httpupgrade":"httpupgrade","/xhttp":"xhttp-auto","/xhttp-packet":"xhttp-packet-up"}[path if path in ("/xhttp","/xhttp-packet") else network]
+        label=profile["key"] if network=="xhttp" else network
         links.append({"label":label,"url":f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}"})
     return links
 
