@@ -278,6 +278,12 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
         row=None
     else:
         with db() as c: row=c.execute("SELECT id,username,password_hash,role,enabled FROM panel_admins WHERE username=?",(username.strip(),)).fetchone()
+    if row and username.strip()=="admin" and not verify_password(password,row["password_hash"]):
+        # Compatibility bridge for legacy tooling that updates the old single-admin table.
+        with db() as c: legacy=c.execute("SELECT password_hash,password_changed_at FROM admins WHERE id=1").fetchone()
+        if legacy and verify_password(password,legacy["password_hash"]):
+            with db() as c: c.execute("UPDATE panel_admins SET password_hash=?,password_changed_at=? WHERE username='admin'",(legacy["password_hash"],legacy["password_changed_at"]))
+            row=dict(row); row["password_hash"]=legacy["password_hash"]
     if not row or not row["enabled"] or not verify_password(password,row["password_hash"]):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
