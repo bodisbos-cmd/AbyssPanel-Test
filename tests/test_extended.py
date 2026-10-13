@@ -147,7 +147,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     token = info["page_url"].rsplit("/", 1)[1]
     diag = client.get(f"/s/{token}/diagnostics")
     assert diag.status_code == 200, diag.text
-    assert diag.json()["profile_count"] == 4
+    assert diag.json()["profile_count"] == 6
     help_page = client.get(f"/s/{token}/help")
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
@@ -156,6 +156,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     assert page.status_code == 200
     assert "بررسی اتصال" in page.text
     assert "دانلود برنامه‌های رسمی" in page.text
+    assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
 
 
 def test_dashboard_injects_hamburger_api_backup_and_metrics(client):
