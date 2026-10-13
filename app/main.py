@@ -206,10 +206,13 @@ async def headers(request,call_next):
 def require_admin(r):
     if r.session.get("admin") is not True: raise HTTPException(401,"Authentication required")
     admin_id=r.session.get("admin_id","owner-admin")
-    with db() as c: account=c.execute("SELECT role,enabled FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
+    with db() as c: account=c.execute("SELECT role,enabled,password_changed_at FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
     if not account or not account["enabled"]:
         r.session.clear()
         raise HTTPException(401,"Account is disabled or no longer exists")
+    if r.session.get("admin_password_changed_at") != account["password_changed_at"]:
+        r.session.clear()
+        raise HTTPException(401,"Password changed; please sign in again")
     if r.session.get("admin_role")!=account["role"]:
         r.session["admin_role"]=account["role"]
 def require_role(r,*roles):
@@ -290,7 +293,7 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
     if len(username)>64 or len(password)>256:
         row=None
     else:
-        with db() as c: row=c.execute("SELECT id,username,password_hash,role,enabled FROM panel_admins WHERE username=?",(username.strip(),)).fetchone()
+        with db() as c: row=c.execute("SELECT id,username,password_hash,role,enabled,password_changed_at FROM panel_admins WHERE username=?",(username.strip(),)).fetchone()
     if row and username.strip()=="admin" and not verify_password(password,row["password_hash"]):
         # Compatibility bridge for legacy tooling that updates the old single-admin table.
         with db() as c: legacy=c.execute("SELECT password_hash,password_changed_at FROM admins WHERE id=1").fetchone()
@@ -301,7 +304,7 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","نام کاربری یا رمز عبور اشتباه است.").replace("{{CSRF}}",token),status_code=401)
-    r.session.clear(); r.session["admin"]=True; r.session["admin_id"]=row["id"]; r.session["admin_username"]=row["username"]; r.session["admin_role"]=row["role"]; r.session["csrf"]=secrets.token_urlsafe(32); event("INFO","Administrator signed in as "+row["username"]+" ("+row["role"]+").")
+    r.session.clear(); r.session["admin"]=True; r.session["admin_id"]=row["id"]; r.session["admin_username"]=row["username"]; r.session["admin_role"]=row["role"]; r.session["admin_password_changed_at"]=row["password_changed_at"]; r.session["csrf"]=secrets.token_urlsafe(32); event("INFO","Administrator signed in as "+row["username"]+" ("+row["role"]+").")
     return RedirectResponse("/",303)
 @app.get("/logout")
 async def logout(r:Request): r.session.clear(); return RedirectResponse("/login",303)
@@ -571,6 +574,7 @@ async def change_password(r: Request):
         c.execute("UPDATE panel_admins SET password_hash=?, password_changed_at=? WHERE id=?", (changed,at,admin_id))
         if row["username"]=="admin":
             c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1",(changed,at))
+    r.session["admin_password_changed_at"]=at
     try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
     except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Administrator password changed.")
