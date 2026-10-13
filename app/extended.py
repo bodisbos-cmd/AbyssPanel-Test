@@ -262,7 +262,7 @@ def install_extended(app, namespace):
                 integrity=check.execute("PRAGMA integrity_check").fetchone()[0]
                 tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                 if integrity!="ok" or not {"admins","clients","settings","events"}.issubset(tables):
-                    raise HTTPException(400,"Backup database failed integrity/schema validation")
+                    raise HTTPException(400,"Backup database failed integrity/schema validation: integrity="+str(integrity)+", tables="+",".join(sorted(tables)))
             finally: check.close()
             path=Path(p.DB_PATH); path.parent.mkdir(parents=True,exist_ok=True)
             if path.exists():
