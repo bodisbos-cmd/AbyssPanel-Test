@@ -189,47 +189,46 @@ def test_subscription_html_escapes_names_and_shows_friendly_disabled_state(clien
     assert "اشتراک در دسترس نیست" in unavailable.text
 
 
+def _login_as(client, username, password):
+    page = client.get("/login")
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
+    response = client.post("/login", data={
+        "username": username, "password": password, "csrf_token": html.unescape(token)
+    }, follow_redirects=False)
+    assert response.status_code == 303
+    return client.get("/api/overview").json()["csrf"]
+
+
 def test_multi_admin_roles_and_owner_only_controls(client):
     owner_csrf = admin_login(client)
     made = client.post("/api/admin/users", json={
-        "username": "readonly", "password": "StrongPass123456", "role": "viewer"
+        "username": "readonly", "password": "StrongPass123456", "role": "admin"
     }, headers={"X-CSRF-Token": owner_csrf})
     assert made.status_code == 200, made.text
     user_id = made.json()["id"]
     assert client.get("/api/admin/users").status_code == 200
-    assert client.patch(f"/api/admin/users/{user_id}", json={"role": "admin"},
-                        headers={"X-CSRF-Token": owner_csrf}).status_code == 200
 
-    # Sign in as the newly created admin and verify that they can manage clients but not owner controls.
     client.get("/logout")
-    page = client.get("/login")
-    login_csrf = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
-    signed = client.post("/login", data={
-        "username": "readonly", "password": "StrongPass123456", "csrf_token": html.unescape(login_csrf)
-    }, follow_redirects=False)
-    assert signed.status_code == 303
-    csrf = client.get("/api/overview").json()["csrf"]
+    admin_csrf = _login_as(client, "readonly", "StrongPass123456")
     assert client.get("/api/overview").json()["user"]["role"] == "admin"
     assert client.get("/api/admin/users").status_code == 403
     assert client.get("/api/admin/api-keys").status_code == 403
     made_client = client.post("/api/clients", json={"name": "managed by admin"},
-                              headers={"X-CSRF-Token": csrf})
+                              headers={"X-CSRF-Token": admin_csrf})
     assert made_client.status_code == 200, made_client.text
 
-    # The viewer role may read but cannot mutate clients or access owner-only endpoints.
-    client.patch(f"/api/admin/users/{user_id}", json={"role": "viewer"},
-                 headers={"X-CSRF-Token": owner_csrf})
     client.get("/logout")
-    page = client.get("/login")
-    login_csrf = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
-    signed = client.post("/login", data={
-        "username": "readonly", "password": "StrongPass123456", "csrf_token": html.unescape(login_csrf)
-    }, follow_redirects=False)
-    assert signed.status_code == 303
-    csrf = client.get("/api/overview").json()["csrf"]
-    cid = client.get("/api/overview").json()["clients"][0]["id"]
-    assert client.get("/api/clients").status_code == 404 or client.get("/api/overview").status_code == 200
-    denied = client.patch(f"/api/clients/{cid}", json={"enabled": False},
-                          headers={"X-CSRF-Token": csrf})
-    assert denied.status_code == 403
+    owner_csrf = _login_as(client, "admin", "admin")
+    changed = client.patch(f"/api/admin/users/{user_id}", json={"role": "viewer"},
+                           headers={"X-CSRF-Token": owner_csrf})
+    assert changed.status_code == 200, changed.text
+
+    client.get("/logout")
+    viewer_csrf = _login_as(client, "readonly", "StrongPass123456")
+    assert client.get("/api/overview").json()["user"]["role"] == "viewer"
+    assert client.get("/api/admin/users").status_code == 403
     assert client.get("/api/admin/api-keys").status_code == 403
+    cid = client.get("/api/overview").json()["clients"][0]["id"]
+    denied = client.patch(f"/api/clients/{cid}", json={"enabled": False},
+                          headers={"X-CSRF-Token": viewer_csrf})
+    assert denied.status_code == 403
