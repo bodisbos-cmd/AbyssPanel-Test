@@ -178,24 +178,53 @@ async def create_client(r:Request):
     if not isinstance(note,str) or len(note)>300: raise HTTPException(422,"Note must be at most 300 characters")
     cid,uid,token=str(uuid.uuid4()),str(uuid.uuid4()),secrets.token_urlsafe(32)
     with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note) VALUES(?,?,?,?,1,?,?)",(cid,name,uid,token,utc_now(),note.strip()))
-    try: await start_xray()
-    except Exception as e: event("ERROR",f"Xray update failed: {e}"); raise HTTPException(503,"Client saved, but Xray update failed")
+    try:
+        await start_xray()
+    except Exception as e:
+        # Do not leave a client marked active when Xray rejected its config.
+        with db() as c: c.execute("DELETE FROM clients WHERE id=?",(cid,))
+        try: await start_xray()
+        except Exception as restore_error: event("ERROR",f"Xray recovery after failed client creation also failed: {restore_error}")
+        event("ERROR",f"Client creation rolled back because Xray update failed: {e}")
+        raise HTTPException(503,"Client was not created because Xray could not apply the configuration")
     event("INFO",f"Created client {name!r} ({cid[:8]})."); return {"id":cid,"name":name,"enabled":True}
 @app.patch("/api/clients/{cid}")
 async def update_client(cid:str,r:Request):
     require_admin(r); require_csrf(r); b=await r.json()
     if not isinstance(b.get("enabled"),bool): raise HTTPException(422,"enabled must be true or false")
     with db() as c:
-        cur=c.execute("UPDATE clients SET enabled=? WHERE id=?",(int(b["enabled"]),cid))
-        if not cur.rowcount: raise HTTPException(404,"Client not found")
-    await start_xray(); event("INFO",f"Updated client {cid[:8]}."); return {"ok":True}
+        row=c.execute("SELECT enabled FROM clients WHERE id=?",(cid,)).fetchone()
+        if not row: raise HTTPException(404,"Client not found")
+        old_enabled=int(row["enabled"])
+        c.execute("UPDATE clients SET enabled=? WHERE id=?",(int(b["enabled"]),cid))
+    try:
+        await start_xray()
+    except Exception as e:
+        with db() as c: c.execute("UPDATE clients SET enabled=? WHERE id=?",(old_enabled,cid))
+        try: await start_xray()
+        except Exception as restore_error: event("ERROR",f"Xray recovery after failed client update also failed: {restore_error}")
+        event("ERROR",f"Client update rolled back because Xray update failed: {e}")
+        raise HTTPException(503,"Client status was not changed because Xray could not apply the configuration")
+    event("INFO",f"Updated client {cid[:8]}."); return {"ok":True}
 @app.delete("/api/clients/{cid}")
 async def delete_client(cid:str,r:Request):
     require_admin(r); require_csrf(r)
     with db() as c:
-        cur=c.execute("DELETE FROM clients WHERE id=?",(cid,))
-        if not cur.rowcount: raise HTTPException(404,"Client not found")
-    await start_xray(); event("INFO",f"Revoked client {cid[:8]}."); return {"ok":True}
+        row=c.execute("SELECT id,name,client_uuid,sub_token,enabled,created_at,note FROM clients WHERE id=?",(cid,)).fetchone()
+        if not row: raise HTTPException(404,"Client not found")
+        previous=dict(row)
+        c.execute("DELETE FROM clients WHERE id=?",(cid,))
+    try:
+        await start_xray()
+    except Exception as e:
+        with db() as c:
+            c.execute("INSERT OR REPLACE INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note) VALUES(?,?,?,?,?,?,?)",
+                      (previous["id"],previous["name"],previous["client_uuid"],previous["sub_token"],previous["enabled"],previous["created_at"],previous["note"]))
+        try: await start_xray()
+        except Exception as restore_error: event("ERROR",f"Xray recovery after failed client revocation also failed: {restore_error}")
+        event("ERROR",f"Client revocation rolled back because Xray update failed: {e}")
+        raise HTTPException(503,"Client was not revoked because Xray could not apply the configuration")
+    event("INFO",f"Revoked client {cid[:8]}."); return {"ok":True}
 def get_base_url(r=None):
     if BASE_URL:return BASE_URL
     if PUBLIC_DOMAIN:return "https://"+PUBLIC_DOMAIN
