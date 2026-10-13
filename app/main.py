@@ -509,3 +509,7 @@ async def change_password(r: Request):
     except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Administrator password changed.")
     return {"ok": True}
+
+# Extended operations are isolated to keep core routing maintainable.
+from app.extended import install_extended
+install_extended(app, globals())
