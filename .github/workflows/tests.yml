@@ -19,6 +19,18 @@ jobs:
       - run: pytest -q
       - name: Check dashboard JavaScript syntax
         run: DATA_DIR=/tmp/abyss-js-check COOKIE_SECURE=0 python -c "import app.main as m; open('/tmp/abyss-dashboard.js','w').write(m.DASH_JS)" && node --check /tmp/abyss-dashboard.js
+      - name: Check subscription page JavaScript syntax
+        run: |
+          DATA_DIR=/tmp/abyss-sub-js-check COOKIE_SECURE=0 ABYSS_TEST_MODE=1 python - <<'PY'
+          import re
+          from app.main import render_subscription_page
+          page=render_subscription_page({"name":"Syntax Test","quota_bytes":None,"used_bytes":0,"expires_at":None},
+            [{"key":"ws","label":"ws","url":"vless://example"}],"https://example.test/sub/token","https://example.test/sub/token/qr")
+          scripts=re.findall(r"<script>(.*?)</script>",page,re.S)
+          assert len(scripts)>=2, "Expected subscription helper scripts"
+          open("/tmp/abyss-subscription.js","w",encoding="utf-8").write("\n".join(scripts))
+          PY
+          node --check /tmp/abyss-subscription.js
       - name: Build deployment image
         run: docker build --pull -t abysspanel-test:ci .
       - name: Smoke test the real container and Xray routes
