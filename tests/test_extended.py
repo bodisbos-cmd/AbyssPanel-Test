@@ -185,6 +185,9 @@ def test_dashboard_injects_hamburger_api_backup_and_metrics(client):
     assert 'id="apiPanel"' in page.text or "API و اتصال ربات" in page.text
     assert "پشتیبان‌گیری و بازیابی" in page.text
     assert "پایش زنده سرویس" in page.text
+    assert 'id="gCpu"' in page.text and 'id="gRam"' in page.text
+    assert 'id="gDisk"' in page.text and 'id="gSpeed"' in page.text
+    assert 'id="abyssMenuButton"' in page.text and 'aria-expanded="false"' in page.text
 
 
 def test_subscription_html_escapes_names_and_shows_friendly_disabled_state(client):
