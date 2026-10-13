@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import html
 import os
@@ -249,6 +250,92 @@ def test_failed_revoke_restores_usage_and_limits(client, monkeypatch):
     assert after["expires_at"] == before["expires_at"]
     assert after["quota_bytes"] == before["quota_bytes"]
     assert after["used_bytes"] == 34567
+
+
+def test_profile_settings_update_xray_and_subscription(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post("/api/clients", json={"name": "Profile test"}, headers=headers)
+    assert created.status_code == 200
+    cid = created.json()["id"]
+
+    settings = client.get("/api/settings")
+    assert settings.status_code == 200
+    assert len(settings.json()["profiles"]) == 4
+    assert all(p["enabled"] for p in settings.json()["profiles"])
+
+    changed = client.patch(
+        "/api/settings/profiles",
+        json={"profiles": {"ws": False, "xhttp_packet_up": False}},
+        headers=headers,
+    )
+    assert changed.status_code == 200
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto"}
+    config = panel.make_xray_config()
+    assert 10001 not in {i["port"] for i in config["inbounds"]}
+    assert 10004 not in {i["port"] for i in config["inbounds"]}
+
+    info = client.get(f"/api/clients/{cid}/subscription").json()
+    raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
+    links = base64.b64decode(raw.text).decode().splitlines()
+    assert len(links) == 2
+    assert all("type=ws" not in line for line in links)
+    assert all("packet-up" not in line for line in links)
+
+    rejected = client.patch(
+        "/api/settings/profiles",
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False}},
+        headers=headers,
+    )
+    assert rejected.status_code == 422
+
+
+def test_profile_settings_roll_back_if_xray_fails(client, monkeypatch):
+    csrf = admin_client(client)
+    calls = {"count": 0}
+    async def fail_once_then_recover():
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("simulated Xray failure")
+        panel.XRAY_CONFIG.write_text('{"recovered": true}', encoding="utf-8")
+    monkeypatch.setattr(panel, "start_xray", fail_once_then_recover)
+
+    response = client.patch(
+        "/api/settings/profiles",
+        json={"profiles": {"ws": False}},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert response.status_code == 503
+    assert panel.get_profile_flags()["ws"] is True
+    assert 10001 in {i["port"] for i in panel.make_xray_config()["inbounds"]}
+    assert calls["count"] == 2
+
+
+def test_usage_monitor_enforces_quota(client, monkeypatch, tmp_path):
+    csrf = admin_client(client)
+    created = client.post(
+        "/api/clients",
+        json={"name": "Quota test", "quota_gb": 1},
+        headers={"X-CSRF-Token": csrf},
+    )
+    cid = created.json()["id"]
+    with panel.db() as conn:
+        conn.execute("UPDATE clients SET used_bytes=? WHERE id=?", (1024**3 - 10, cid))
+
+    fake_xray = tmp_path / "xray"
+    fake_xray.write_text("test", encoding="utf-8")
+    monkeypatch.setattr(panel, "XRAY_BIN", str(fake_xray))
+    class RunningProcess:
+        def poll(self): return None
+    monkeypatch.setattr(panel, "xray_proc", RunningProcess())
+    monkeypatch.setattr(panel, "read_xray_stats", lambda: {cid[:8]: 20})
+    async def fake_restart(): return None
+    monkeypatch.setattr(panel, "start_xray", fake_restart)
+
+    asyncio.run(panel.enforce_client_limits())
+    row = client.get("/api/overview").json()["clients"][0]
+    assert row["used_bytes"] == 1024**3 + 10
+    assert row["enabled"] is False
 
 
 def test_dashboard_has_persian_english_toggle(client):
