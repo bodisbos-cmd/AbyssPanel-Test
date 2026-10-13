@@ -301,7 +301,7 @@ async def read_settings(r:Request):
 
 @app.patch("/api/settings/profiles")
 async def update_profile_settings(r:Request):
-    require_admin(r); require_csrf(r); body=await r.json()
+    require_role(r,"owner","admin"); require_csrf(r); body=await r.json()
     profiles=body.get("profiles") if isinstance(body,dict) else None
     keys={p["key"] for p in PROFILES}
     if not isinstance(profiles,dict) or not profiles or set(profiles)-keys or any(not isinstance(v,bool) for v in profiles.values()):
@@ -330,7 +330,9 @@ async def update_profile_settings(r:Request):
 
 @app.post("/api/clients")
 async def create_client(r:Request):
-    require_admin(r); require_csrf(r); b=await r.json(); name=valid_name(b.get("name")); note=b.get("note","")
+    require_role(r,"owner","admin"); require_csrf(r); b=await r.json()
+    if not isinstance(b,dict): raise HTTPException(422,"JSON object required")
+    name=valid_name(b.get("name")); note=b.get("note","")
     if not isinstance(note,str) or len(note)>300: raise HTTPException(422,"Note must be at most 300 characters")
     days=b.get("duration_days"); quota=b.get("quota_gb")
     if days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or not float(days).is_integer() or days<1 or days>3650): raise HTTPException(422,"duration_days must be a whole number from 1 to 3650")
@@ -351,7 +353,7 @@ async def create_client(r:Request):
     event("INFO",f"Created client {name!r} ({cid[:8]})."); return {"id":cid,"name":name,"enabled":True}
 @app.patch("/api/clients/{cid}")
 async def update_client(cid:str,r:Request):
-    require_admin(r); require_csrf(r); b=await r.json()
+    require_role(r,"owner","admin"); require_csrf(r); b=await r.json()
     allowed={"enabled","name","note","duration_days","quota_gb"}
     if not isinstance(b,dict) or not b or set(b)-allowed: raise HTTPException(422,"Provide supported client fields only")
     if "enabled" in b and not isinstance(b["enabled"],bool): raise HTTPException(422,"enabled must be true or false")
@@ -385,7 +387,7 @@ async def update_client(cid:str,r:Request):
 
 @app.post("/api/clients/{cid}/reset-usage")
 async def reset_client_usage(cid:str,r:Request):
-    require_admin(r); require_csrf(r)
+    require_role(r,"owner","admin"); require_csrf(r)
     with db() as c:
         row=c.execute("SELECT name FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
@@ -397,7 +399,7 @@ async def reset_client_usage(cid:str,r:Request):
     return {"ok":True}
 @app.delete("/api/clients/{cid}")
 async def delete_client(cid:str,r:Request):
-    require_admin(r); require_csrf(r)
+    require_role(r,"owner","admin"); require_csrf(r)
     with db() as c:
         row=c.execute("SELECT * FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
