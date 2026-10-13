@@ -142,12 +142,12 @@ async def login_page(r:Request):
 @app.post("/login")
 async def login(r:Request,username:str=Form(...),password:str=Form(...)):
     f=await r.form(); a=str(f.get("csrf_token","")); b=str(r.session.get("login_csrf",""))
-    if not a or not b or not hmac.compare_digest(a,b): raise HTTPException(403,"Session expired; reload login")
+    if not a or not b or not hmac.compare_digest(a,b):\n        token=secrets.token_urlsafe(24); r.session["login_csrf"]=token\n        return HTMLResponse(LOGIN.replace("{{ERROR}}","Session expired. Please try again.").replace("{{CSRF}}",token),status_code=403)
     ip=r.client.host if r.client else "unknown"
-    if not rate_check(r,"login:"+ip): raise HTTPException(429,"Too many attempts")
+    if not rate_check(r,"login:"+ip):\n        token=secrets.token_urlsafe(24); r.session["login_csrf"]=token\n        return HTMLResponse(LOGIN.replace("{{ERROR}}","Too many attempts. Wait five minutes.").replace("{{CSRF}}",token),status_code=429)
     with db() as c: row=c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
     if not row or username!="admin" or not verify_password(password,row["password_hash"]):
-        event("WARNING","Rejected administrator sign-in attempt."); raise HTTPException(401,"Invalid username or password")
+        event("WARNING","Rejected administrator sign-in attempt.")\n        token=secrets.token_urlsafe(24); r.session["login_csrf"]=token\n        return HTMLResponse(LOGIN.replace("{{ERROR}}","Invalid username or password.").replace("{{CSRF}}",token),status_code=401)
     r.session.clear(); r.session["admin"]=True; r.session["csrf"]=secrets.token_urlsafe(32); event("INFO","Administrator signed in.")
     return RedirectResponse("/",303)
 @app.get("/logout")
