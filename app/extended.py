@@ -31,6 +31,7 @@ def _scopes(raw):
     except (ValueError,TypeError): return set()
 
 def _api_auth(r,p,scope):
+    _init(p)
     scheme,_,token=r.headers.get("authorization","").partition(" ")
     if scheme.lower()!="bearer" or not token or len(token)>256:
         raise HTTPException(401,"A valid Bearer API token is required",headers={"WWW-Authenticate":"Bearer"})
@@ -104,7 +105,7 @@ def install_extended(app, namespace):
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):
-        _admin(request,p)
+        _admin(request,p); _init(p)
         with p.db() as c:
             rows=[dict(x) for x in c.execute("SELECT id,name,token_prefix,scopes,created_at,last_used_at,enabled FROM api_keys ORDER BY created_at DESC")]
         for x in rows: x["scopes"]=sorted(_scopes(x["scopes"])); x["enabled"]=bool(x["enabled"])
@@ -112,7 +113,7 @@ def install_extended(app, namespace):
 
     @app.post("/api/admin/api-keys")
     async def create_api_key(request:Request):
-        _admin(request,p); _csrf(request,p); body=await request.json()
+        _admin(request,p); _csrf(request,p); _init(p); body=await request.json()
         name=p.valid_name(body.get("name"))
         if len(name)>48: raise HTTPException(422,"API key name must be at most 48 characters")
         allowed={"clients:read","clients:write","subscriptions:read"}
@@ -128,7 +129,7 @@ def install_extended(app, namespace):
 
     @app.delete("/api/admin/api-keys/{key_id}")
     async def revoke_api_key(key_id:str,request:Request):
-        _admin(request,p); _csrf(request,p)
+        _admin(request,p); _csrf(request,p); _init(p)
         with p.db() as c:
             cur=c.execute("UPDATE api_keys SET enabled=0 WHERE id=? AND enabled=1",(key_id,))
             if not cur.rowcount: raise HTTPException(404,"API key not found or already revoked")
@@ -273,6 +274,8 @@ def install_extended(app, namespace):
                 try: src.backup(dst); dst.commit()
                 finally: dst.close(); src.close()
             replace(restored)
+            p.init_db()
+            _init(p)
             try: await p.start_xray()
             except Exception as exc:
                 if previous.exists():
