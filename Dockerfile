@@ -1,19 +1,21 @@
+FROM ghcr.io/xtls/xray-core:26.9.8 AS xray
+
 FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/data XRAY_BIN=/usr/local/bin/xray COOKIE_SECURE=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DATA_DIR=/data \
+    XRAY_BIN=/usr/local/bin/xray \
+    COOKIE_SECURE=1
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip nginx && rm -rf /var/lib/apt/lists/* && rm -f /etc/nginx/sites-enabled/default
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl nginx \
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -f /etc/nginx/sites-enabled/default
 
-# Fetch the official Xray Linux x64 release and verify its published SHA-256.
-RUN set -eu; \
-    tag="$(curl -fsSL --retry 3 --retry-delay 2 https://api.github.com/repos/XTLS/Xray-core/releases/latest | python -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"; \
-    url="https://github.com/XTLS/Xray-core/releases/download/${tag}"; \
-    curl -fsSL --retry 3 --retry-delay 2 "${url}/Xray-linux-64.zip" -o /tmp/xray.zip; \
-    curl -fsSL --retry 3 --retry-delay 2 "${url}/Xray-linux-64.zip.dgst" -o /tmp/xray.dgst; \
-    expected="$(grep -i "SHA256" /tmp/xray.dgst | grep -oE "[0-9a-fA-F]{64}" | head -n 1)"; \
-    test -n "$expected"; printf '%s  %s\n' "$expected" /tmp/xray.zip | sha256sum -c -; \
-    unzip -q /tmp/xray.zip xray -d /usr/local/bin; chmod 0755 /usr/local/bin/xray; \
-    rm -f /tmp/xray.zip /tmp/xray.dgst; /usr/local/bin/xray version
+# Copy the official Xray binary from the upstream, version-pinned image.
+COPY --from=xray /usr/local/bin/xray /usr/local/bin/xray
+RUN /usr/local/bin/xray version
 
 WORKDIR /app
 COPY requirements.txt ./requirements.txt
