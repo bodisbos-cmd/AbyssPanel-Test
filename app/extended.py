@@ -4,8 +4,6 @@ import hashlib, hmac, io, json, os, shutil, sqlite3, tempfile, time, zipfile, se
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
-import urllib.error
-import urllib.request
 from fastapi import File, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 
@@ -100,16 +98,18 @@ def _metrics(p):
 def _probe_profile(profile):
     started=time.monotonic()
     result={"key":profile["key"],"label":profile["label"],"path":profile["path"],"latency_ms":None,"http_status":None,"route_ok":False,"error":None}
+    connection=None
     try:
-        req=urllib.request.Request("http://127.0.0.1:8080"+profile["path"],headers={"Host":"localhost","Connection":"close"})
-        try:
-            with urllib.request.urlopen(req,timeout=0.8) as response:  # nosec B310 - fixed loopback host and static profile paths only
-                result["http_status"]=response.status
-        except urllib.error.HTTPError as exc:
-            result["http_status"]=exc.code
+        connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=0.8)
+        connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
+        response=connection.getresponse()
+        result["http_status"]=response.status
+        response.read(1)
         result["route_ok"]=result["http_status"] not in {502,503,504}
-    except (urllib.error.URLError,TimeoutError,OSError) as exc:
+    except (http.client.HTTPException,TimeoutError,OSError) as exc:
         result["error"]="Gateway/route did not respond: "+str(exc)[:120]
+    finally:
+        if connection: connection.close()
     result["latency_ms"]=round((time.monotonic()-started)*1000,1)
     return result
 
@@ -440,6 +440,8 @@ def install_extended(app, namespace):
 
     @app.get("/s/{token}/diagnostics")
     async def subscription_diagnostics(token:str,request:Request):
+        if not p.rate_check(request,"subdiag:"+token[:16],limit=8,window=60):
+            raise HTTPException(429,"Too many diagnostic checks; wait a minute and retry")
         client=p.active_subscription_client(token); flags=p.get_profile_flags(); links=p.make_subscription_links(client,request)
         expires=client.get("expires_at"); expired=bool(expires and expires<=_utc())
         quota=client.get("quota_bytes"); used=int(client.get("used_bytes") or 0)
