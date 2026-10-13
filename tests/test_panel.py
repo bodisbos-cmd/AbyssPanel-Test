@@ -356,7 +356,7 @@ def test_usage_monitor_enforces_quota(client, monkeypatch, tmp_path):
         def poll(self): return None
         def terminate(self): return None
     monkeypatch.setattr(panel, "xray_proc", RunningProcess())
-    monkeypatch.setattr(panel, "read_xray_stats", lambda: {cid[:8]: 20})
+    monkeypatch.setattr(panel, "read_xray_stats", lambda: {cid: 20})
     async def fake_restart(): return None
     monkeypatch.setattr(panel, "start_xray", fake_restart)
 
