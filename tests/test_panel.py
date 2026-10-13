@@ -145,6 +145,112 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
 
 
+def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
+    csrf = admin_client(client)
+    created = client.post(
+        "/api/clients",
+        json={"name": "Portal user", "duration_days": 14, "quota_gb": 8},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert created.status_code == 200
+    cid = created.json()["id"]
+    info = client.get(f"/api/clients/{cid}/subscription").json()
+    assert info["url"].startswith("https://testserver/sub/")
+    assert info["page_url"].startswith("https://testserver/s/")
+    assert info["qr_url"].endswith("/qr")
+
+    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
+    assert page.status_code == 200
+    assert "viewport-fit=cover" in page.text
+    assert "Abyss Tunnel" in page.text
+    assert "Portal user" in page.text
+    assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
+    assert page.headers["cache-control"] == "no-store"
+    assert "noindex, nofollow" in page.headers["x-robots-tag"]
+
+    qr = client.get(info["qr_url"].replace("https://testserver", "http://testserver"))
+    assert qr.status_code == 200
+    assert "image/svg+xml" in qr.headers["content-type"]
+    assert b"<svg" in qr.content
+    assert qr.headers["cache-control"] == "no-store"
+
+    paused = client.patch(f"/api/clients/{cid}", json={"enabled": False}, headers={"X-CSRF-Token": csrf})
+    assert paused.status_code == 200
+    assert client.get(f"/s/{info['url'].rsplit('/', 1)[1]}").status_code == 404
+    assert client.get(f"/sub/{info['url'].rsplit('/', 1)[1]}/qr").status_code == 404
+
+
+def test_edit_client_and_reset_usage(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post(
+        "/api/clients",
+        json={"name": "Before", "duration_days": 7, "quota_gb": 5, "note": "old"},
+        headers=headers,
+    )
+    assert created.status_code == 200
+    cid = created.json()["id"]
+    with panel.db() as conn:
+        conn.execute("UPDATE clients SET used_bytes=? WHERE id=?", (12345, cid))
+
+    edited = client.patch(
+        f"/api/clients/{cid}",
+        json={"name": "After", "note": "new", "duration_days": 21, "quota_gb": 12},
+        headers=headers,
+    )
+    assert edited.status_code == 200
+    row = client.get("/api/overview").json()["clients"][0]
+    assert row["name"] == "After"
+    assert row["note"] == "new"
+    assert row["quota_bytes"] == 12 * 1024**3
+    assert row["used_bytes"] == 12345
+    assert row["expires_at"]
+
+    reset = client.post(f"/api/clients/{cid}/reset-usage", headers=headers)
+    assert reset.status_code == 200
+    assert client.get("/api/overview").json()["clients"][0]["used_bytes"] == 0
+
+    unlimited = client.patch(
+        f"/api/clients/{cid}",
+        json={"duration_days": None, "quota_gb": None},
+        headers=headers,
+    )
+    assert unlimited.status_code == 200
+    row = client.get("/api/overview").json()["clients"][0]
+    assert row["expires_at"] is None
+    assert row["quota_bytes"] is None
+
+
+def test_failed_revoke_restores_usage_and_limits(client, monkeypatch):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post(
+        "/api/clients",
+        json={"name": "Rollback metadata", "duration_days": 20, "quota_gb": 7},
+        headers=headers,
+    )
+    cid = created.json()["id"]
+    with panel.db() as conn:
+        conn.execute("UPDATE clients SET used_bytes=34567 WHERE id=?", (cid,))
+    before = client.get("/api/overview").json()["clients"][0]
+
+    calls = {"count": 0}
+    async def fail_once_then_recover():
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise RuntimeError("simulated Xray failure")
+        panel.XRAY_CONFIG.write_text('{"recovered": true}', encoding="utf-8")
+    monkeypatch.setattr(panel, "start_xray", fail_once_then_recover)
+
+    response = client.delete(f"/api/clients/{cid}", headers=headers)
+    assert response.status_code == 503
+    after = client.get("/api/overview").json()["clients"][0]
+    assert after["id"] == before["id"]
+    assert after["expires_at"] == before["expires_at"]
+    assert after["quota_bytes"] == before["quota_bytes"]
+    assert after["used_bytes"] == 34567
+
+
 def test_dashboard_has_persian_english_toggle(client):
     csrf = admin_client(client)
     page = client.get("/")
