@@ -327,6 +327,7 @@ def test_usage_monitor_enforces_quota(client, monkeypatch, tmp_path):
     monkeypatch.setattr(panel, "XRAY_BIN", str(fake_xray))
     class RunningProcess:
         def poll(self): return None
+        def terminate(self): return None
     monkeypatch.setattr(panel, "xray_proc", RunningProcess())
     monkeypatch.setattr(panel, "read_xray_stats", lambda: {cid[:8]: 20})
     async def fake_restart(): return None
@@ -335,7 +336,7 @@ def test_usage_monitor_enforces_quota(client, monkeypatch, tmp_path):
     asyncio.run(panel.enforce_client_limits())
     row = client.get("/api/overview").json()["clients"][0]
     assert row["used_bytes"] == 1024**3 + 10
-    assert row["enabled"] is False
+    assert not row["enabled"]
 
 
 def test_dashboard_has_persian_english_toggle(client):
