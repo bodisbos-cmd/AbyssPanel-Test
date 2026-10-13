@@ -46,16 +46,19 @@ def _api_auth(r,p,scope):
     if scheme.lower()!="bearer" or not token or len(token)>256:
         raise HTTPException(401,"A valid Bearer API token is required",headers={"WWW-Authenticate":"Bearer"})
     digest=_hash(token)
+    expired=False
     with p.db() as c:
         row=c.execute("SELECT id,name,token_hash,scopes,enabled,expires_at FROM api_keys WHERE token_hash=?",(digest,)).fetchone()
         if not row or not row["enabled"] or not hmac.compare_digest(row["token_hash"],digest):
             raise HTTPException(401,"Invalid or revoked API token",headers={"WWW-Authenticate":"Bearer"})
         if row["expires_at"] and row["expires_at"]<=_utc():
             c.execute("UPDATE api_keys SET enabled=0 WHERE id=?",(row["id"],))
-            raise HTTPException(401,"API token expired",headers={"WWW-Authenticate":"Bearer"})
-        scopes=_scopes(row["scopes"])
-        if scope not in scopes: raise HTTPException(403,"API token does not have the required permission")
-        c.execute("UPDATE api_keys SET last_used_at=? WHERE id=?",(_utc(),row["id"]))
+            expired=True
+        else:
+            scopes=_scopes(row["scopes"])
+            if scope not in scopes: raise HTTPException(403,"API token does not have the required permission")
+            c.execute("UPDATE api_keys SET last_used_at=? WHERE id=?",(_utc(),row["id"]))
+    if expired: raise HTTPException(401,"API token expired",headers={"WWW-Authenticate":"Bearer"})
     if not p.rate_check(r,"api:"+row["id"],limit=180,window=60):
         raise HTTPException(429,"API request limit reached")
     return row
