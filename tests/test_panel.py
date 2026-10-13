@@ -141,7 +141,7 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
-    xhttp = [item for item in inbounds if item["streamSettings"].get("network") == "xhttp"]
+    xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
     assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
 
 def test_health_endpoint(client):
