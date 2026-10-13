@@ -2,6 +2,11 @@ import base64
 import html
 import os
 import re
+import sys
+from pathlib import Path
+
+# Ensure the repository root is importable regardless of pytest's import mode.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 os.environ["DATA_DIR"] = "/tmp/abyss-panel-test-import"
 os.environ["COOKIE_SECURE"] = "0"
