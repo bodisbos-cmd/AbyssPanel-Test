@@ -25,7 +25,9 @@ def _init(panel):
         c.execute("""CREATE TABLE IF NOT EXISTS api_keys(
             id TEXT PRIMARY KEY, name TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE,
             token_prefix TEXT NOT NULL, scopes TEXT NOT NULL, created_at TEXT NOT NULL,
-            last_used_at TEXT, enabled INTEGER NOT NULL DEFAULT 1)""")
+            last_used_at TEXT, enabled INTEGER NOT NULL DEFAULT 1, expires_at TEXT)""")
+        cols={row["name"] for row in c.execute("PRAGMA table_info(api_keys)")}
+        if "expires_at" not in cols: c.execute("ALTER TABLE api_keys ADD COLUMN expires_at TEXT")
         c.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_enabled ON api_keys(enabled)")
 
 def _admin(r, p): p.require_admin(r)
@@ -45,9 +47,12 @@ def _api_auth(r,p,scope):
         raise HTTPException(401,"A valid Bearer API token is required",headers={"WWW-Authenticate":"Bearer"})
     digest=_hash(token)
     with p.db() as c:
-        row=c.execute("SELECT id,name,token_hash,scopes,enabled FROM api_keys WHERE token_hash=?",(digest,)).fetchone()
+        row=c.execute("SELECT id,name,token_hash,scopes,enabled,expires_at FROM api_keys WHERE token_hash=?",(digest,)).fetchone()
         if not row or not row["enabled"] or not hmac.compare_digest(row["token_hash"],digest):
             raise HTTPException(401,"Invalid or revoked API token",headers={"WWW-Authenticate":"Bearer"})
+        if row["expires_at"] and row["expires_at"]<=_utc():
+            c.execute("UPDATE api_keys SET enabled=0 WHERE id=?",(row["id"],))
+            raise HTTPException(401,"API token expired",headers={"WWW-Authenticate":"Bearer"})
         scopes=_scopes(row["scopes"])
         if scope not in scopes: raise HTTPException(403,"API token does not have the required permission")
         c.execute("UPDATE api_keys SET last_used_at=? WHERE id=?",(_utc(),row["id"]))
@@ -225,7 +230,7 @@ def install_extended(app, namespace):
     async def list_api_keys(request:Request):
         _role(request,p,"owner"); _init(p)
         with p.db() as c:
-            rows=[dict(x) for x in c.execute("SELECT id,name,token_prefix,scopes,created_at,last_used_at,enabled FROM api_keys ORDER BY created_at DESC")]
+            rows=[dict(x) for x in c.execute("SELECT id,name,token_prefix,scopes,created_at,last_used_at,enabled,expires_at FROM api_keys ORDER BY created_at DESC")]
         for x in rows: x["scopes"]=sorted(_scopes(x["scopes"])); x["enabled"]=bool(x["enabled"])
         return {"keys":rows}
 
@@ -239,12 +244,16 @@ def install_extended(app, namespace):
         scopes=body.get("scopes",sorted(allowed))
         if not isinstance(scopes,list) or not scopes or any(x not in allowed for x in scopes):
             raise HTTPException(422,"Choose supported API permissions")
+        days=body.get("expires_in_days")
+        if days is not None and (not isinstance(days,int) or isinstance(days,bool) or not 1<=days<=3650):
+            raise HTTPException(422,"expires_in_days must be an integer from 1 to 3650, or null")
+        expires=(datetime.now(timezone.utc)+timedelta(days=days)).isoformat(timespec="seconds") if days is not None else None
         scopes=sorted(set(scopes)); token="aby_"+secrets.token_urlsafe(36); kid=uuid.uuid4().hex
         with p.db() as c:
-            c.execute("INSERT INTO api_keys(id,name,token_hash,token_prefix,scopes,created_at,enabled) VALUES(?,?,?,?,?,?,1)",
-              (kid,name,_hash(token),token[:12],json.dumps(scopes),_utc()))
+            c.execute("INSERT INTO api_keys(id,name,token_hash,token_prefix,scopes,created_at,enabled,expires_at) VALUES(?,?,?,?,?,?,1,?)",
+              (kid,name,_hash(token),token[:12],json.dumps(scopes),_utc(),expires))
         p.event("INFO",f"Created bot API key {name!r} ({kid[:8]}).")
-        return {"id":kid,"name":name,"token":token,"prefix":token[:12],"scopes":scopes}
+        return {"id":kid,"name":name,"token":token,"prefix":token[:12],"scopes":scopes,"expires_at":expires}
 
     @app.delete("/api/admin/api-keys/{key_id}")
     async def revoke_api_key(key_id:str,request:Request):
