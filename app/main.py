@@ -508,8 +508,15 @@ async def change_password(r: Request):
     try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
     except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Administrator password changed.")
-    return {"ok": True}
+    return {"ok": True
 
-# Extended operations are isolated to keep core routing maintainable.
-from app.extended import install_extended
+# Load extension by package name in production and by file path in isolated test imports.
+try:
+    from app.extended import install_extended
+except ModuleNotFoundError:
+    import importlib.util
+    _extension_spec = importlib.util.spec_from_file_location("abyss_extended", Path(__file__).with_name("extended.py"))
+    _extension_module = importlib.util.module_from_spec(_extension_spec)
+    _extension_spec.loader.exec_module(_extension_module)
+    install_extended = _extension_module.install_extended
 install_extended(app, globals())
