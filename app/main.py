@@ -84,7 +84,7 @@ def valid_name(name:Any):
     if not name or len(name)>64 or any(ord(x)<32 for x in name): raise HTTPException(422,"Client name must be 1–64 printable characters")
     return name
 def make_xray_config():
-    clients=[{"id":x["client_uuid"],"email":f"client-{x['id'][:8]}"} for x in get_clients(True) if x["enabled"]]
+    clients=[{"id":x["client_uuid"],"email":f"client-{x['id']}"} for x in get_clients(True) if x["enabled"]]
     ins=[{"tag":"api","listen":"127.0.0.1","port":10085,"protocol":"dokodemo-door","settings":{"address":"127.0.0.1","port":10085,"network":"tcp"}}]
     flags=get_profile_flags()
     for profile in PROFILES:
@@ -126,7 +126,7 @@ def read_xray_stats():
     stats={}
     for item in payload.get("stat",payload.get("stats",[])):
         name=str(item.get("name","")); value=int(item.get("value",0))
-        # user>>>client-<8 chars>>>traffic>>>uplink/downlink
+        # user>>>client-<client UUID>>>traffic>>>uplink/downlink
         bits=name.split(">>>")
         if len(bits)>=4 and bits[0]=="user" and bits[1].startswith("client-") and bits[2]=="traffic":
             cid=bits[1].removeprefix("client-")
@@ -137,8 +137,13 @@ def apply_xray_stats(stats):
     if not stats: return
     with db() as c:
         for key,delta in stats.items():
-            if delta>0:
+            if delta<=0: continue
+            # Accept legacy 8-character emails during a rolling upgrade, but
+            # use the full UUID for new Xray stats to avoid prefix collisions.
+            if len(key)==8:
                 c.execute("UPDATE clients SET used_bytes=used_bytes+? WHERE substr(id,1,8)=?",(int(delta),key))
+            else:
+                c.execute("UPDATE clients SET used_bytes=used_bytes+? WHERE id=?",(int(delta),key))
 
 async def enforce_client_limits():
     if not Path(XRAY_BIN).exists() or not xray_proc or xray_proc.poll() is not None: return
