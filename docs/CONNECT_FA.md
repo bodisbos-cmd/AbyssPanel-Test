@@ -16,10 +16,11 @@
 
 ## دانلودهای رسمی
 - Android از Google Play: [Hiddify](https://play.google.com/store/apps/details?id=app.hiddify.com)
+- iPhone/iPad: [Hiddify در App Store](https://apps.apple.com/app/hiddify-proxy-vpn/id6596777532)
 - Android: [v2rayNG Releases](https://github.com/2dust/v2rayNG/releases)
 - چندسکویی: [Hiddify Releases](https://github.com/hiddify/hiddify-app/releases)
 - Android: [NekoBox for Android Releases](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases)
-- Windows: [v2rayN Releases](https://github.com/2dust/v2rayN/releases)
+- Windows / macOS / Linux: [v2rayN Releases](https://github.com/2dust/v2rayN/releases)
 
 لینک‌ها به صفحات رسمی انتشار پروژه‌ها اشاره دارند، نه سایت‌های دانلود متفرقه. از فایل APK یا نصب‌کننده ناشناس استفاده نکن. سازگاری فروشگاه‌ها و نسخه‌ها ممکن است با کشور یا دستگاه متفاوت باشد.
 
