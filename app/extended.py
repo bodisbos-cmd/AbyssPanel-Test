@@ -317,6 +317,16 @@ def install_extended(app, namespace):
     @app.middleware("http")
     async def abyss_extras(request:Request,call_next):
         response=await call_next(request); path=request.url.path
+        if path.startswith("/s/") and path.count("/") == 2 and response.status_code == 404:
+            message = "این اشتراک در دسترس نیست؛ ممکن است غیرفعال یا منقضی شده باشد."
+            channel = os.getenv("ABYSS_CHANNEL_URL", "").strip()
+            parsed = urlsplit(channel) if channel else None
+            support = ""
+            if parsed and parsed.scheme == "https" and parsed.hostname in {"t.me", "www.t.me", "telegram.me"}:
+                support = '<a href="' + p.html_escape(channel, quote=True) + '" rel="noopener noreferrer">ارتباط با پشتیبانی ↗</a>'
+            return HTMLResponse(
+                '<!doctype html><html lang="fa" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Abyss Tunnel · اشتراک در دسترس نیست</title><body style="margin:0;min-height:100vh;display:grid;place-items:center;background:#080b12;color:#edf2ff;font:15px system-ui;padding:20px"><main style="width:min(480px,100%);padding:25px;border:1px solid #273749;border-radius:18px;background:#101622"><div style="color:#8de8d6">◈ ABYSS TUNNEL</div><h1>اشتراک در دسترس نیست</h1><p style="line-height:1.9;color:#9aabc0">' + message + '</p>' + support + '</main></body></html>',
+                status_code=404, headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
         if "text/html" not in response.headers.get("content-type","") or response.status_code!=200: return response
         if not (path=="/" or (path.startswith("/s/") and path.count("/")==2)): return response
         try: body=b"".join([part async for part in response.body_iterator]).decode("utf-8")
