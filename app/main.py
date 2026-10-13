@@ -411,7 +411,13 @@ def active_subscription_client(token):
     if len(token)>100: raise HTTPException(404,"Not found")
     with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=? AND enabled=1",(token,)).fetchone()
     if not client: raise HTTPException(404,"Subscription not found or disabled")
-    return dict(client)
+    client=dict(client)
+    if client.get("expires_at") and client["expires_at"]<=utc_now():
+        raise HTTPException(404,"Subscription not found or disabled")
+    quota=client.get("quota_bytes")
+    if quota is not None and int(client.get("used_bytes") or 0)>=int(quota):
+        raise HTTPException(404,"Subscription not found or disabled")
+    return client
 
 def make_subscription_links(client, r):
     base=get_base_url(r)
