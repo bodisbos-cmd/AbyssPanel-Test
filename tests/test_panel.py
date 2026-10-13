@@ -144,6 +144,26 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
     assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
 
+
+def test_dashboard_has_persian_english_toggle(client):
+    csrf = admin_client(client)
+    page = client.get("/")
+    assert page.status_code == 200
+    assert 'lang="fa" dir="rtl"' in page.text
+    script = client.get("/dashboard.js")
+    assert script.status_code == 200
+    assert "toggleLanguage" in script.text
+    assert "localStorage.setItem('abyss-lang',lang)" in script.text
+    assert "fa:" in script.text and "en:" in script.text
+
+
+def test_nginx_xhttp_uses_prefix_locations():
+    config = (Path(__file__).resolve().parents[1] / "nginx" / "default.conf").read_text(encoding="utf-8")
+    assert "location ^~ /xhttp {" in config
+    assert "location ^~ /xhttp-packet {" in config
+    assert "location = /xhttp {" not in config
+    assert "location = /xhttp-packet {" not in config
+
 def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
