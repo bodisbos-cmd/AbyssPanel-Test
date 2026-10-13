@@ -1,45 +1,66 @@
-# AbyssPanel-Test
+# Abyss Tunnel Panel
 
-A responsive Xray/VLESS control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
+پنل مدیریتی Xray/VLESS با تمرکز بر Railway، داشبورد فارسی، مدیریت سرویس، اشتراک مشتری، API ربات و ابزارهای عملیاتی. وضعیت پروژه: **نسخه توسعه/آزمایشی**؛ پیش از استفاده تجاری باید اتصال واقعی هر پروفایل از شبکه‌های هدف آزمایش شود.
 
-> **Status:** test-stage build, not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
+## امکانات فعلی
+- داشبورد فارسی RTL و انگلیسی، واکنش‌گرا و منوی همبرگری.
+- ورود مدیر، هش رمز با scrypt، نشست امن، محافظت CSRF، محدودسازی تلاش ورود و هدرهای امنیتی.
+- ساخت، ویرایش، توقف/فعال‌سازی، حذف، ریست مصرف، حجم و تاریخ انقضا برای مشتری.
+- لینک اشتراک Base64، صفحه اشتراک، QR و لینک‌های مستقیم پروفایل‌های فعال.
+- فعال/غیرفعال‌سازی پروفایل‌ها با بازگردانی تنظیمات در صورت شکست اعمال Xray.
+- پایش CPU/RAM/دیسک کانتینر، وضعیت Xray، تعداد مشتریان و تغییر مصرف ثبت‌شده.
+- API Token با مجوزهای تفکیک‌شده برای اتصال ربات؛ کلید خام فقط هنگام ساخت نمایش داده می‌شود و فقط هش آن ذخیره می‌شود.
+- دانلود نسخه پشتیبان ZIP و بازیابی با بررسی ساختار و صحت SQLite، همراه با تلاش برای بازگردانی نسخه قبلی اگر اعمال Xray پس از بازیابی شکست بخورد.
+- صفحه راهنمای اتصال، لینک‌های رسمی دریافت کلاینت و بررسی اولیه سرویس/اشتراک.
+- رویدادهای عملیاتی، اعتبارسنجی ورودی و تست خودکار.
 
-## Features
+## استقرار روی Railway
+1. این مخزن را به سرویس Railway متصل کن و از Dockerfile استفاده کن.
+2. یک Volume با mount path برابر /data بساز؛ دیتابیس، کلید نشست و فایل رمز اولیه در این مسیر قرار دارند.
+3. دامنه عمومی HTTPS برای سرویس با پورت 8080 بساز.
+4. در اولین راه‌اندازی، رمز تصادفی مدیر از لاگ اولین اجرا یا فایل /data/INITIAL_ADMIN_PASSWORD.txt برداشته می‌شود. نام کاربری admin است؛ بلافاصله رمز را تغییر بده.
+5. اگر دامنه اشتراک باید متفاوت باشد، BASE_URL را با آدرس HTTPS نهایی تنظیم کن.
+6. برای نمایش تبلیغ کانال خودت در صفحه اشتراک، متغیرهای ABYSS_CHANNEL_URL و ABYSS_CHANNEL_TEXT را تنظیم کن. لینک فقط از دامنه‌های Telegram پذیرفته می‌شود و از داخل پنل مشتری قابل ویرایش نیست.
 
-- Responsive dark dashboard with Persian (RTL) and English language support.
-- Unique random initial administrator password on fresh installs. It is written to `/data/INITIAL_ADMIN_PASSWORD.txt` and startup logs; change it immediately. Existing database credentials are not overwritten during upgrades.
-- Signed HTTP-only session cookie, CSRF protection on mutations, login throttling, security headers, and scrypt password hashing.
-- SQLite database in `/data` for persistent Railway Volume storage.
-- Create, edit, pause/enable, revoke, and reset recorded usage for clients.
-- Optional expiry and traffic quota, with automatic disabling after expiry or quota exhaustion.
-- Settings page to enable/disable each connection profile; updates are rolled back if Xray cannot apply the configuration.
-- A private token per client. `/s/<token>` is a branded responsive subscription page with profile links and a QR code; `/sub/<token>` remains a Base64 subscription endpoint for compatible client apps.
-- Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
-- Xray configuration validation, basic process recovery, and a health endpoint.
+**Volume را حذف نکن.** حذف آن می‌تواند دیتابیس و کلید نشست را از بین ببرد. قبل از تغییرات مهم از داشبورد بکاپ بگیر و فایل را خارج از سرویس، در محل امن نگه دار.
 
-## Railway deployment
+## اتصال ربات
+در داشبورد، بخش «API و اتصال بات» یک کلید بساز و فقط مجوزهای لازم را انتخاب کن. کلید کامل یک بار نمایش داده می‌شود. آن را در متغیر محیطی امن ربات ذخیره کن؛ هرگز در مخزن GitHub قرار نده.
 
-1. Deploy this repository to a Railway service using the included Dockerfile.
-2. Add a Railway Volume mounted at `/data`. It is required to preserve clients, admin credentials, session secret, and the database across deploys.
-3. Generate a public domain for port `8080`.
-4. Open the service after its first successful deployment. On a fresh database, retrieve the random initial administrator password from the first-boot logs or `/data/INITIAL_ADMIN_PASSWORD.txt`; sign in as `admin` and change it immediately.
-5. Set `BASE_URL` to the intended public HTTPS URL only if the automatically detected Railway domain is not the one you want to use for subscriptions.
+مستندات کامل:
+- [راهنمای API فارسی](docs/API_FA.md)
+- [راهنمای اتصال و عیب‌یابی](docs/CONNECT_FA.md)
 
-The app is intended to remain on Railway. Its HTTP transports are routed through Railway's HTTPS edge to local Xray inbounds; no separate public Xray TCP port is used in this design. Railway region changes can require volume migration and downtime, so do not change regions casually.
+API base: /api/v1/
+- GET /health
+- GET /clients
+- POST /clients
+- PATCH /clients/{id}
+- DELETE /clients/{id}
+- GET /clients/{id}/subscription
 
-## Local Docker test
+هر درخواست API به کلید Authorization: Bearer ... نیاز دارد. برای ساخت مشتری و دریافت لینک اشتراک، مجوز مناسب لازم است.
 
-```sh
+## بکاپ و بازیابی
+از بخش «پشتیبان‌گیری و بازیابی» بکاپ ZIP دریافت کن. بکاپ شامل دیتابیس مشتریان، تنظیمات، رویدادها و هش‌های اعتبارنامه است؛ فایل را مانند اطلاعات حساس نگه دار. بازیابی، اطلاعات فعلی را جایگزین می‌کند و فقط مدیر واردشده با CSRF معتبر می‌تواند آن را اجرا کند.
+
+## پروفایل‌ها، پینگ و محدودیت‌های شبکه
+پروفایل‌های فعلی شامل WebSocket، HTTPUpgrade و دو حالت XHTTP هستند. آن‌ها از دامنه HTTPS و reverse proxy عبور می‌کنند. نتیجه روی اپراتور، منطقه، محدودیت‌های شبکه، نسخه کلاینت و پیکربندی Xray تأثیر می‌پذیرد. تعداد بیشتر لینک به‌تنهایی پینگ کمتر را تضمین نمی‌کند. تست‌های CI پیکربندی، API و رفتار مسیرها را بررسی می‌کنند اما جایگزین اتصال واقعی از گوشی و اپراتور هدف نیستند.
+
+## امنیت
+- دیتابیس و فایل‌های /data را منتشر نکن.
+- لینک اشتراک مانند رمز است؛ هرکس آن را داشته باشد می‌تواند به سرویس دسترسی بگیرد.
+- کلید API، رمز اولیه، کوکی نشست و لینک‌های خصوصی را در گزارش‌ها یا پیام‌های عمومی نگذار.
+- از داشبورد فقط روی HTTPS استفاده کن؛ COOKIE_SECURE=0 فقط برای تست محلی است.
+- این نسخه هنوز ممیزی نفوذ مستقل نشده است و تضمین امنیت کامل ندارد. پیش از فروش عمومی، بازیابی بکاپ، کنترل دسترسی و اتصال واقعی را در محیط آزمایشی بررسی کن.
+
+## تست محلی
+~~~sh
+pip install -r requirements.txt pytest httpx
+python -m compileall -q app tests
+pytest -q
 docker build -t abysspanel-test .
 docker run --rm -p 8080:8080 -e COOKIE_SECURE=0 -v "$PWD/data:/data" abysspanel-test
-```
+~~~
 
-Open `http://localhost:8080`. The initial password is written to `data/INITIAL_ADMIN_PASSWORD.txt` and printed to the container logs on a fresh database.
-
-## Security and operational notes
-
-- Never commit `/data`, initial credentials, cookies, or subscription URLs.
-- A subscription token grants access to that client's connection profiles. Treat it like a password; revoking or disabling the client invalidates its subscription page, QR, and raw subscription endpoint.
-- The dashboard is a control plane, not an uptime guarantee. Railway edge/protocol compatibility and real client traffic must be tested in the target region.
-- TLS for public HTTPS is terminated at Railway's edge. Xray listens only on loopback behind Nginx.
-- Still not production-audited: multiple admins, backup/restore UI, and Reality/TCP inbounds are not implemented. Automated tests cover API lifecycle, profile settings and rollback, quota enforcement, subscription links, and QR rendering; real network latency and every third-party client app must still be validated from the intended user networks.
+برای استفاده روی اینترنت عمومی، از رمز قوی، Volume پایدار و بکاپ خارج از Railway استفاده کن.
