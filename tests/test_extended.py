@@ -302,3 +302,24 @@ def test_interactive_api_docs_require_an_admin_session(client):
     assert "/api/v1/clients" in paths
     assert "/api/v1/clients/{client_id}/reset-usage" in paths
     assert "/api/v1/system/metrics" in paths
+
+
+def test_api_tokens_can_expire_and_are_revoked_on_use(client):
+    csrf = admin_login(client)
+    invalid = client.post("/api/admin/api-keys", json={
+        "name": "bad expiry", "scopes": ["clients:read"], "expires_in_days": 0
+    }, headers={"X-CSRF-Token": csrf})
+    assert invalid.status_code == 422
+    made = client.post("/api/admin/api-keys", json={
+        "name": "temporary bot", "scopes": ["clients:read"], "expires_in_days": 1
+    }, headers={"X-CSRF-Token": csrf})
+    assert made.status_code == 200, made.text
+    token = made.json()["token"]
+    key_id = made.json()["id"]
+    assert made.json()["expires_at"]
+    with panel.db() as c:
+        c.execute("UPDATE api_keys SET expires_at=? WHERE id=?", ("2000-01-01T00:00:00+00:00", key_id))
+    expired = client.get("/api/v1/clients", headers={"Authorization": "Bearer " + token})
+    assert expired.status_code == 401
+    key = next(x for x in client.get("/api/admin/api-keys").json()["keys"] if x["id"] == key_id)
+    assert key["enabled"] is False
