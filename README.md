@@ -1,6 +1,6 @@
 # AbyssPanel-Test
 
-A separate test-stage control panel for Xray/VLESS on Railway. It includes an administrator dashboard, persistent SQLite state, per-client credentials, subscription links, Xray configuration validation, and basic process recovery.
+A responsive Xray/VLESS control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, quota/expiry enforcement, Xray configuration validation, and process recovery.
 
 > **Status:** first implementation / test build. Do not treat this as production-audited. Validate actual client connectivity, Railway WebSocket behavior, resource limits, and subscription compatibility before relying on it for paid users.
 
@@ -14,7 +14,7 @@ A separate test-stage control panel for Xray/VLESS on Railway. It includes an ad
 - One private subscription token per client; subscription returns Base64-encoded VLESS links.
 - Xray config is generated from active clients and validated with `xray run -test` before process restart.
 - Nginx routes `/ws`, `/httpupgrade`, and `/xhttp` to local Xray inbounds; admin/API traffic is routed to FastAPI.
-- Health endpoint and basic Xray process recovery.
+- Health endpoint and basic Xray process recovery.\n- Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
 
 ## Railway deployment
 
@@ -43,4 +43,4 @@ Open `http://localhost:8080`. The generated initial password is printed to conta
 - Configure a strong, unique administrator password after first login.
 - The dashboard/API is a control plane, not an uptime guarantee. Railway edge/protocol compatibility and real client traffic must be tested in the target region.
 - TLS for public HTTPS is terminated at Railway's edge. The generated VLESS link uses TLS at the public endpoint; Xray listens only on loopback behind Nginx.
-- This initial version does not yet implement traffic accounting, quotas, expiry, multiple admins, backups/restore UI, or Reality/TCP inbound. Those require additional work and tests before production use.
+- Still not production-audited: multiple admins, backup/restore UI, and Reality/TCP inbounds are not implemented. Automated tests cover API lifecycle, quota/expiry fields, subscription links and QR rendering, and configuration structure; real network performance and every third-party client app must still be validated from the intended user networks.
