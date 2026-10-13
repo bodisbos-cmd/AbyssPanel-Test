@@ -168,7 +168,7 @@ async def enforce_client_limits():
 
 async def monitor():
     while True:
-        await asyncio.sleep(30)
+        await asyncio.sleep(10)
         if Path(XRAY_BIN).exists() and (xray_proc is None or xray_proc.poll() is not None):
             try: event("WARNING","Restarting stopped Xray process."); await start_xray()
             except Exception as e: event("ERROR",f"Xray recovery failed: {e}")
