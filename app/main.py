@@ -544,15 +544,21 @@ async def change_password(r: Request):
     require_admin(r)
     require_csrf(r)
     body = await r.json()
+    if not isinstance(body,dict): raise HTTPException(422,"JSON object required")
     current = str(body.get("current_password", ""))
     new = str(body.get("new_password", ""))
+    if len(current)>256: raise HTTPException(403,"Current password is incorrect")
+    admin_id=r.session.get("admin_id","owner-admin")
     with db() as c:
-        row = c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
+        row = c.execute("SELECT username,password_hash FROM panel_admins WHERE id=? AND enabled=1",(admin_id,)).fetchone()
         if not row or not verify_password(current, row["password_hash"]):
             raise HTTPException(403, "Current password is incorrect")
         if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
             raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
-        c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1", (password_hash(new), utc_now()))
+        changed=password_hash(new); at=utc_now()
+        c.execute("UPDATE panel_admins SET password_hash=?, password_changed_at=? WHERE id=?", (changed,at,admin_id))
+        if row["username"]=="admin":
+            c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1",(changed,at))
     try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
     except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Administrator password changed.")
