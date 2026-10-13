@@ -37,7 +37,7 @@ def init_db():
     with db() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY CHECK(id=1),password_hash TEXT NOT NULL,password_changed_at TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS clients(id TEXT PRIMARY KEY,name TEXT NOT NULL,client_uuid TEXT NOT NULL UNIQUE,sub_token TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,note TEXT NOT NULL DEFAULT '');
+        CREATE TABLE IF NOT EXISTS clients(id TEXT PRIMARY KEY,name TEXT NOT NULL,client_uuid TEXT NOT NULL UNIQUE,sub_token TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,note TEXT NOT NULL DEFAULT '',expires_at TEXT,quota_bytes INTEGER,used_bytes INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,level TEXT NOT NULL,message TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at DESC);
@@ -49,6 +49,10 @@ def init_db():
             try: p.chmod(0o600)
             except OSError: pass
             if os.getenv("ABYSS_TEST_MODE")!="1": LOG.warning("DEFAULT ADMIN CREDENTIAL username=admin password=admin; change immediately in Settings")
+        # Safe in-place migration for persistent databases created by older releases.
+        cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
+        for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0")):
+            if name not in cols: c.execute(f"ALTER TABLE clients ADD COLUMN {name} {declaration}")
         c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('created_at',?)",(utc_now(),))
 def event(level,message):
     LOG.log(getattr(logging,level.upper(),logging.INFO),message)
@@ -58,7 +62,7 @@ def event(level,message):
             c.execute("DELETE FROM events WHERE id NOT IN (SELECT id FROM events ORDER BY id DESC LIMIT 250)")
     except Exception: LOG.exception("event storage failed")
 def get_clients(include_client_uuid=False):
-    cols="id,name,client_uuid,enabled,created_at,note" if include_client_uuid else "id,name,enabled,created_at,note"
+    cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes"
     with db() as c: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
 def valid_name(name:Any):
     if not isinstance(name,str): raise HTTPException(422,"Client name must be text")
@@ -67,12 +71,13 @@ def valid_name(name:Any):
     return name
 def make_xray_config():
     clients=[{"id":x["client_uuid"],"email":f"client-{x['id'][:8]}"} for x in get_clients(True) if x["enabled"]]
-    ins=[]
-    for port,network,path in [(10001,"ws","/ws"),(10002,"httpupgrade","/httpupgrade"),(10003,"xhttp","/xhttp")]:
+    ins=[{"tag":"api","listen":"127.0.0.1","port":10085,"protocol":"dokodemo-door","settings":{"address":"127.0.0.1","port":10085,"network":"tcp"}}]
+    for port,network,path in [(10001,"ws","/ws"),(10002,"httpupgrade","/httpupgrade"),(10003,"xhttp","/xhttp"),(10004,"xhttp","/xhttp-packet")]:
         stream={"network":network,"security":"none"}
-        stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":"auto"} if network=="xhttp" else {})}
+        stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":"packet-up" if path.endswith("packet") else "auto"} if network=="xhttp" else {})}
         ins.append({"tag":f"in-{network}","listen":"127.0.0.1","port":port,"protocol":"vless","settings":{"clients":clients,"decryption":"none"},"streamSettings":stream})
-    return {"log":{"loglevel":"warning"},"inbounds":ins,"outbounds":[{"protocol":"freedom","tag":"direct"},{"protocol":"blackhole","tag":"block"}],"routing":{"domainStrategy":"AsIs","rules":[]}}
+    ins.insert(1, {"tag":"in-xhttp-packet","listen":"127.0.0.1","port":10004,"protocol":"vless","settings":{"clients":clients,"decryption":"none"},"streamSettings":{"network":"xhttp","security":"none","xhttpSettings":{"path":"/xhttp-packet","mode":"packet-up"}}})
+    return {"log":{"loglevel":"warning"},"api":{"tag":"api","services":["StatsService"]},"stats":{},"policy":{"levels":{"0":{"statsUserUplink":True,"statsUserDownlink":True}}},"inbounds":ins,"outbounds":[{"protocol":"freedom","tag":"direct"},{"protocol":"blackhole","tag":"block"},{"protocol":"freedom","tag":"api"}],"routing":{"domainStrategy":"AsIs","rules":[{"type":"field","inboundTag":["api"],"outboundTag":"api"}]}}
 def validate_and_write_xray():
     tmp=XRAY_CONFIG.with_suffix(".tmp"); tmp.write_text(json.dumps(make_xray_config(),indent=2),encoding="utf-8"); tmp.replace(XRAY_CONFIG)
     if Path(XRAY_BIN).exists():
@@ -92,12 +97,56 @@ async def start_xray():
         finally: err.close()
         await asyncio.sleep(.25)
         if xray_proc.poll() is not None: raise RuntimeError("Xray exited; inspect /data/xray-stderr.log")
+def read_xray_stats():
+    if not Path(XRAY_BIN).exists(): return {}
+    result=subprocess.run([XRAY_BIN,"api","statsquery","--server=127.0.0.1:10085","--pattern","user>>>client-"],capture_output=True,text=True,timeout=8)
+    if result.returncode: raise RuntimeError((result.stderr or result.stdout)[-500:])
+    try: payload=json.loads(result.stdout)
+    except json.JSONDecodeError: raise RuntimeError("Xray stats API returned invalid JSON")
+    stats={}
+    for item in payload.get("stat",payload.get("stats",[])):
+        name=str(item.get("name","")); value=int(item.get("value",0))
+        # user>>>client-<8 chars>>>traffic>>>uplink/downlink
+        bits=name.split(">>>")
+        if len(bits)>=4 and bits[0]=="user" and bits[1].startswith("client-") and bits[2]=="traffic":
+            cid=bits[1].removeprefix("client-")
+            stats.setdefault(cid,0); stats[cid]+=max(0,value)
+    return stats
+
+async def enforce_client_limits():
+    if not Path(XRAY_BIN).exists() or not xray_proc or xray_proc.poll() is not None: return
+    stats=read_xray_stats()
+    with db() as c:
+        rows=[dict(x) for x in c.execute("SELECT id,name,enabled,created_at,expires_at,quota_bytes,used_bytes FROM clients")]
+        for row in rows:
+            if not row["enabled"]: continue
+            key=row["id"][:8]
+            # Xray stats are cumulative per generated email; persist only positive deltas.
+            total=stats.get(key)
+            if total is not None:
+                old=int(row["used_bytes"] or 0)
+                # The stored value is the last observed cumulative count; keep it monotonic.
+                used=max(old,total)
+                c.execute("UPDATE clients SET used_bytes=? WHERE id=?",(used,row["id"]))
+                row["used_bytes"]=used
+            expired=bool(row["expires_at"] and row["expires_at"]<=utc_now())
+            exhausted=bool(row["quota_bytes"] is not None and int(row["used_bytes"] or 0)>=int(row["quota_bytes"]))
+            if expired or exhausted:
+                c.execute("UPDATE clients SET enabled=0 WHERE id=?",(row["id"],))
+                event("INFO",f"Client {row['name']!r} automatically disabled: {'expired' if expired else 'quota reached'}.")
+    # Apply any auto-disabled clients to Xray once.
+    with db() as c: disabled=c.execute("SELECT COUNT(*) n FROM clients WHERE enabled=0").fetchone()["n"]
+    if any(row["enabled"] and ((row["expires_at"] and row["expires_at"]<=utc_now()) or (row["quota_bytes"] is not None and int(row["used_bytes"] or 0)>=int(row["quota_bytes"]))) for row in rows):
+        await start_xray()
+
 async def monitor():
     while True:
-        await asyncio.sleep(20)
+        await asyncio.sleep(30)
         if Path(XRAY_BIN).exists() and (xray_proc is None or xray_proc.poll() is not None):
             try: event("WARNING","Restarting stopped Xray process."); await start_xray()
             except Exception as e: event("ERROR",f"Xray recovery failed: {e}")
+        try: await enforce_client_limits()
+        except Exception as e: event("ERROR",f"Client usage/expiry monitor failed: {e}")
 @asynccontextmanager
 async def lifespan(app):
     init_db()
@@ -132,9 +181,9 @@ def rate_check(r,key,limit=8,window=300):
         c.execute("UPDATE settings SET value=? WHERE key=?",(f"{start}:{count+1}",k)); return True
 
 LOGIN='''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#080b12;color:#edf2ff;font:15px system-ui}.card{width:min(390px,calc(100% - 32px));padding:30px;border:1px solid #263449;border-radius:18px;background:#101622}h1{margin:10px 0}.mint{color:#76e4d1;letter-spacing:.15em;font-size:11px}label{display:block;margin:16px 0 6px}input{width:100%;box-sizing:border-box;padding:12px;border-radius:9px;border:1px solid #2a3548;background:#090e17;color:white}button{width:100%;padding:12px;margin-top:18px;background:#76e4d1;border:0;border-radius:9px;font-weight:bold}.err{color:#ff9f9f;font-size:12px}</style></head><body><main class="card"><div class="mint">ABYSSPANEL · PRIVATE CONTROL</div><h1>Welcome back.</h1><p>Sign in to manage proxy clients.</p><form method="post"><input type="hidden" name="csrf_token" value="{{CSRF}}"><label>Username</label><input name="username" value="admin" required><label>Password</label><input type="password" name="password" required><p class="err">{{ERROR}}</p><button>Sign in ↗</button></form></main></body></html>'''
-DASH='''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel</title><style>body{margin:0;background:#080b12;color:#edf2ff;font:14px system-ui}.wrap{max-width:1100px;margin:auto;padding:24px 16px}.card{background:#101622;border:1px solid #222d40;border-radius:14px;padding:18px;margin:16px 0}.top,.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.mint{color:#76e4d1;font-size:11px;letter-spacing:.15em}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.num{font-size:27px;font-weight:bold}input,button{font:inherit;border-radius:8px;padding:10px}input{background:#090e17;color:white;border:1px solid #2a3548}button{cursor:pointer;background:#14202b;color:white;border:1px solid #2d3b50}button.primary{background:#76e4d1;color:#07120f}.client{padding:13px 0;border-top:1px solid #222d40;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small{font-size:11px;color:#8794ac}@media(max-width:600px){.stats{grid-template-columns:1fr}}</style></head><body><main class="wrap"><header class="top"><div><b>A / ABYSSPANEL</b><div class="mint">PRIVATE CONTROL PLANE</div></div><button onclick="changePassword()">Settings · Change password</button><button onclick="location.href='/logout'">Sign out</button></header><section class="stats"><div class="card">Total clients<div class="num" id="total">—</div></div><div class="card">Active clients<div class="num" id="active">—</div></div><div class="card">Xray<div class="num" id="xray">—</div></div></section><section class="card"><div class="row"><div><b>Client services</b><div class="small">Create, pause, revoke and copy subscription URLs.</div></div><div><input id="name" maxlength="64" placeholder="Client name"><button class="primary" onclick="add()">+ Create</button></div></div><div id="clients"></div></section><section class="card"><div id="status" class="small" style="color:#76e4d1">Checking dashboard…</div></section><section class="card"><b>Recent events</b><div id="events"></div></section></main><script src="/dashboard.js" defer></script></body></html>'''
+DASH='''<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel</title><style>body{margin:0;background:#080b12;color:#edf2ff;font:14px system-ui}.wrap{max-width:1100px;margin:auto;padding:24px 16px}.card{background:#101622;border:1px solid #222d40;border-radius:14px;padding:18px;margin:16px 0}.top,.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.mint{color:#76e4d1;font-size:11px;letter-spacing:.15em}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.num{font-size:27px;font-weight:bold}input,button{font:inherit;border-radius:8px;padding:10px}input{background:#090e17;color:white;border:1px solid #2a3548}button{cursor:pointer;background:#14202b;color:white;border:1px solid #2d3b50}button.primary{background:#76e4d1;color:#07120f}.client{padding:13px 0;border-top:1px solid #222d40;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.small{font-size:11px;color:#8794ac}@media(max-width:600px){.stats{grid-template-columns:1fr}}</style></head><body><main class="wrap"><header class="top"><div><b>A / ABYSSPANEL</b><div class="mint">PRIVATE CONTROL PLANE</div></div><button onclick="changePassword()">Settings · Change password</button><button onclick="location.href='/logout'">Sign out</button></header><section class="stats"><div class="card">Total clients<div class="num" id="total">—</div></div><div class="card">Active clients<div class="num" id="active">—</div></div><div class="card">Xray<div class="num" id="xray">—</div></div></section><section class="card"><div class="row"><div><b>Client services</b><div class="small">Create, pause, revoke and copy subscription URLs.</div></div><div><input id="name" maxlength="64" placeholder="Client name"><input id="days" type="number" min="1" max="3650" placeholder="Days (optional)"><input id="quota" type="number" min="1" max="100000" placeholder="Quota GB (optional)"><button class="primary" onclick="add()">+ Create</button></div></div><div id="clients"></div></section><section class="card"><div id="status" class="small" style="color:#76e4d1">Checking dashboard…</div></section><section class="card"><b>Recent events</b><div id="events"></div></section></main><script src="/dashboard.js" defer></script></body></html>'''
 
-DASH_JS=r'''let csrf='';document.getElementById("status").textContent="JavaScript started; loading data…";async function api(u,o={}){o.headers={...(o.headers||{}),'Content-Type':'application/json','X-CSRF-Token':csrf};let r=await fetch(u,o),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||'Request failed');return d}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}async function load(){try{let d=await api('/api/overview');csrf=d.csrf;document.getElementById('total').textContent=d.total;document.getElementById('active').textContent=d.active;document.getElementById('xray').textContent=d.xray.running?'Online':d.xray.installed?'Starting':'Not installed';document.getElementById('clients').innerHTML=d.clients.map(c=>'<div class="client"><div><b>'+esc(c.name)+'</b><div class="small">'+esc(c.id.slice(0,8))+' · '+(c.enabled?'Active':'Paused')+'</div></div><div><button onclick="sub(\''+c.id+'\')">Subscription</button> <button onclick="toggle(\''+c.id+'\','+(!c.enabled)+')">'+(c.enabled?'Pause':'Enable')+'</button> <button onclick="revoke(\''+c.id+'\')">Revoke</button></div></div>').join('')||'<p class="small">No clients yet.</p>';document.getElementById('events').innerHTML=d.events.map(e=>'<div class="small">'+esc(e.at)+' · '+esc(e.level)+' · '+esc(e.message)+'</div>').join('');document.getElementById('status').textContent='Dashboard connected successfully.'}catch(e){document.getElementById('status').textContent='Dashboard API error: '+e.message}}async function add(){const input=document.getElementById('name');try{await api('/api/clients',{method:'POST',body:JSON.stringify({name:input.value})});input.value='';await load()}catch(e){alert(e.message)}}async function toggle(id,enabled){try{await api('/api/clients/'+id,{method:'PATCH',body:JSON.stringify({enabled})});await load()}catch(e){alert(e.message)}}async function revoke(id){if(!confirm('Revoke this client?'))return;try{await api('/api/clients/'+id,{method:'DELETE'});await load()}catch(e){alert(e.message)}}async function sub(id){try{let d=await api('/api/clients/'+id+'/subscription');prompt('Copy subscription URL:',d.url)}catch(e){alert(e.message)}}async function changePassword(){let current=prompt('Current password:');if(current===null)return;let next=prompt('New password (14+ characters, letters and numbers):');if(next===null)return;try{await api('/api/password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});alert('Password changed.')}catch(e){alert(e.message)}}load();'''
+DASH_JS=r'''let csrf='';document.getElementById("status").textContent="JavaScript started; loading data…";async function api(u,o={}){o.headers={...(o.headers||{}),'Content-Type':'application/json','X-CSRF-Token':csrf};let r=await fetch(u,o),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||'Request failed');return d}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}async function load(){try{let d=await api('/api/overview');csrf=d.csrf;document.getElementById('total').textContent=d.total;document.getElementById('active').textContent=d.active;document.getElementById('xray').textContent=d.xray.running?'Online':d.xray.installed?'Starting':'Not installed';document.getElementById('clients').innerHTML=d.clients.map(c=>'<div class="client"><div><b>'+esc(c.name)+'</b><div class="small">'+esc(c.id.slice(0,8))+' · '+(c.enabled?'Active':'Paused')+' · Used '+(c.used_bytes/1073741824).toFixed(3)+' GB'+(c.quota_bytes===null?' / Unlimited':(' / '+(c.quota_bytes/1073741824).toFixed(2)+' GB'))+' · '+(c.expires_at?'Expires '+esc(c.expires_at):'No expiry')+'</div></div><div><button onclick="sub(\''+c.id+'\')">Subscription</button> <button onclick="toggle(\''+c.id+'\','+(!c.enabled)+')">'+(c.enabled?'Pause':'Enable')+'</button> <button onclick="revoke(\''+c.id+'\')">Revoke</button></div></div>').join('')||'<p class="small">No clients yet.</p>';document.getElementById('events').innerHTML=d.events.map(e=>'<div class="small">'+esc(e.at)+' · '+esc(e.level)+' · '+esc(e.message)+'</div>').join('');document.getElementById('status').textContent='Dashboard connected successfully.'}catch(e){document.getElementById('status').textContent='Dashboard API error: '+e.message}}async function add(){const input=document.getElementById('name'),days=document.getElementById('days'),quota=document.getElementById('quota');try{await api('/api/clients',{method:'POST',body:JSON.stringify({name:input.value,duration_days:days.value?Number(days.value):null,quota_gb:quota.value?Number(quota.value):null})});input.value='';days.value='';quota.value='';await load()}catch(e){alert(e.message)}}async function toggle(id,enabled){try{await api('/api/clients/'+id,{method:'PATCH',body:JSON.stringify({enabled})});await load()}catch(e){alert(e.message)}}async function revoke(id){if(!confirm('Revoke this client?'))return;try{await api('/api/clients/'+id,{method:'DELETE'});await load()}catch(e){alert(e.message)}}async function sub(id){try{let d=await api('/api/clients/'+id+'/subscription');prompt('Copy subscription URL:',d.url)}catch(e){alert(e.message)}}async function changePassword(){let current=prompt('Current password:');if(current===null)return;let next=prompt('New password (14+ characters, letters and numbers):');if(next===null)return;try{await api('/api/password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});alert('Password changed.')}catch(e){alert(e.message)}}load();'''
 
 @app.get("/dashboard.js",response_class=PlainTextResponse)
 async def dashboard_js():
@@ -176,8 +225,13 @@ async def overview(r:Request):
 async def create_client(r:Request):
     require_admin(r); require_csrf(r); b=await r.json(); name=valid_name(b.get("name")); note=b.get("note","")
     if not isinstance(note,str) or len(note)>300: raise HTTPException(422,"Note must be at most 300 characters")
+    days=b.get("duration_days"); quota=b.get("quota_gb")
+    if days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or days<1 or days>3650): raise HTTPException(422,"duration_days must be 1–3650")
+    if quota is not None and (not isinstance(quota,(int,float)) or isinstance(quota,bool) or quota<1 or quota>100000): raise HTTPException(422,"quota_gb must be 1–100000")
+    expires=(datetime.now(timezone.utc)+__import__("datetime").timedelta(days=int(days))).isoformat(timespec="seconds") if days is not None else None
+    quota_bytes=int(float(quota)*1024**3) if quota is not None else None
     cid,uid,token=str(uuid.uuid4()),str(uuid.uuid4()),secrets.token_urlsafe(32)
-    with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note) VALUES(?,?,?,?,1,?,?)",(cid,name,uid,token,utc_now(),note.strip()))
+    with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes) VALUES(?,?,?,?,1,?,?,?,?,0)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes))
     try:
         await start_xray()
     except Exception as e:
@@ -244,9 +298,11 @@ async def subscription(token:str,r:Request):
     host=(r.headers.get("x-forwarded-host") or r.headers.get("host","YOUR-RAILWAY-DOMAIN")).split(",")[0].strip().split(":")[0]
     if host in ("localhost","127.0.0.1","YOUR-RAILWAY-DOMAIN"): host=PUBLIC_DOMAIN or "YOUR-RAILWAY-DOMAIN"
     links=[]
-    for network,path in [("ws","/ws"),("httpupgrade","/httpupgrade"),("xhttp","/xhttp")]:
+    for network,path,mode in [("ws","/ws",None),("httpupgrade","/httpupgrade",None),("xhttp","/xhttp","auto"),("xhttp","/xhttp-packet","packet-up")]:
         q=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}&encryption=none"
-        links.append(f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{network}")
+        if mode: q+=f"&mode={quote(mode)}"
+        label={"ws":"ws","httpupgrade":"httpupgrade","/xhttp":"xhttp-auto","/xhttp-packet":"xhttp-packet-up"}[path if path in ("/xhttp","/xhttp-packet") else network]
+        links.append(f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}")
     return PlainTextResponse(base64.b64encode("\n".join(links).encode()).decode(),headers={"Cache-Control":"no-store"})
 @app.get("/health")
 async def health():
