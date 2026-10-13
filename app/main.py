@@ -1,12 +1,15 @@
 from __future__ import annotations
-import asyncio, base64, hashlib, hmac, json, logging, os, secrets, sqlite3, subprocess, time, uuid
+import asyncio, base64, hashlib, hmac, io, json, logging, os, secrets, sqlite3, subprocess, time, uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from html import escape as html_escape
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
+import qrcode
+from qrcode.image.svg import SvgPathImage
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 
 APP_NAME="AbyssPanel-Test"
@@ -249,9 +252,9 @@ async def create_client(r:Request):
     require_admin(r); require_csrf(r); b=await r.json(); name=valid_name(b.get("name")); note=b.get("note","")
     if not isinstance(note,str) or len(note)>300: raise HTTPException(422,"Note must be at most 300 characters")
     days=b.get("duration_days"); quota=b.get("quota_gb")
-    if days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or days<1 or days>3650): raise HTTPException(422,"duration_days must be 1–3650")
-    if quota is not None and (not isinstance(quota,(int,float)) or isinstance(quota,bool) or quota<1 or quota>100000): raise HTTPException(422,"quota_gb must be 1–100000")
-    expires=(datetime.now(timezone.utc)+__import__("datetime").timedelta(days=int(days))).isoformat(timespec="seconds") if days is not None else None
+    if days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or not float(days).is_integer() or days<1 or days>3650): raise HTTPException(422,"duration_days must be a whole number from 1 to 3650")
+    if quota is not None and (not isinstance(quota,(int,float)) or isinstance(quota,bool) or not 1<=quota<=100000): raise HTTPException(422,"quota_gb must be 1–100000")
+    expires=(datetime.now(timezone.utc)+timedelta(days=int(days))).isoformat(timespec="seconds") if days is not None else None
     quota_bytes=int(float(quota)*1024**3) if quota is not None else None
     cid,uid,token=str(uuid.uuid4()),str(uuid.uuid4()),secrets.token_urlsafe(32)
     with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes) VALUES(?,?,?,?,1,?,?,?,?,0)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes))
@@ -268,26 +271,51 @@ async def create_client(r:Request):
 @app.patch("/api/clients/{cid}")
 async def update_client(cid:str,r:Request):
     require_admin(r); require_csrf(r); b=await r.json()
-    if not isinstance(b.get("enabled"),bool): raise HTTPException(422,"enabled must be true or false")
+    allowed={"enabled","name","note","duration_days","quota_gb"}
+    if not isinstance(b,dict) or not b or set(b)-allowed: raise HTTPException(422,"Provide supported client fields only")
+    if "enabled" in b and not isinstance(b["enabled"],bool): raise HTTPException(422,"enabled must be true or false")
+    if "name" in b: b["name"]=valid_name(b["name"])
+    if "note" in b and (not isinstance(b["note"],str) or len(b["note"])>300): raise HTTPException(422,"Note must be at most 300 characters")
+    if "duration_days" in b and b["duration_days"] is not None and (not isinstance(b["duration_days"],(int,float)) or isinstance(b["duration_days"],bool) or not float(b["duration_days"]).is_integer() or not 1<=b["duration_days"]<=3650): raise HTTPException(422,"duration_days must be a whole number from 1 to 3650, or null")
+    if "quota_gb" in b and b["quota_gb"] is not None and (not isinstance(b["quota_gb"],(int,float)) or isinstance(b["quota_gb"],bool) or not 1<=b["quota_gb"]<=100000): raise HTTPException(422,"quota_gb must be 1–100000, or null")
     with db() as c:
-        row=c.execute("SELECT enabled FROM clients WHERE id=?",(cid,)).fetchone()
+        row=c.execute("SELECT * FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
-        old_enabled=int(row["enabled"])
-        c.execute("UPDATE clients SET enabled=? WHERE id=?",(int(b["enabled"]),cid))
-    try:
-        await start_xray()
-    except Exception as e:
-        with db() as c: c.execute("UPDATE clients SET enabled=? WHERE id=?",(old_enabled,cid))
-        try: await start_xray()
-        except Exception as restore_error: event("ERROR",f"Xray recovery after failed client update also failed: {restore_error}")
-        event("ERROR",f"Client update rolled back because Xray update failed: {e}")
-        raise HTTPException(503,"Client status was not changed because Xray could not apply the configuration")
+        previous=dict(row)
+        updates={}
+        if "enabled" in b: updates["enabled"]=int(b["enabled"])
+        if "name" in b: updates["name"]=b["name"]
+        if "note" in b: updates["note"]=b["note"].strip()
+        if "duration_days" in b:
+            updates["expires_at"]=(datetime.now(timezone.utc)+timedelta(days=int(b["duration_days"]))).isoformat(timespec="seconds") if b["duration_days"] is not None else None
+        if "quota_gb" in b: updates["quota_bytes"]=int(float(b["quota_gb"])*1024**3) if b["quota_gb"] is not None else None
+        if not updates: raise HTTPException(422,"No fields to update")
+        c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))
+    if "enabled" in updates and updates["enabled"] != previous["enabled"]:
+        try:
+            await start_xray()
+        except Exception as e:
+            with db() as c: c.execute("UPDATE clients SET enabled=? WHERE id=?",(previous["enabled"],cid))
+            try: await start_xray()
+            except Exception as restore_error: event("ERROR",f"Xray recovery after failed client update also failed: {restore_error}")
+            event("ERROR",f"Client update rolled back because Xray update failed: {e}")
+            raise HTTPException(503,"Client status was not changed because Xray could not apply the configuration")
     event("INFO",f"Updated client {cid[:8]}."); return {"ok":True}
+
+@app.post("/api/clients/{cid}/reset-usage")
+async def reset_client_usage(cid:str,r:Request):
+    require_admin(r); require_csrf(r)
+    with db() as c:
+        row=c.execute("SELECT name FROM clients WHERE id=?",(cid,)).fetchone()
+        if not row: raise HTTPException(404,"Client not found")
+        c.execute("UPDATE clients SET used_bytes=0 WHERE id=?",(cid,))
+    event("INFO",f"Reset usage for client {row['name']!r} ({cid[:8]}).")
+    return {"ok":True}
 @app.delete("/api/clients/{cid}")
 async def delete_client(cid:str,r:Request):
     require_admin(r); require_csrf(r)
     with db() as c:
-        row=c.execute("SELECT id,name,client_uuid,sub_token,enabled,created_at,note FROM clients WHERE id=?",(cid,)).fetchone()
+        row=c.execute("SELECT * FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
         previous=dict(row)
         c.execute("DELETE FROM clients WHERE id=?",(cid,))
@@ -295,38 +323,90 @@ async def delete_client(cid:str,r:Request):
         await start_xray()
     except Exception as e:
         with db() as c:
-            c.execute("INSERT OR REPLACE INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note) VALUES(?,?,?,?,?,?,?)",
-                      (previous["id"],previous["name"],previous["client_uuid"],previous["sub_token"],previous["enabled"],previous["created_at"],previous["note"]))
+            c.execute("INSERT OR REPLACE INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                      (previous["id"],previous["name"],previous["client_uuid"],previous["sub_token"],previous["enabled"],previous["created_at"],previous["note"],previous["expires_at"],previous["quota_bytes"],previous["used_bytes"]))
         try: await start_xray()
         except Exception as restore_error: event("ERROR",f"Xray recovery after failed client revocation also failed: {restore_error}")
         event("ERROR",f"Client revocation rolled back because Xray update failed: {e}")
         raise HTTPException(503,"Client was not revoked because Xray could not apply the configuration")
     event("INFO",f"Revoked client {cid[:8]}."); return {"ok":True}
 def get_base_url(r=None):
-    if BASE_URL:return BASE_URL
-    if PUBLIC_DOMAIN:return "https://"+PUBLIC_DOMAIN
-    if r:return f"{r.headers.get('x-forwarded-proto','https')}://{r.headers.get('x-forwarded-host') or r.headers.get('host','localhost')}"
+    if BASE_URL: return BASE_URL
+    if PUBLIC_DOMAIN: return "https://"+PUBLIC_DOMAIN
+    if r: return f"{r.headers.get('x-forwarded-proto','https')}://{r.headers.get('x-forwarded-host') or r.headers.get('host','localhost')}"
     return "https://YOUR-RAILWAY-DOMAIN"
-@app.get("/api/clients/{cid}/subscription")
-async def subscription_link(cid:str,r:Request):
-    require_admin(r)
-    with db() as c: row=c.execute("SELECT sub_token FROM clients WHERE id=?",(cid,)).fetchone()
-    if not row: raise HTTPException(404,"Client not found")
-    return {"url":f"{get_base_url(r)}/sub/{row['sub_token']}"}
-@app.get("/sub/{token}",response_class=PlainTextResponse)
-async def subscription(token:str,r:Request):
+
+def active_subscription_client(token):
     if len(token)>100: raise HTTPException(404,"Not found")
     with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=? AND enabled=1",(token,)).fetchone()
     if not client: raise HTTPException(404,"Subscription not found or disabled")
-    host=(r.headers.get("x-forwarded-host") or r.headers.get("host","YOUR-RAILWAY-DOMAIN")).split(",")[0].strip().split(":")[0]
-    if host in ("localhost","127.0.0.1","YOUR-RAILWAY-DOMAIN"): host=PUBLIC_DOMAIN or "YOUR-RAILWAY-DOMAIN"
+    return dict(client)
+
+def make_subscription_links(client, r):
+    base=get_base_url(r)
+    host=urlsplit(base).hostname or PUBLIC_DOMAIN or "YOUR-RAILWAY-DOMAIN"
     links=[]
     for network,path,mode in [("ws","/ws",None),("httpupgrade","/httpupgrade",None),("xhttp","/xhttp","auto"),("xhttp","/xhttp-packet","packet-up")]:
         q=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}&encryption=none"
         if mode: q+=f"&mode={quote(mode)}"
         label={"ws":"ws","httpupgrade":"httpupgrade","/xhttp":"xhttp-auto","/xhttp-packet":"xhttp-packet-up"}[path if path in ("/xhttp","/xhttp-packet") else network]
-        links.append(f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}")
-    return PlainTextResponse(base64.b64encode("\n".join(links).encode()).decode(),headers={"Cache-Control":"no-store"})
+        links.append({"label":label,"url":f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}"})
+    return links
+
+def subscription_text(links):
+    return base64.b64encode("\n".join(item["url"] for item in links).encode()).decode()
+
+def render_subscription_page(client, links, sub_url, qr_url):
+    quota=client["quota_bytes"]
+    usage=(int(client["used_bytes"] or 0)/1024**3)
+    quota_text="نامحدود" if quota is None else f"{quota/1024**3:.2f} GB"
+    expiry=client["expires_at"] or "بدون انقضا"
+    cards="".join(
+        '<a class="profile" href="'+html_escape(item["url"],quote=True)+'"><span class="profile-icon">↗</span><span><b>'+html_escape(item["label"])+'</b><small>VLESS · TLS · '+html_escape(item["label"])+'</small></span><span class="profile-open">باز کردن</span></a>'
+        for item in links
+    )
+    template="""<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#080b12"><title>Abyss Tunnel · اشتراک خصوصی</title><style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#163a43 0,transparent 48%),#080b12;color:#edf5f7;font:15px system-ui,-apple-system,sans-serif}.shell{width:min(820px,100%);margin:auto;padding:28px 16px 44px}.top,.row,.profile{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{font-size:12px;letter-spacing:.18em;color:#8de8d6;font-weight:800}.badge{font-size:11px;color:#8de8d6;border:1px solid #275c58;padding:7px 10px;border-radius:99px}.hero{margin:25px 0 16px;padding:25px;border:1px solid #25434b;border-radius:24px;background:linear-gradient(135deg,rgba(18,39,49,.96),rgba(13,20,32,.97));box-shadow:0 22px 70px #0005}.eyebrow{font-size:11px;color:#8de8d6;letter-spacing:.12em}.hero h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:12px 0 8px;overflow-wrap:anywhere}.muted,small{color:#91a3b4;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.metric,.panel{background:#101722;border:1px solid #222f3f;border-radius:16px;padding:16px;min-width:0}.metric small{display:block;font-size:11px}.metric b{display:block;font-size:16px;margin-top:7px;overflow-wrap:anywhere}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}.section-head h2{font-size:16px;margin:0}.profiles{display:grid;gap:9px}.profile{padding:13px;text-decoration:none;color:#edf5f7;border:1px solid #263447;border-radius:13px;background:#0b111b;min-width:0}.profile:hover{border-color:#76e4d1;background:#101e27}.profile-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#173b3c;color:#8de8d6;flex-shrink:0}.profile>span:nth-child(2){flex:1;min-width:0}.profile b,.profile small{display:block;overflow-wrap:anywhere}.profile-open{font-size:12px;color:#8de8d6;white-space:nowrap}.share{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:16px;align-items:center}.linkbox{direction:ltr;text-align:left;width:100%;background:#080d15;color:#c6d6df;border:1px solid #2a3b4d;border-radius:10px;padding:12px;font:12px ui-monospace,monospace;overflow-wrap:anywhere}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:9px;padding:11px 14px;border-radius:10px;border:1px solid #2b4651;background:#152630;color:#eaf8f6;font:inherit;cursor:pointer;text-decoration:none}.btn.primary{background:#8de8d6;color:#061412;border-color:#8de8d6;font-weight:800}.qr{display:block;width:160px;max-width:100%;padding:9px;border-radius:13px;background:#fff;aspect-ratio:1}.footer{text-align:center;font-size:11px;color:#65778a;margin-top:24px;line-height:1.9}.warning{color:#d8c58a;font-size:12px;margin-top:12px;line-height:1.8}@media(max-width:560px){.shell{padding:18px 11px 30px}.hero{padding:19px;border-radius:19px}.grid{grid-template-columns:1fr 1fr}.share{grid-template-columns:1fr}.qr{width:145px;margin:8px auto 0}.profile{gap:9px;padding:11px}.profile-open{font-size:11px}.metric,.panel{padding:13px}}@media(max-width:360px){.grid{grid-template-columns:1fr}.profile-open{display:none}}
+</style></head><body data-sub-url="__SUB_URL__"><main class="shell"><header class="top"><div class="brand">◈ ABYSS TUNNEL</div><span class="badge">PRIVATE SUBSCRIPTION</span></header><section class="hero"><div class="eyebrow">YOUR CONNECTION · YOUR CONTROL</div><h1>اشتراک خصوصی شما</h1><p class="muted">پروفایل موردنظرت را انتخاب کن یا لینک اشتراک را در کلاینت VPN وارد کن.</p><div class="row"><div><small>نام سرویس</small><div style="font-size:19px;font-weight:800;overflow-wrap:anywhere">__CLIENT_NAME__</div></div><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button></div></section><section class="grid"><div class="metric"><small>مصرف‌شده</small><b>__USED__ GB</b></div><div class="metric"><small>حجم کل</small><b>__QUOTA__</b></div><div class="metric"><small>اعتبار تا</small><b>__EXPIRY__</b></div></section><section class="panel"><div class="section-head"><h2>پروفایل‌های اتصال</h2><span class="badge">4 PROFILES</span></div><div class="profiles">__PROFILES__</div><p class="warning">اگر کلاینت شما از لینک اشتراک پشتیبانی می‌کند، لینک اصلی را وارد کنید تا همه پروفایل‌ها یکجا اضافه شوند.</p></section><section class="panel" style="margin-top:14px"><div class="section-head"><h2>لینک اشتراک</h2><span class="badge">BASE64</span></div><div class="share"><div><input class="linkbox" readonly value="__SUB_URL__" aria-label="Subscription URL"><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button><button class="btn" onclick="window.location.href=__SUB_JSON__">دریافت اشتراک</button></div><img class="qr" src="__QR_URL__" alt="QR code for subscription link" width="160" height="160"></div></section><footer class="footer">ABYSS TUNNEL · PRIVATE BY DESIGN<br>این صفحه را فقط با صاحب سرویس به اشتراک بگذار؛ لینک اشتراک مانند رمز دسترسی عمل می‌کند.</footer></main><script>async function copySub(){const u=document.body.dataset.subUrl;try{await navigator.clipboard.writeText(u);alert('لینک اشتراک کپی شد')}catch(e){const x=document.querySelector('.linkbox');x.focus();x.select();alert('لینک را به‌صورت دستی کپی کن')}}</script></body></html>"""
+    return (template.replace("__SUB_URL__",html_escape(sub_url,quote=True))
+        .replace("__CLIENT_NAME__",html_escape(client["name"]))
+        .replace("__USED__",f"{usage:.3f}")
+        .replace("__QUOTA__",html_escape(quota_text))
+        .replace("__EXPIRY__",html_escape(expiry))
+        .replace("__PROFILES__",cards)
+        .replace("__QR_URL__",html_escape(qr_url,quote=True))
+        .replace("__SUB_JSON__",json.dumps(sub_url)))
+
+@app.get("/api/clients/{cid}/subscription")
+async def subscription_link(cid:str,r:Request):
+    require_admin(r)
+    with db() as c: row=c.execute("SELECT sub_token FROM clients WHERE id=?",(cid,)).fetchone()
+    if not row: raise HTTPException(404,"Client not found")
+    base=get_base_url(r); token=row["sub_token"]
+    return {"url":f"{base}/sub/{token}","page_url":f"{base}/s/{token}","qr_url":f"{base}/sub/{token}/qr"}
+
+@app.get("/sub/{token}",response_class=PlainTextResponse)
+async def subscription(token:str,r:Request):
+    client=active_subscription_client(token)
+    links=make_subscription_links(client,r)
+    return PlainTextResponse(subscription_text(links),headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/sub/{token}/qr")
+async def subscription_qr(token:str,r:Request):
+    client=active_subscription_client(token)
+    url=f"{get_base_url(r)}/sub/{token}"
+    qr=qrcode.make(url,image_factory=SvgPathImage,box_size=7,border=2)
+    buffer=io.BytesIO(); qr.save(buffer)
+    return Response(buffer.getvalue(),media_type="image/svg+xml",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/s/{token}",response_class=HTMLResponse)
+async def subscription_page(token:str,r:Request):
+    client=active_subscription_client(token)
+    links=make_subscription_links(client,r)
+    base=get_base_url(r); sub_url=f"{base}/sub/{token}"
+    page=render_subscription_page(client,links,sub_url,f"{base}/sub/{token}/qr")
+    return HTMLResponse(page,headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
 @app.get("/health")
 async def health():
     with db() as c:c.execute("SELECT 1").fetchone()
