@@ -28,6 +28,7 @@ def _init(panel):
         c.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_enabled ON api_keys(enabled)")
 
 def _admin(r, p): p.require_admin(r)
+def _role(r, p, *roles): p.require_role(r, *roles)
 def _csrf(r, p): p.require_csrf(r)
 def _hash(token): return hashlib.sha256(token.encode()).hexdigest()
 def _scopes(raw):
@@ -111,7 +112,7 @@ def install_extended(app, namespace):
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):
-        _admin(request,p); _init(p)
+        _role(request,p,"owner"); _init(p)
         with p.db() as c:
             rows=[dict(x) for x in c.execute("SELECT id,name,token_prefix,scopes,created_at,last_used_at,enabled FROM api_keys ORDER BY created_at DESC")]
         for x in rows: x["scopes"]=sorted(_scopes(x["scopes"])); x["enabled"]=bool(x["enabled"])
@@ -119,7 +120,8 @@ def install_extended(app, namespace):
 
     @app.post("/api/admin/api-keys")
     async def create_api_key(request:Request):
-        _admin(request,p); _csrf(request,p); _init(p); body=await request.json()
+        _role(request,p,"owner"); _csrf(request,p); _init(p); body=await request.json()
+        if not isinstance(body,dict): raise HTTPException(422,"JSON object required")
         name=p.valid_name(body.get("name"))
         if len(name)>48: raise HTTPException(422,"API key name must be at most 48 characters")
         allowed={"clients:read","clients:write","subscriptions:read"}
@@ -135,7 +137,7 @@ def install_extended(app, namespace):
 
     @app.delete("/api/admin/api-keys/{key_id}")
     async def revoke_api_key(key_id:str,request:Request):
-        _admin(request,p); _csrf(request,p); _init(p)
+        _role(request,p,"owner"); _csrf(request,p); _init(p)
         with p.db() as c:
             cur=c.execute("UPDATE api_keys SET enabled=0 WHERE id=? AND enabled=1",(key_id,))
             if not cur.rowcount: raise HTTPException(404,"API key not found or already revoked")
@@ -231,7 +233,7 @@ def install_extended(app, namespace):
 
     @app.get("/api/backup")
     async def download_backup(request:Request):
-        _admin(request,p); path=_db_path(p)
+        _role(request,p,"owner"); path=_db_path(p)
         if not path.exists(): raise HTTPException(503,"Database is not initialized yet")
         with tempfile.TemporaryDirectory(prefix="abyss-backup-") as temp:
             target_path=Path(temp)/"panel.sqlite3"
@@ -250,7 +252,7 @@ def install_extended(app, namespace):
 
     @app.post("/api/backup/restore")
     async def restore_backup(request:Request,backup:UploadFile=File(...)):
-        _admin(request,p); _csrf(request,p); raw=await backup.read(MAX_UPLOAD+1)
+        _role(request,p,"owner"); _csrf(request,p); raw=await backup.read(MAX_UPLOAD+1)
         if len(raw)>MAX_UPLOAD: raise HTTPException(413,"Backup file is larger than 20 MB")
         if not raw: raise HTTPException(400,"Choose a backup ZIP file")
         try:
