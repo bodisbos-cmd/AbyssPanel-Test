@@ -366,6 +366,29 @@ def test_usage_monitor_enforces_quota(client, monkeypatch, tmp_path):
     assert not row["enabled"]
 
 
+def test_password_change_removes_initial_credential_file(client, tmp_path):
+    csrf = admin_client(client)
+    initial_file = tmp_path / "INITIAL_ADMIN_PASSWORD.txt"
+    assert initial_file.exists()
+    changed = client.post(
+        "/api/password",
+        json={"current_password": "admin", "new_password": "SecureAbyssPass2026"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert changed.status_code == 200
+    assert not initial_file.exists()
+
+    client.get("/logout")
+    page = client.get("/login")
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
+    response = client.post(
+        "/login",
+        data={"username": "admin", "password": "SecureAbyssPass2026", "csrf_token": html.unescape(token)},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+
 def test_dashboard_has_persian_english_toggle(client):
     csrf = admin_client(client)
     page = client.get("/")
