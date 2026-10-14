@@ -1,5 +1,5 @@
 from __future__ import annotations
-import asyncio, base64, hashlib, hmac, io, json, logging, os, secrets, shutil, sqlite3, subprocess, time, uuid
+import asyncio, base64, hashlib, hmac, http.client, io, json, logging, os, secrets, shutil, sqlite3, subprocess, time, uuid
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone, timedelta
 from html import escape as html_escape
@@ -639,6 +639,88 @@ async def update_profile_settings(r:Request):
         raise HTTPException(503,"Profile settings were not saved because Xray could not apply the configuration")
     event("INFO","Updated enabled connection profiles.")
     return {"profiles":[{"key":p["key"],"label":p["label"],"enabled":updated[p["key"]]} for p in PROFILES]}
+
+def _diagnostic_route(profile):
+    started=time.monotonic()
+    result={"key":profile["key"],"label":profile["label"],"path":profile["path"],"network":profile["network"],"mode":profile.get("mode"),"latency_ms":None,"http_status":None,"route_ok":False,"error":None}
+    connection=None
+    try:
+        connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=0.25)
+        connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
+        response=connection.getresponse()
+        result["http_status"]=response.status
+        response.read(1)
+        result["latency_ms"]=round((time.monotonic()-started)*1000,1)
+        result["route_ok"]=response.status not in {502,503,504}
+        if not result["route_ok"]: result["error"]="Gateway error from local route"
+    except (http.client.HTTPException,TimeoutError,OSError) as exc:
+        result["latency_ms"]=round((time.monotonic()-started)*1000,1)
+        result["error"]="Local route did not respond: "+str(exc)[:140]
+    finally:
+        if connection: connection.close()
+    return result
+
+def _carrier_label(carrier):
+    return {"mci":"همراه اول","irancell":"ایرانسل","rightel":"رایتل","wifi":"وای‌فای"}.get(carrier,"همراه اول")
+
+@app.get("/api/system/diagnostics")
+async def system_diagnostics(r:Request,carrier:str="mci"):
+    require_admin(r)
+    if carrier not in {"mci","irancell","rightel","wifi"}:
+        raise HTTPException(422,"Unsupported carrier")
+    flags=get_profile_flags()
+    config_ok=True
+    config_error=None
+    if Path(XRAY_BIN).exists():
+        try:
+            checked=subprocess.run([XRAY_BIN,"run","-test","-config",str(XRAY_CONFIG)],capture_output=True,text=True,timeout=15)
+            config_ok=checked.returncode==0
+            if not config_ok: config_error=(checked.stderr or checked.stdout)[-500:]
+        except (OSError,subprocess.SubprocessError) as exc:
+            config_ok=False
+            config_error=str(exc)[:300]
+    installed=Path(XRAY_BIN).exists()
+    running=bool(xray_proc and xray_proc.poll() is None) if installed else False
+    profiles=[]
+    preferred={"ws","httpupgrade","xhttp_auto"}
+    for profile in PROFILES:
+        if not flags.get(profile["key"],False):
+            continue
+        item=_diagnostic_route(profile)
+        item["status_text"]="مسیر داخلی پاسخ می‌دهد" if item["route_ok"] else "مسیر داخلی پاسخ نمی‌دهد"
+        if not item["route_ok"]:
+            item["recommendation"]="فعلاً انتخابش نکن؛ مسیر داخلی خطا دارد و باید ابتدا سرور بررسی شود."
+        elif profile["key"] in preferred:
+            item["recommendation"]="گزینهٔ شروع برای مقایسه روی همین اپراتور؛ اتصال واقعی را در کلاینت تأیید کن."
+        else:
+            item["recommendation"]="گزینهٔ جایگزین برای مقایسه؛ پشتیبانی نسخهٔ کلاینت از این حالت را تأیید کن."
+        profiles.append(item)
+    failures=[x for x in profiles if not x["route_ok"]]
+    summary=("تنظیمات Xray معتبر است" if config_ok else "خطا در اعتبارسنجی تنظیمات Xray")
+    summary+=(" · پردازش Xray فعال است" if running else (" · Xray نصب نیست" if not installed else " · پردازش Xray متوقف است"))
+    summary+=f" · مسیرهای مشکل‌دار: {len(failures)} از {len(profiles)}"
+    return {"ok":config_ok and (running or not installed) and not failures,"config_ok":config_ok,"config_error":config_error,"xray_installed":installed,"xray_running":running,"carrier":carrier,"carrier_label":_carrier_label(carrier),"profiles":profiles,"summary":summary,"note":"HTTP route checks only verify the local Nginx/Xray path. They do not perform an end-to-end VPN handshake or a test from the selected mobile carrier."}
+
+@app.post("/api/system/diagnostics/repair")
+async def repair_system_diagnostics(r:Request):
+    require_role(r,"owner","admin")
+    require_csrf(r)
+    changes=[]
+    with db() as c:
+        cur=c.execute("UPDATE settings SET value='0' WHERE key='profile:ss_ws' AND value!='0'")
+        if cur.rowcount:
+            changes.append("غیرفعال‌کردن تنظیم قدیمی SS-WebSocket")
+    try:
+        validate_and_write_xray()
+        changes.append("اعتبارسنجی تنظیمات Xray")
+        if Path(XRAY_BIN).exists():
+            await start_xray()
+            changes.append("راه‌اندازی مجدد Xray")
+        event("INFO","Safe diagnostics repair completed: "+", ".join(changes))
+    except Exception as exc:
+        event("ERROR",f"Safe diagnostics repair failed: {exc}")
+        raise HTTPException(503,"تعمیر کامل نشد؛ رویدادهای Xray را بررسی کن.")
+    return {"ok":True,"message":"تعمیر امن انجام شد: "+", ".join(changes)+". حالا بررسی را دوباره اجرا کن."}
 
 @app.post("/api/clients")
 async def create_client(r:Request):
