@@ -109,14 +109,14 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 11
-    assert sum(line.startswith("vless://") for line in configs) == 8
+    assert len(configs) == 13
+    assert sum(line.startswith("vless://") for line in configs) == 10
     assert sum(line.startswith("trojan://") for line in configs) == 1
     assert sum(line.startswith("vmess://") for line in configs) == 1
     assert sum(line.startswith("ss://") for line in configs) == 1
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
-    assert sum("type=xhttp" in line for line in configs) == 4
+    assert sum("type=xhttp" in line for line in configs) == 6
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
     assert sum("mode=packet-up" in line for line in configs) == 1
@@ -158,7 +158,7 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert subscription_client.status_code == 200
     assert "text/plain" in subscription_client.headers["content-type"]
     configs = base64.b64decode(subscription_client.text).decode().splitlines()
-    assert len(configs) == 11
+    assert len(configs) == 13
     assert "Accept, User-Agent" in subscription_client.headers["vary"]
     assert "Subscription-Userinfo" in subscription_client.headers
     assert "total=4294967296" in subscription_client.headers["Subscription-Userinfo"]
@@ -203,14 +203,26 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 12  # Stats API plus eleven selectable profiles
+    assert len(inbounds) == 14  # Stats API plus thirteen selectable profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
+    assert len({item["streamSettings"]["xhttpSettings"]["path"] for item in xhttp}) == 6
+
+
+def test_xhttp_modes_are_real_and_alternate_paths_are_unique(client):
+    profiles = {p["key"]: p for p in panel.PROFILES}
+    assert profiles["xhttp_stream_up"]["mode"] == "stream-up"
+    assert profiles["xhttp_stream_one"]["mode"] == "stream-one"
+    assert profiles["xhttp_stream_up_alt"]["mode"] == "stream-up"
+    assert profiles["xhttp_stream_one_alt"]["mode"] == "stream-one"
+    assert profiles["xhttp_stream_up"]["path"] != profiles["xhttp_stream_up_alt"]["path"]
+    assert profiles["xhttp_stream_one"]["path"] != profiles["xhttp_stream_one_alt"]["path"]
+    assert len({p["port"] for p in panel.PROFILES}) == len(panel.PROFILES)
 
 
 def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
@@ -218,7 +230,7 @@ def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
     response = client.get("/api/system/diagnostics")
     assert response.status_code == 200, response.text
     data = response.json()
-    assert len(data["profiles"]) == 11
+    assert len(data["profiles"]) == 13
     assert data["actual_tunnel_tested"] is False
     assert "تست واقعی" in data["note"]
     for profile in data["profiles"]:
@@ -374,7 +386,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 11
+    assert len(settings.json()["profiles"]) == 13
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
