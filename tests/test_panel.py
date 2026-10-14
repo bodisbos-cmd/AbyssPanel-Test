@@ -78,8 +78,11 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 6
-    assert all(line.startswith("vless://") for line in configs)
+    assert len(configs) == 9
+    assert sum(line.startswith("vless://") for line in configs) == 6
+    assert sum(line.startswith("trojan://") for line in configs) == 1
+    assert sum(line.startswith("vmess://") for line in configs) == 1
+    assert sum(line.startswith("ss://") for line in configs) == 1
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
     assert sum("type=xhttp" in line for line in configs) == 4
@@ -138,7 +141,7 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 7  # Stats API + WS + HTTPUpgrade + four XHTTP modes
+    assert len(inbounds) == 10  # Stats API + nine client profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
@@ -168,6 +171,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert "Abyss Tunnel" in page.text
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
+    assert "Trojan" in page.text and "VMess" in page.text and "Shadowsocks" in page.text
     assert page.headers["cache-control"] == "no-store"
     assert "noindex, nofollow" in page.headers["x-robots-tag"]
 
@@ -290,7 +294,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 6
+    assert len(settings.json()["profiles"]) == 9
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -299,7 +303,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -307,7 +311,7 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 4
+    assert len(links) == 7
     assert all("type=ws" not in line for line in links)
     assert all("packet-up" not in line for line in links)
 
