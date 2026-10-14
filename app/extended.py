@@ -31,6 +31,28 @@ def _init(panel):
         cols={row["name"] for row in c.execute("PRAGMA table_info(api_keys)")}
         if "expires_at" not in cols: c.execute("ALTER TABLE api_keys ADD COLUMN expires_at TEXT")
         c.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_enabled ON api_keys(enabled)")
+        c.execute("""CREATE TABLE IF NOT EXISTS profile_reports(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id TEXT NOT NULL,
+            profile_key TEXT NOT NULL,
+            carrier TEXT NOT NULL,
+            result TEXT NOT NULL CHECK(result IN ('ok','fail')),
+            created_at TEXT NOT NULL,
+            user_agent TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_profile_reports_lookup ON profile_reports(carrier,profile_key,created_at DESC)")
+        c.execute("""CREATE TABLE IF NOT EXISTS profile_reports(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id TEXT NOT NULL,
+            profile_key TEXT NOT NULL,
+            carrier TEXT NOT NULL,
+            result TEXT NOT NULL CHECK(result IN ('ok','fail')),
+            created_at TEXT NOT NULL,
+            user_agent TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
+        )""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_profile_reports_lookup ON profile_reports(carrier,profile_key,created_at DESC)")
 
 def _admin(r, p): p.require_admin(r)
 def _role(r, p, *roles): p.require_role(r, *roles)
@@ -209,9 +231,7 @@ def install_extended(app, namespace):
         _admin(request,p)
         return {"current":_metrics(p),"history":list(_HISTORY)}
 
-    @app.get("/api/system/profiles/check")
-    async def check_profile_routes(request:Request):
-        _admin(request,p)
+    def _profile_route_checks():
         results=[]
         for profile in p.PROFILES:
             started=time.monotonic()
@@ -219,19 +239,106 @@ def install_extended(app, namespace):
             connection=None
             try:
                 connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=1.5)
-                connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
+                # A plain GET is only a reverse-proxy reachability check, not a VPN ping.
+                connection.request("GET",profile["path"].split("?",1)[0],headers={"Host":"localhost","Connection":"close"})
                 resp=connection.getresponse()
                 result["http_status"]=resp.status
                 resp.read(1)
                 result["latency_ms"]=round((time.monotonic()-started)*1000,1)
                 result["route_ok"]=result["http_status"] not in {502,503,504}
+                result["status"]="route reachable" if result["route_ok"] else "gateway failure"
+                result["detail"]="HTTP path answered; client handshake and operator reachability are not tested."
             except (http.client.HTTPException,TimeoutError,OSError) as exc:
                 result["latency_ms"]=round((time.monotonic()-started)*1000,1)
                 result["error"]="Nginx/route did not respond: "+str(exc)[:140]
+                result["status"]="unreachable"
+                result["detail"]=result["error"]
             finally:
                 if connection: connection.close()
             results.append(result)
-        return {"checks":results,"note":"این تست فقط مسیر HTTP داخل کانتینر تا Nginx/Xray را می‌سنجد؛ پینگ واقعی تونل یا سرعت اینترنت مشتری نیست."}
+        return results
+
+    @app.get("/api/system/profiles/check")
+    async def check_profile_routes(request:Request):
+        _admin(request,p)
+        return {"checks":_profile_route_checks(),"note":"این تست فقط پاسخ مسیر HTTP داخل کانتینر را بررسی می‌کند؛ پینگ واقعی تونل یا اپراتور نیست."}
+
+    @app.get("/api/system/assistant")
+    async def system_assistant(request:Request):
+        _role(request,p,"owner","admin")
+        checks=[]
+        xray_installed=Path(_global(p,"XRAY_BIN")).exists()
+        xray_running=bool(_global(p,"xray_proc") and _global(p,"xray_proc").poll() is None)
+        try:
+            p.validate_and_write_xray()
+            checks.append({"key":"xray-config","label":"اعتبار تنظیمات Xray","status":"سالم","detail":"ساختار تنظیمات و اعتبارسنجی Xray موفق بود."})
+        except Exception as exc:
+            checks.append({"key":"xray-config","label":"اعتبار تنظیمات Xray","status":"خطا","detail":str(exc)[:220]})
+        checks.append({"key":"xray-process","label":"سرویس Xray","status":"فعال" if xray_running else ("نصب نشده" if not xray_installed else "متوقف"),"detail":"این وضعیت از پردازش همین کانتینر خوانده شده است."})
+        try:
+            probe=subprocess.run(["nginx","-t"],capture_output=True,text=True,timeout=5)
+            checks.append({"key":"nginx-config","label":"اعتبار تنظیمات Nginx","status":"سالم" if probe.returncode==0 else "خطا","detail":(probe.stderr or probe.stdout or "nginx -t finished")[-260:]})
+        except (OSError,subprocess.TimeoutExpired) as exc:
+            checks.append({"key":"nginx-config","label":"بررسی Nginx","status":"بررسی نشد","detail":str(exc)[:220]})
+        route_checks=_profile_route_checks()
+        for item in route_checks:
+            checks.append({"key":"route-"+item["key"],"label":"مسیر "+item["label"],"status":"پاسخ‌گو" if item["route_ok"] else "خطا","detail":"HTTP "+str(item["http_status"])+" · "+item.get("detail","") if item.get("http_status") is not None else item.get("detail","")})
+        labels={x["key"]:x["label"] for x in p.PROFILES}
+        carriers={"mci":"همراه اول","irancell":"ایرانسل","rightel":"رایتل","wifi":"وای‌فای / سایر","auto":"انتخاب خودکار"}
+        with p.db() as c:
+            rows=c.execute("""SELECT carrier,profile_key,COUNT(*) AS total,
+                SUM(CASE WHEN result='ok' THEN 1 ELSE 0 END) AS success
+                FROM profile_reports WHERE created_at >= ? GROUP BY carrier,profile_key
+                HAVING COUNT(*) >= 2 ORDER BY (1.0*SUM(CASE WHEN result='ok' THEN 1 ELSE 0 END)/COUNT(*)) DESC, COUNT(*) DESC""",
+                ((datetime.now(timezone.utc)-timedelta(days=30)).isoformat(timespec="seconds"),)).fetchall()
+        recommendations=[]
+        for row in rows:
+            recommendations.append({"carrier":row["carrier"],"carrier_label":carriers.get(row["carrier"],row["carrier"]),"profile_key":row["profile_key"],"profile_label":labels.get(row["profile_key"],row["profile_key"]),"total":row["total"],"success":row["success"],"success_rate":round(100*row["success"]/row["total"])})
+        failed=sum(x["status"]=="خطا" for x in checks)
+        summary=("بررسی انجام شد؛ "+str(failed)+" مورد نیازمند توجه است." if failed else "بررسی انجام شد؛ مشکل قطعی در تست‌های محلی پیدا نشد. برای تأیید واقعی، تست روی دیتای اپراتورها لازم است.")
+        return {"summary":summary,"checks":checks,"recommendations":recommendations,"limitations":["بررسی HTTP مسیر، پینگ یا handshake واقعی VPN نیست.","سرور نمی‌تواند از راه دور بفهمد یک پروفایل روی دیتای همراه اول/ایرانسل/رایتل کار می‌کند؛ نتیجه‌ها از گزارش کاربران جمع می‌شوند."]}
+
+    @app.post("/api/system/assistant/repair")
+    async def repair_system_assistant(request:Request):
+        _role(request,p,"owner","admin"); _csrf(request,p)
+        outcomes=[]
+        try:
+            probe=subprocess.run(["nginx","-t"],capture_output=True,text=True,timeout=5)
+            outcomes.append({"item":"Nginx config","ok":probe.returncode==0,"detail":(probe.stderr or probe.stdout or "nginx -t finished")[-260:]})
+        except (OSError,subprocess.TimeoutExpired) as exc:
+            outcomes.append({"item":"Nginx config","ok":False,"detail":str(exc)[:220]})
+        if not Path(_global(p,"XRAY_BIN")).exists():
+            outcomes.append({"item":"Xray","ok":False,"detail":"Xray binary is not installed; automatic restart is unavailable."})
+        else:
+            try:
+                await p.start_xray()
+                running=bool(_global(p,"xray_proc") and _global(p,"xray_proc").poll() is None)
+                outcomes.append({"item":"Xray validate/restart","ok":running,"detail":"Xray configuration validated and service restart attempted." if running else "Restart returned, but the process is not running."})
+            except Exception as exc:
+                outcomes.append({"item":"Xray validate/restart","ok":False,"detail":str(exc)[:260]})
+        ok=all(x["ok"] for x in outcomes)
+        p.event("INFO" if ok else "WARNING","System assistant repair "+("completed" if ok else "finished with issues")+".")
+        return {"ok":ok,"summary":"تلاش برای رفع خودکار تمام شد؛ نتیجهٔ هر مورد را بررسی کن." if not ok else "تنظیمات بررسی شد و سرویس‌های قابل‌بازیابی در دسترس‌اند.","outcomes":outcomes}
+
+    @app.post("/sub/{token}/report")
+    async def report_subscription_profile(token:str,request:Request):
+        if len(token)>100: raise HTTPException(404,"Not found")
+        client=p.active_subscription_client(token)
+        if not p.rate_check(request,"profile-report:"+client["id"],limit=30,window=60):
+            raise HTTPException(429,"Too many profile reports; try again shortly.")
+        try: body=await request.json()
+        except Exception as exc: raise HTTPException(400,"JSON body required") from exc
+        if not isinstance(body,dict): raise HTTPException(422,"JSON object required")
+        profile_key=body.get("profile_key")
+        carrier=body.get("carrier")
+        result=body.get("result")
+        if profile_key not in {x["key"] for x in p.PROFILES}: raise HTTPException(422,"Unknown profile key")
+        if carrier not in {"auto","mci","irancell","rightel","wifi"}: raise HTTPException(422,"Unsupported carrier")
+        if result not in {"ok","fail"}: raise HTTPException(422,"Result must be ok or fail")
+        with p.db() as c:
+            c.execute("INSERT INTO profile_reports(client_id,profile_key,carrier,result,created_at,user_agent) VALUES(?,?,?,?,?,?)",
+                (client["id"],profile_key,carrier,result,_utc(),request.headers.get("user-agent","")[:160]))
+        return {"ok":True,"message":"گزارش برای پیشنهادهای اپراتوری ثبت شد."}
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):
