@@ -288,7 +288,7 @@ def install_extended(app, namespace):
 
     @app.post("/api/system/diagnostics/repair")
     async def repair_xray(request:Request):
-        _admin(request,p); _csrf(request,p)
+        _role(request,p,"owner"); _csrf(request,p)
         if not Path(str(_global(p,"XRAY_BIN") or "")).is_file():
             raise HTTPException(503,"Xray is not installed; automatic restart is unavailable")
         try:
