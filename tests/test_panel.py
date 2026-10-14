@@ -495,13 +495,21 @@ def test_nested_reseller_allocation_is_atomic_and_scoped(client):
         headers=headers,
     )
     assert child.status_code == 200, child.text
+    edited = client.patch(
+        f"/api/resellers/{child.json()['id']}",
+        json={"username": "child_renamed", "password": "ChangedPassword123", "quota_gb": 1},
+        headers=headers,
+    )
+    assert edited.status_code == 200, edited.text
     too_much = client.post(
         "/api/resellers",
         json={"username": "oversized_child", "password": "OtherPassword123", "quota_gb": 1.1},
         headers=headers,
     )
     assert too_much.status_code == 422
-    assert client.get("/api/resellers").json()["resellers"][0]["id"] == child.json()["id"]
+    listed = client.get("/api/resellers").json()["resellers"]
+    assert listed[0]["id"] == child.json()["id"]
+    assert listed[0]["username"] == "child_renamed"
 
     # Simulate two simultaneous allocation attempts competing for the same
     # final GB. SQLite BEGIN IMMEDIATE must serialize the quota check + insert.
@@ -523,7 +531,7 @@ def test_nested_reseller_allocation_is_atomic_and_scoped(client):
     token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
     login = client.post(
         "/login",
-        data={"username": "child_reseller", "password": "ChildPassword123", "csrf_token": html.unescape(token)},
+        data={"username": "child_renamed", "password": "ChangedPassword123", "csrf_token": html.unescape(token)},
         follow_redirects=False,
     )
     assert login.status_code == 303
