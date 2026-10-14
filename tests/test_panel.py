@@ -119,6 +119,10 @@ def test_create_pause_subscription_and_revoke(client):
     assert sum("type=xhttp" in line for line in configs) == 6
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
+    assert any("mode=stream-up" in line and "xhttp-stream-up" in line for line in configs)
+    assert any("mode=stream-one" in line and "xhttp-stream-one" in line for line in configs)
+    assert any("xhttp-stream-up-alt" in line for line in configs)
+    assert any("xhttp-stream-one-alt" in line for line in configs)
     assert sum("mode=packet-up" in line for line in configs) == 1
     assert sum("mode=auto" in line for line in configs) == 3
     assert any("xhttp-auto-alt-a" in line for line in configs)
@@ -212,6 +216,32 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
     assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
     assert len({item["streamSettings"]["xhttpSettings"]["path"] for item in xhttp}) == 6
+
+
+def test_diagnostics_repair_is_owner_only_csrf_protected_and_restarts_xray(client, monkeypatch, tmp_path):
+    # The endpoint is not public and does not accept a state-changing request without CSRF.
+    assert client.post("/api/system/diagnostics/repair").status_code == 401
+    csrf = admin_client(client)
+    assert client.post("/api/system/diagnostics/repair").status_code == 403
+
+    fake_xray = tmp_path / "xray"
+    fake_xray.write_text("test binary", encoding="utf-8")
+    monkeypatch.setattr(panel, "XRAY_BIN", str(fake_xray))
+
+    class RunningProcess:
+        def poll(self):
+            return None
+
+    async def fake_start_xray():
+        monkeypatch.setattr(panel, "xray_proc", RunningProcess())
+
+    monkeypatch.setattr(panel, "start_xray", fake_start_xray)
+    response = client.post(
+        "/api/system/diagnostics/repair",
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["ok"] is True
 
 
 def test_xhttp_modes_are_real_and_alternate_paths_are_unique(client):
