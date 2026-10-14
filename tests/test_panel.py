@@ -431,7 +431,7 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 9
+    assert len(links) == 11
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert any("mode=auto" in line for line in links)
     assert any("xhttp-auto-alt-a" in line for line in links)
