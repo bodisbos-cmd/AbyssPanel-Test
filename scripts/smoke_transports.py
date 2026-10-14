@@ -97,6 +97,9 @@ def main():
 
     server = ThreadingHTTPServer(("127.0.0.1", 9000), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    with urllib.request.urlopen("http://127.0.0.1:9000/check", timeout=3) as direct:
+        if direct.read() != MARKER:
+            raise RuntimeError("Local smoke target is not responding correctly")
     profiles = [
         ("ws", "/ws", None, 11081),
         ("httpupgrade", "/httpupgrade", None, 11082),
@@ -151,9 +154,12 @@ def main():
                 if result.returncode or result.stdout != MARKER:
                     stderr_file.flush()
                     detail = stderr_path.read_text(errors="replace")[-1500:]
+                    server_log = Path("/data/xray-stderr.log")
+                    server_detail = server_log.read_text(errors="replace")[-3000:] if server_log.exists() else "(no server Xray log)"
                     raise RuntimeError(
                         f"Real VLESS {network} {mode or ''} tunnel failed "
-                        f"(curl={result.returncode}, body={result.stdout!r}, stderr={detail})"
+                        f"(curl={result.returncode}, body={result.stdout!r}, curl_stderr={result.stderr.decode(errors='replace')[-1000:]}, "
+                        f"client_stderr={detail}, server_stderr={server_detail})"
                     )
                 print(f"PASS real VLESS tunnel: {network} {mode or 'default'}")
             finally:
