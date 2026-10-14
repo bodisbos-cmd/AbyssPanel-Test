@@ -345,8 +345,9 @@ def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
     assert all("abysstunnel-" in x or x.startswith("vmess://") for x in decoded)
     config = panel.make_xray_config()
     inbound = [x for x in config["inbounds"] if x.get("tag", "").startswith("in-")]
-    assert len(inbound) == 13
-    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
-    assert len({x["port"] for x in inbound}) == 13
+    assert len(inbound) == 12
+    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess"}
+    assert any(x["protocol"] == "shadowsocks" for x in config["inbounds"])
+    assert len({x["port"] for x in inbound}) == 12
     for item in inbound:
         assert item["streamSettings"]["network"] in {"ws", "httpupgrade", "xhttp"}
