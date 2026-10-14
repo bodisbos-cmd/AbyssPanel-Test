@@ -107,6 +107,14 @@ def get_profile_flags():
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
     return {p["key"]:saved.get("profile:"+p["key"],"1")=="1" for p in PROFILES}
 
+def get_ss2022_server_password():
+    with db() as c:
+        row=c.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()
+        if row: return row["value"]
+        generated=base64.b64encode(secrets.token_bytes(16)).decode()
+        c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('ss2022_server_password',?)",(generated,))
+        return c.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()["value"]
+
 def client_is_expired(expires_at):
     if not expires_at:
         return False
@@ -151,7 +159,7 @@ def make_xray_config():
             settings={"clients":[{"id":x["id"],"alterId":0,"email":x["email"]} for x in clients]}
         elif protocol=="shadowsocks":
             ss_clients=[{"password":base64.b64encode(hashlib.sha256(x["id"].encode()).digest()[:16]).decode(),"email":x["email"]} for x in clients]
-            settings={"method":"2022-blake3-aes-128-gcm","password":ss_clients[0]["password"] if ss_clients else base64.b64encode(secrets.token_bytes(16)).decode(),"network":"tcp","clients":ss_clients}
+            settings={"method":"2022-blake3-aes-128-gcm","password":get_ss2022_server_password(),"network":"tcp","clients":ss_clients}
         else:
             raise ValueError("Unsupported profile protocol: "+protocol)
         inbound={"tag":f"in-{profile['key']}","listen":"127.0.0.1","port":port,"protocol":protocol,"settings":settings,"streamSettings":stream}
@@ -639,7 +647,8 @@ def make_subscription_links(client, r):
             url="vmess://"+base64.b64encode(json.dumps(vmess,separators=(",",":")).encode()).decode()
         elif proto=="shadowsocks":
             ss_password=base64.b64encode(hashlib.sha256(uid.encode()).digest()[:16]).decode()
-            userinfo=base64.urlsafe_b64encode(("2022-blake3-aes-128-gcm:"+ss_password).encode()).decode().rstrip("=")
+            combined_password=get_ss2022_server_password()+":"+ss_password
+            userinfo=base64.urlsafe_b64encode(("2022-blake3-aes-128-gcm:"+combined_password).encode()).decode().rstrip("=")
             plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
             url=f"ss://{userinfo}@{host}:443?plugin={plugin}#{title}"
         else:
