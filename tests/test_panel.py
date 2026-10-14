@@ -50,6 +50,23 @@ def admin_client(client):
     return overview.json()["csrf"]
 
 
+def test_fresh_install_uses_requested_admin_default(client, tmp_path):
+    credential_file = tmp_path / "INITIAL_ADMIN_PASSWORD.txt"
+    assert credential_file.exists()
+    assert "Username: admin" in credential_file.read_text(encoding="utf-8")
+    assert "Password: admin" in credential_file.read_text(encoding="utf-8")
+
+
+def test_dashboard_is_not_cached_and_has_section_navigation(client):
+    admin_client(client)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "no-store" in response.headers.get("cache-control", "")
+    assert 'id="sidebar"' in response.text
+    assert 'data-section-page="clients"' in response.text
+    assert '/dashboard.js?v=20261014-ui2' in response.text
+
+
 def test_dashboard_requires_login(client):
     response = client.get("/", follow_redirects=False)
     assert response.status_code == 303
