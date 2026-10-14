@@ -720,8 +720,14 @@ async def delete_reseller(rid:str,r:Request):
 
 @app.get("/health")
 async def health():
-    with db() as c:c.execute("SELECT 1").fetchone()
-    return {"ok":True}
+    with db() as c:
+        c.execute("SELECT 1").fetchone()
+    # If Xray is part of this image, a healthy HTTP process alone is not
+    # sufficient: report unhealthy until the actual tunnel engine is running.
+    xray_required=Path(XRAY_BIN).exists()
+    xray_running=bool(not xray_required or (xray_proc is not None and xray_proc.poll() is None))
+    payload={"ok":xray_running,"xray":"running" if xray_running else "stopped"}
+    return JSONResponse(payload,status_code=200 if xray_running else 503)
 @app.exception_handler(Exception)
 async def unhandled(r:Request,e:Exception):
     LOG.exception("Unhandled error: %s",e)
