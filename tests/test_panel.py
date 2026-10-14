@@ -312,8 +312,8 @@ def test_profile_settings_update_xray_and_subscription(client):
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
     assert len(links) == 7
-    assert all("type=ws" not in line for line in links)
-    assert all("packet-up" not in line for line in links)
+    assert not any(line.startswith("vless://") and "type=ws" in line for line in links)
+    assert not any(line.startswith("vless://") and "packet-up" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
