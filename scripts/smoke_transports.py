@@ -135,6 +135,7 @@ def main():
         ("vless", "xhttp", "/xhttp-stream-one-alt", "stream-one", 11093, True),
         ("trojan", "ws", "/trojan-ws", None, 11087, False),
         ("vmess", "ws", "/vmess-ws", None, 11088, False),
+        ("shadowsocks", "ws", "/ss-ws", None, 11089, False),
         ("vless", "ws", "/connect", None, 11090, False),
         ("vless", "httpupgrade", "/upgrade", None, 11091, False),
     ]
