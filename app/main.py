@@ -1,6 +1,6 @@
 from __future__ import annotations
-import asyncio, base64, hashlib, hmac, io, json, logging, os, secrets, sqlite3, subprocess, time, uuid
-from contextlib import asynccontextmanager
+import asyncio, base64, hashlib, hmac, io, json, logging, os, secrets, shutil, sqlite3, subprocess, time, uuid
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone, timedelta
 from html import escape as html_escape
 from pathlib import Path
@@ -27,11 +27,23 @@ LOG=logging.getLogger("abysspanel"); logging.basicConfig(level=os.getenv("LOG_LE
 xray_proc=None; xray_lock=asyncio.Lock()
 
 def utc_now(): return datetime.now(timezone.utc).isoformat(timespec="seconds")
+@contextmanager
 def db():
+    """Open one short-lived SQLite unit of work and always close its connection."""
     DATA_DIR.mkdir(parents=True,exist_ok=True)
-    c=sqlite3.connect(DB_PATH,timeout=15); c.row_factory=sqlite3.Row
-    c.execute("PRAGMA foreign_keys=ON"); c.execute("PRAGMA journal_mode=WAL"); c.execute("PRAGMA busy_timeout=15000")
-    return c
+    c=sqlite3.connect(DB_PATH,timeout=30,isolation_level="DEFERRED")
+    c.row_factory=sqlite3.Row
+    c.execute("PRAGMA foreign_keys=ON")
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA busy_timeout=30000")
+    try:
+        yield c
+        c.commit()
+    except BaseException:
+        c.rollback()
+        raise
+    finally:
+        c.close()
 def password_hash(password,salt=None):
     salt=salt or secrets.token_bytes(16); digest=hashlib.scrypt(password.encode(),salt=salt,n=2**14,r=8,p=1,dklen=32)
     return f"scrypt${base64.urlsafe_b64encode(salt).decode()}${base64.urlsafe_b64encode(digest).decode()}"
@@ -377,11 +389,21 @@ async def create_client(r:Request):
     if quota is not None and (not isinstance(quota,(int,float)) or isinstance(quota,bool) or not 1<=quota<=100000): raise HTTPException(422,"quota_gb must be 1–100000")
     expires=(datetime.now(timezone.utc)+timedelta(days=int(days))).isoformat(timespec="seconds") if days is not None else None
     owner=owner_id_for(r); quota_bytes=int(float(quota)*1024**3) if quota is not None else None
-    if owner is not None:
-        if quota_bytes is None: raise HTTPException(422,"Resellers must assign a finite quota to every client")
-        if quota_bytes>reseller_remaining(owner): raise HTTPException(422,"Client quota exceeds your remaining allocation")
+    if owner is not None and quota_bytes is None:
+        raise HTTPException(422,"Resellers must assign a finite quota to every client")
     cid,uid,token=str(uuid.uuid4()),str(uuid.uuid4()),secrets.token_urlsafe(32)
-    with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id) VALUES(?,?,?,?,1,?,?,?,?,0,?)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes,owner))
+    with db() as c:
+        # Serialize allocation checks and inserts to prevent concurrent requests
+        # from spending the same remaining reseller quota twice.
+        c.execute("BEGIN IMMEDIATE")
+        if owner is not None:
+            parent=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(owner,)).fetchone()
+            if not parent or not parent["enabled"]:
+                raise HTTPException(403,"Reseller account is disabled")
+            allocated=reseller_allocated(c,owner)
+            if quota_bytes>int(parent["quota_bytes"])-allocated:
+                raise HTTPException(422,"Client quota exceeds your remaining allocation")
+        c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id) VALUES(?,?,?,?,1,?,?,?,?,0,?)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes,owner))
     try:
         await start_xray()
     except Exception as e:
@@ -563,25 +585,56 @@ async def restore_database(r:Request):
     if not raw or len(raw)>100*1024*1024: raise HTTPException(413,"Backup must be between 1 byte and 100 MB")
     candidate=DATA_DIR/".restore-candidate.sqlite3"
     candidate.write_bytes(raw)
+    old=None
     try:
-        with sqlite3.connect(candidate) as check:
-            if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok": raise HTTPException(422,"Backup database integrity check failed")
+        check=sqlite3.connect(candidate)
+        try:
+            if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
+                raise HTTPException(422,"Backup database integrity check failed")
             tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            if not {"admins","clients","settings"}.issubset(tables): raise HTTPException(422,"Incompatible AbyssPanel backup")
+            if not {"admins","clients","settings"}.issubset(tables):
+                raise HTTPException(422,"Incompatible AbyssPanel backup")
+        finally:
+            check.close()
         stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         old=DATA_DIR/("pre-restore-"+stamp+".sqlite3")
         if DB_PATH.exists():
-            with sqlite3.connect(DB_PATH) as src, sqlite3.connect(old) as dst: src.backup(dst)
+            src=sqlite3.connect(DB_PATH,timeout=30)
+            dst=sqlite3.connect(old,timeout=30)
+            try:
+                src.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                src.backup(dst)
+            finally:
+                dst.close()
+                src.close()
         candidate.replace(DB_PATH)
+        Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
+        Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
         init_db()
-        await start_xray()
-        event("WARNING","Database restore completed; a pre-restore backup was retained.")
-        return {"ok":True,"message":"Restore completed; pre-restore database retained."}
+        try:
+            await start_xray()
+        except Exception:
+            # If the restored configuration cannot be applied, put the prior
+            # database back while retaining its dated backup for manual recovery.
+            if old and old.exists():
+                rollback=DATA_DIR/".restore-rollback.sqlite3"
+                shutil.copy2(old,rollback)
+                rollback.replace(DB_PATH)
+                Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
+                Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
+                init_db()
+                try:
+                    await start_xray()
+                except Exception as rollback_error:
+                    LOG.exception("Xray failed after restoring the previous database: %s",rollback_error)
+            raise
+        event("WARNING","Database restore completed; a pre-restore database copy was retained.")
+        return {"ok":True,"message":"Restore completed; a pre-restore database copy was retained."}
     except HTTPException:
         raise
     except Exception as e:
         LOG.exception("Database restore failed")
-        raise HTTPException(500,"Restore failed; inspect service logs and the pre-restore backup") from e
+        raise HTTPException(500,"Restore failed; previous database retained when available") from e
     finally:
         candidate.unlink(missing_ok=True)
 
@@ -600,10 +653,17 @@ async def create_reseller(r:Request):
     if len(password)<14 or len(password)>256 or not any(x.isalpha() for x in password) or not any(x.isdigit() for x in password): raise HTTPException(422,"Password must be at least 14 characters and include letters and numbers")
     if not isinstance(quota,(int,float)) or isinstance(quota,bool) or not 0.1<=quota<=100000: raise HTTPException(422,"Invalid quota allocation")
     quota_bytes=int(float(quota)*1024**3)
-    if owner is not None and quota_bytes>reseller_remaining(owner): raise HTTPException(422,"Allocation exceeds your remaining quota")
     rid=str(uuid.uuid4())
     try:
-        with db() as c: c.execute("INSERT INTO resellers(id,username,password_hash,quota_bytes,enabled,parent_id,created_at) VALUES(?,?,?,?,1,?,?)",(rid,username,password_hash(password),quota_bytes,owner,utc_now()))
+        with db() as c:
+            c.execute("BEGIN IMMEDIATE")
+            if owner is not None:
+                parent=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(owner,)).fetchone()
+                if not parent or not parent["enabled"]:
+                    raise HTTPException(403,"Reseller account is disabled")
+                if quota_bytes>int(parent["quota_bytes"])-reseller_allocated(c,owner):
+                    raise HTTPException(422,"Allocation exceeds your remaining quota")
+            c.execute("INSERT INTO resellers(id,username,password_hash,quota_bytes,enabled,parent_id,created_at) VALUES(?,?,?,?,1,?,?)",(rid,username,password_hash(password),quota_bytes,owner,utc_now()))
     except sqlite3.IntegrityError: raise HTTPException(409,"Username already exists")
     event("INFO",f"Created reseller {username!r} with quota allocation.")
     return {"id":rid,"username":username,"quota_bytes":quota_bytes}
@@ -611,6 +671,7 @@ async def create_reseller(r:Request):
 async def update_reseller(rid:str,r:Request):
     require_admin(r); require_csrf(r); body=await r.json(); owner=owner_id_for(r)
     with db() as c:
+        c.execute("BEGIN IMMEDIATE")
         row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
         if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
         updates={}
@@ -635,6 +696,7 @@ async def update_reseller(rid:str,r:Request):
 async def delete_reseller(rid:str,r:Request):
     require_admin(r); require_csrf(r); owner=owner_id_for(r)
     with db() as c:
+        c.execute("BEGIN IMMEDIATE")
         row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
         if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
         if reseller_allocated(c,rid): raise HTTPException(409,"Remove allocated client/reseller quotas before deleting")
