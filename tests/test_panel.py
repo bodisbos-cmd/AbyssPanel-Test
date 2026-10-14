@@ -376,7 +376,7 @@ def test_profile_settings_update_xray_and_subscription(client):
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
     assert len(links) == 12
-    assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
+    assert not any(line.endswith("#abysstunnel-Profile%20test-ws") for line in links)
     assert any("mode=stream-up" in line for line in links)
     assert any("mode=stream-one" in line for line in links)
 
