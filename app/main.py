@@ -480,6 +480,46 @@ async def subscription_page(token:str,r:Request):
     page=render_subscription_page(client,links,sub_url,f"{base}/sub/{token}/qr")
     return HTMLResponse(page,headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
+@app.get("/api/backup")
+async def backup_database(r:Request):
+    require_admin(r)
+    target=DATA_DIR/("abyss-backup-"+datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".sqlite3")
+    with db() as source:
+        dest=sqlite3.connect(target)
+        try: source.backup(dest)
+        finally: dest.close()
+    event("INFO","Administrator created a database backup.")
+    return FileResponse(target,media_type="application/vnd.sqlite3",filename=target.name)
+
+@app.post("/api/restore")
+async def restore_database(r:Request):
+    require_admin(r); require_csrf(r)
+    raw=await r.body()
+    if not raw or len(raw)>100*1024*1024: raise HTTPException(413,"Backup must be between 1 byte and 100 MB")
+    candidate=DATA_DIR/".restore-candidate.sqlite3"
+    candidate.write_bytes(raw)
+    try:
+        with sqlite3.connect(candidate) as check:
+            if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok": raise HTTPException(422,"Backup database integrity check failed")
+            tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            if not {"admins","clients","settings"}.issubset(tables): raise HTTPException(422,"Incompatible AbyssPanel backup")
+        stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        old=DATA_DIR/("pre-restore-"+stamp+".sqlite3")
+        if DB_PATH.exists():
+            with sqlite3.connect(DB_PATH) as src, sqlite3.connect(old) as dst: src.backup(dst)
+        candidate.replace(DB_PATH)
+        init_db()
+        await start_xray()
+        event("WARNING","Database restore completed; a pre-restore backup was retained.")
+        return {"ok":True,"message":"Restore completed; pre-restore database retained."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        LOG.exception("Database restore failed")
+        raise HTTPException(500,"Restore failed; inspect service logs and the pre-restore backup") from e
+    finally:
+        candidate.unlink(missing_ok=True)
+
 @app.get("/health")
 async def health():
     with db() as c:c.execute("SELECT 1").fetchone()
