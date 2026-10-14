@@ -255,7 +255,7 @@ def install_extended(app, namespace):
 
     @app.get("/api/system/assistant")
     async def system_assistant(request:Request):
-        _role(request,p,"owner","admin")
+        _role(request,p,"owner","admin"); _init(p)
         checks=[]
         xray_installed=Path(_global(p,"XRAY_BIN")).exists()
         xray_running=bool(_global(p,"xray_proc") and _global(p,"xray_proc").poll() is None)
@@ -317,6 +317,7 @@ def install_extended(app, namespace):
 
     @app.post("/sub/{token}/report")
     async def report_subscription_profile(token:str,request:Request):
+        _init(p)
         if len(token)>100: raise HTTPException(404,"Not found")
         client=p.active_subscription_client(token)
         if not p.rate_check(request,"profile-report:"+client["id"],limit=30,window=60):
