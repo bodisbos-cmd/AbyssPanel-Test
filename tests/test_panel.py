@@ -312,7 +312,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 4
+    assert len(settings.json()["profiles"]) == 6
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -321,7 +321,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -329,13 +329,13 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 2
+    assert len(links) == 4
     assert all("type=ws" not in line for line in links)
     assert all("packet-up" not in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False}},
         headers=headers,
     )
     assert rejected.status_code == 422
