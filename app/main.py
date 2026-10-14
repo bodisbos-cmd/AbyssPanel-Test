@@ -90,8 +90,8 @@ def init_db():
         initial_file=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"
         if initial_file.exists():
             initial_password=os.getenv("ABYSS_INITIAL_ADMIN_PASSWORD","admin").strip() or "admin"
-            owner=c.execute("SELECT id FROM panel_admins WHERE username='admin'").fetchone()
-            if owner:
+            owner=c.execute("SELECT id,password_hash FROM panel_admins WHERE username='admin'").fetchone()
+            if owner and not verify_password(initial_password,owner["password_hash"]):
                 changed=utc_now()
                 hashed=password_hash(initial_password)
                 c.execute("UPDATE admins SET password_hash=?,password_changed_at=? WHERE id=1",(hashed,changed))
