@@ -58,11 +58,19 @@ def test_fresh_install_uses_requested_admin_default(client, tmp_path):
 
 
 def test_dashboard_is_not_cached_and_has_section_navigation(client):
+    login_page = client.get("/login")
+    assert 'id="abyss-theme-system"' in login_page.text
+    assert 'id="abyss-theme-controller"' in login_page.text
+    assert 'data-abyss-theme="angel"' in login_page.text
     admin_client(client)
     response = client.get("/")
     assert response.status_code == 200
     assert "no-store" in response.headers.get("cache-control", "")
     assert '/dashboard.js?v=20261014-ui3' in response.text
+    assert 'id="abyss-theme-system"' in response.text
+    assert 'id="abyss-theme-controller"' in response.text
+    assert 'سلطنتی · مشکی و طلایی' in response.text
+    assert 'سپید · فرشته‌گون' in response.text
     assert 'id="sidebar"' in response.text
     assert 'data-section-page="clients"' in response.text
     assert 'id="metricsCard"' in response.text
@@ -137,6 +145,8 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert browser.status_code == 200
     assert "text/html" in browser.headers["content-type"]
     assert "Unified URL" in browser.text
+    assert 'id="abyss-theme-system"' in browser.text
+    assert 'id="abyss-theme-controller"' in browser.text
     assert "no-store" in browser.headers["cache-control"]
     subscription_client = client.get(path, headers={"Accept": "*/*", "User-Agent": "v2rayNG"})
     assert subscription_client.status_code == 200
