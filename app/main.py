@@ -791,7 +791,7 @@ def make_subscription_links(client, r):
             ss_password=hashlib.sha256(uid.encode()).hexdigest()[:32]
             # SIP002 requires base64(method:password) for classic AEAD Shadowsocks.
             userinfo=base64.urlsafe_b64encode(("aes-128-gcm:"+ss_password).encode()).decode().rstrip("=")
-            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
+            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe="")
             url=f"ss://{userinfo}@{host}:443/?plugin={plugin}#{title}"
         else:
             continue
