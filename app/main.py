@@ -60,6 +60,7 @@ def init_db():
     with db() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY CHECK(id=1),password_hash TEXT NOT NULL,password_changed_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS panel_admins(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('owner','admin','viewer')),enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,password_changed_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS clients(id TEXT PRIMARY KEY,name TEXT NOT NULL,client_uuid TEXT NOT NULL UNIQUE,sub_token TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,note TEXT NOT NULL DEFAULT '',expires_at TEXT,quota_bytes INTEGER,used_bytes INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS resellers(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,quota_bytes INTEGER NOT NULL CHECK(quota_bytes>0),enabled INTEGER NOT NULL DEFAULT 1,parent_id TEXT,created_at TEXT NOT NULL,FOREIGN KEY(parent_id) REFERENCES resellers(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,level TEXT NOT NULL,message TEXT NOT NULL);
@@ -73,6 +74,11 @@ def init_db():
             try: p.chmod(0o600)
             except OSError: pass
             if os.getenv("ABYSS_TEST_MODE")!="1": LOG.warning("INITIAL ADMIN CREDENTIAL username=admin password=%s; change immediately in Settings",pw)
+        # Migrate the existing single-admin credential without changing its password.
+        legacy=c.execute("SELECT password_hash,password_changed_at FROM admins WHERE id=1").fetchone()
+        if legacy and not c.execute("SELECT id FROM panel_admins WHERE username='admin'").fetchone():
+            c.execute("INSERT INTO panel_admins(id,username,password_hash,role,enabled,created_at,password_changed_at) VALUES(?,?,?,?,1,?,?)",
+                ("owner-admin","admin",legacy["password_hash"],"owner",legacy["password_changed_at"],legacy["password_changed_at"]))
         # Safe in-place migration for persistent databases created by older releases.
         cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
         for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0")):
@@ -239,7 +245,18 @@ app.add_middleware(SessionMiddleware,secret_key=sf.read_text().strip(),session_c
 async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
 def require_admin(r):
-    if r.session.get("admin") is True: return
+    if r.session.get("admin") is True:
+        admin_id=r.session.get("admin_id","owner-admin")
+        with db() as c:
+            account=c.execute("SELECT role,enabled,password_changed_at FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
+        if not account or not account["enabled"]:
+            r.session.clear()
+            raise HTTPException(401,"Administrator account is disabled or no longer exists")
+        if r.session.get("admin_password_changed_at") != account["password_changed_at"]:
+            r.session.clear()
+            raise HTTPException(401,"Administrator password changed; please sign in again")
+        r.session["admin_role"]=account["role"]
+        return
     rid=r.session.get("reseller_id")
     if not rid: raise HTTPException(401,"Authentication required")
     with db() as c:
@@ -254,11 +271,16 @@ def require_admin(r):
                 r.session.clear()
                 raise HTTPException(401,"Parent reseller account is disabled")
             parent_id=parent["parent_id"]
-def is_root(r): return r.session.get("admin") is True
-def owner_id_for(r): return None if is_root(r) else str(r.session.get("reseller_id",""))
-def require_root(r):
+def require_role(r,*roles):
     require_admin(r)
-    if not is_root(r): raise HTTPException(403,"Root administrator permission required")
+    role=r.session.get("admin_role","owner")
+    if role not in roles: raise HTTPException(403,"Insufficient permissions")
+def is_root(r): return r.session.get("admin") is True and r.session.get("admin_role","owner")=="owner"
+def owner_id_for(r):
+    if r.session.get("admin") is True: return None
+    return str(r.session.get("reseller_id",""))
+def require_root(r):
+    require_role(r,"owner")
 def require_client_access(r,cid):
     if is_root(r): return
     with db() as c: row=c.execute("SELECT owner_id FROM clients WHERE id=?",(cid,)).fetchone()
@@ -287,6 +309,9 @@ def assert_reseller_chain_enabled(c,rid):
             raise HTTPException(403,"Reseller account or parent is disabled")
         current_id=row["parent_id"]
 def require_csrf(r):
+    require_admin(r)
+    if r.session.get("admin") is True and r.session.get("admin_role")=="viewer":
+        raise HTTPException(403,"Read-only viewer account")
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
 def rate_check(r,key,limit=8,window=300):
@@ -380,15 +405,25 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
     if not rate_check(r,"login:"+ip):
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","تلاش‌های زیادی انجام شده؛ پنج دقیقه صبر کن.").replace("{{CSRF}}",token),status_code=429)
-    with db() as c:
-        row=c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone() if username=="admin" else c.execute("SELECT id,password_hash,enabled FROM resellers WHERE username=?",(username,)).fetchone()
-    if not row or (username=="admin" and not verify_password(password,row["password_hash"])) or (username!="admin" and (not row["enabled"] or not verify_password(password,row["password_hash"]))):
+    if len(username)>64 or len(password)>256:
+        row=None; account_type="admin"
+    else:
+        with db() as c:
+            row=c.execute("SELECT id,username,password_hash,role,enabled,password_changed_at FROM panel_admins WHERE username=?",(username.strip(),)).fetchone()
+            account_type="admin"
+            if not row:
+                row=c.execute("SELECT id,password_hash,enabled FROM resellers WHERE username=?",(username.strip(),)).fetchone()
+                account_type="reseller"
+    if not row or not row["enabled"] or not verify_password(password,row["password_hash"]):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","نام کاربری یا رمز عبور اشتباه است.").replace("{{CSRF}}",token),status_code=401)
     r.session.clear(); r.session["csrf"]=secrets.token_urlsafe(32)
-    if username=="admin": r.session["admin"]=True; event("INFO","Administrator signed in.")
-    else: r.session["reseller_id"]=row["id"]; event("INFO",f"Reseller {username!r} signed in.")
+    if account_type=="admin":
+        r.session["admin"]=True; r.session["admin_id"]=row["id"]; r.session["admin_username"]=row["username"]; r.session["admin_role"]=row["role"]; r.session["admin_password_changed_at"]=row["password_changed_at"]
+        event("INFO",f"Administrator signed in as {row['username']} ({row['role']}).")
+    else:
+        r.session["reseller_id"]=row["id"]; event("INFO",f"Reseller {username!r} signed in.")
     return RedirectResponse("/",303)
 @app.get("/logout")
 async def logout(r:Request): r.session.clear(); return RedirectResponse("/login",303)
@@ -575,7 +610,7 @@ def make_subscription_links(client, r):
         network,path,mode=profile["network"],profile["path"],profile["mode"]
         q=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}&encryption=none"
         if mode: q+=f"&mode={quote(mode)}"
-        label={"xhttp_auto":"xhttp-auto","xhttp_packet_up":"xhttp-packet-up"}.get(profile["key"],profile["key"])
+        label={"xhttp_auto":"xhttp-auto","xhttp_packet_up":"xhttp-packet-up","xhttp_stream_up":"xhttp-stream-up","xhttp_stream_one":"xhttp-stream-one"}.get(profile["key"],profile["key"])
         links.append({"label":label,"url":f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}"})
     return links
 
@@ -861,3 +896,13 @@ async def change_password(r: Request):
         except OSError: event("WARNING","Could not remove the initial administrator password file.")
     event("INFO", "Account password changed.")
     return {"ok": True}
+# Register the optional platform extension after the core app and helpers are defined.
+try:
+    from app.extended import install_extended
+except ModuleNotFoundError:
+    import importlib.util
+    _extension_spec = importlib.util.spec_from_file_location("abyss_extended", Path(__file__).with_name("extended.py"))
+    _extension_module = importlib.util.module_from_spec(_extension_spec)
+    _extension_spec.loader.exec_module(_extension_module)
+    install_extended = _extension_module.install_extended
+install_extended(app, globals())
