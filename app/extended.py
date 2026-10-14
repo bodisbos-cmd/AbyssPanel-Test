@@ -15,7 +15,9 @@ def _utc():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 def _global(panel, name):
-    return panel.db.__globals__.get(name, getattr(panel, name, None))
+    namespace=getattr(panel,"_globals",None)
+    if isinstance(namespace,dict) and name in namespace: return namespace[name]
+    return getattr(panel,name,None)
 
 def _db_path(panel):
     return Path(_global(panel, "DB_PATH"))
@@ -132,6 +134,7 @@ def _download_items():
 
 def install_extended(app, namespace):
     p=type("PanelNamespace",(),namespace)
+    p._globals=namespace
     _init(p)
 
     @app.get("/api/admin/users")
