@@ -96,13 +96,34 @@ def get_profile_flags():
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
     return {p["key"]:saved.get("profile:"+p["key"],"1")=="1" for p in PROFILES}
 
+def client_is_expired(expires_at):
+    if not expires_at:
+        return False
+    try:
+        value=str(expires_at).replace("Z","+00:00")
+        expiry=datetime.fromisoformat(value)
+        if expiry.tzinfo is None:
+            expiry=expiry.replace(tzinfo=timezone.utc)
+        return expiry <= datetime.now(timezone.utc)
+    except (TypeError,ValueError):
+        # Fail closed on corrupt expiry metadata.
+        return True
+
+def client_is_active(client):
+    if not client.get("enabled"):
+        return False
+    if client_is_expired(client.get("expires_at")):
+        return False
+    quota=client.get("quota_bytes")
+    return quota is None or int(client.get("used_bytes") or 0) < int(quota)
+
 def valid_name(name:Any):
     if not isinstance(name,str): raise HTTPException(422,"Client name must be text")
     name=" ".join(name.strip().split())
     if not name or len(name)>64 or any(ord(x)<32 for x in name): raise HTTPException(422,"Client name must be 1–64 printable characters")
     return name
 def make_xray_config():
-    clients=[{"id":x["client_uuid"],"email":f"client-{x['id']}"} for x in get_clients(True) if x["enabled"]]
+    clients=[{"id":x["client_uuid"],"email":f"client-{x['id']}"} for x in get_clients(True) if client_is_active(x)]
     ins=[{"tag":"api","listen":"127.0.0.1","port":10085,"protocol":"dokodemo-door","settings":{"address":"127.0.0.1","port":10085,"network":"tcp"}}]
     flags=get_profile_flags()
     for profile in PROFILES:
@@ -164,15 +185,17 @@ def apply_xray_stats(stats):
                 c.execute("UPDATE clients SET used_bytes=used_bytes+? WHERE id=?",(int(delta),key))
 
 async def enforce_client_limits():
-    if not Path(XRAY_BIN).exists() or not xray_proc or xray_proc.poll() is not None: return
-    stats=read_xray_stats()
-    apply_xray_stats(stats)
+    # Expiry and already-recorded quota enforcement must continue even while
+    # Xray is down; only the live counter query depends on a running process.
+    if Path(XRAY_BIN).exists() and xray_proc and xray_proc.poll() is None:
+        stats=read_xray_stats()
+        apply_xray_stats(stats)
     auto_disabled=[]
     with db() as c:
-        rows=[dict(x) for x in c.execute("SELECT id,name,enabled,created_at,expires_at,quota_bytes,used_bytes FROM clients")]
+        rows=[dict(x) for x in c.execute("SELECT id,name,enabled,expires_at,quota_bytes,used_bytes FROM clients")]
         for row in rows:
             if not row["enabled"]: continue
-            expired=bool(row["expires_at"] and row["expires_at"]<=utc_now())
+            expired=client_is_expired(row["expires_at"])
             exhausted=bool(row["quota_bytes"] is not None and int(row["used_bytes"] or 0)>=int(row["quota_bytes"]))
             if expired or exhausted:
                 c.execute("UPDATE clients SET enabled=0 WHERE id=?",(row["id"],))
@@ -180,9 +203,13 @@ async def enforce_client_limits():
     # Log after closing the database transaction to avoid nested SQLite writers.
     for name,reason in auto_disabled:
         event("INFO",f"Client {name!r} automatically disabled: {reason}.")
-    # Apply any auto-disabled clients to Xray once.
-    if auto_disabled:
-        await start_xray()
+    # Apply any auto-disabled clients to Xray once, but do not prevent the DB
+    # enforcement from completing if the engine is currently unavailable.
+    if auto_disabled and Path(XRAY_BIN).exists():
+        try:
+            await start_xray()
+        except Exception as e:
+            event("ERROR",f"Could not apply automatically disabled clients to Xray: {e}")
 
 async def monitor():
     while True:
@@ -513,7 +540,8 @@ def get_base_url(r=None):
 def active_subscription_client(token):
     if len(token)>100: raise HTTPException(404,"Not found")
     with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=? AND enabled=1",(token,)).fetchone()
-    if not client: raise HTTPException(404,"Subscription not found or disabled")
+    if not client or not client_is_active(dict(client)):
+        raise HTTPException(404,"Subscription not found, expired, or disabled")
     return dict(client)
 
 def make_subscription_links(client, r):
