@@ -468,6 +468,47 @@ async function createApiKey(){const name=document.getElementById('apiKeyName').v
 async function revokeApiKey(id){if(!confirm('این کلید API لغو شود؟'))return;try{await api('/api/admin/api-keys/'+id,{method:'DELETE'});await loadApiKeys()}catch(e){alert(e.message)}}
 applyLanguage();showSection('dashboard');load();'''
 
+
+# Abyss visual themes: royal-black/gold, angelic-white, and restrained color atmospheres.
+ABYSS_THEME_CSS = r"""<style id="abyss-theme-system">
+:root{--ab-bg:#050505;--ab-panel:rgba(17,17,19,.70);--ab-line:rgba(194,163,99,.25);--ab-accent:#c5a568;--ab-accent-hi:#e4d2a5;--ab-text:#eeeae2;--ab-muted:#aaa7a1;--ab-glass:rgba(191,159,95,.105);--ab-glow:rgba(190,151,75,.16);--ab-input:rgba(8,8,10,.58);color-scheme:dark}
+html[data-abyss-theme="royal"]{--ab-bg:#050505;--ab-panel:rgba(17,17,19,.70);--ab-line:rgba(194,163,99,.25);--ab-accent:#c5a568;--ab-accent-hi:#e4d2a5;--ab-text:#eeeae2;--ab-muted:#aaa7a1;--ab-glass:rgba(191,159,95,.105);--ab-glow:rgba(190,151,75,.16);--ab-input:rgba(8,8,10,.58);color-scheme:dark}
+html[data-abyss-theme="angel"]{--ab-bg:#f1f2f6;--ab-panel:rgba(255,255,255,.70);--ab-line:rgba(166,151,119,.30);--ab-accent:#9a8150;--ab-accent-hi:#c2ab79;--ab-text:#292b33;--ab-muted:#6d7180;--ab-glass:rgba(255,255,255,.58);--ab-glow:rgba(255,255,255,.74);--ab-input:rgba(255,255,255,.64);color-scheme:light}
+html[data-abyss-theme="amethyst"]{--ab-bg:#090711;--ab-panel:rgba(25,20,37,.68);--ab-line:rgba(172,144,214,.26);--ab-accent:#b7a0e6;--ab-accent-hi:#ddd0ff;--ab-text:#f0ecf7;--ab-muted:#b1a8c1;--ab-glass:rgba(157,124,207,.12);--ab-glow:rgba(132,93,190,.18);--ab-input:rgba(10,8,17,.55);color-scheme:dark}
+html[data-abyss-theme="ocean"]{--ab-bg:#061015;--ab-panel:rgba(13,29,37,.69);--ab-line:rgba(117,176,195,.26);--ab-accent:#8fc4d3;--ab-accent-hi:#c3e9ef;--ab-text:#eaf4f5;--ab-muted:#a0b8bf;--ab-glass:rgba(111,174,192,.12);--ab-glow:rgba(57,133,157,.18);--ab-input:rgba(5,13,17,.55);color-scheme:dark}
+html[data-abyss-theme="emerald"]{--ab-bg:#07100c;--ab-panel:rgba(16,30,23,.69);--ab-line:rgba(135,181,145,.25);--ab-accent:#a8c7a0;--ab-accent-hi:#d8ead2;--ab-text:#edf4ed;--ab-muted:#a8b8aa;--ab-glass:rgba(130,173,130,.11);--ab-glow:rgba(87,140,91,.17);--ab-input:rgba(6,13,9,.55);color-scheme:dark}
+html,body{min-height:100%;background:var(--ab-bg)!important;color:var(--ab-text)!important}
+body{position:relative;background-image:radial-gradient(ellipse at 82% 14%,var(--ab-glow),transparent 37%),radial-gradient(ellipse at 14% 78%,var(--ab-glow),transparent 42%)!important;background-size:145% 145%;animation:abyssAtmosphere 34s ease-in-out infinite alternate}
+body:before{content:"";position:fixed;inset:-15%;z-index:0;pointer-events:none;opacity:.68;background:radial-gradient(circle at 72% 23%,transparent 0 48px,var(--ab-line) 49px,transparent 52px),radial-gradient(circle at 72% 23%,transparent 0 77px,rgba(210,198,174,.10) 78px,transparent 80px),radial-gradient(ellipse at 18% 20%,var(--ab-glow),transparent 32%),radial-gradient(ellipse at 82% 80%,var(--ab-glow),transparent 38%);animation:abyssOrbit 48s linear infinite}
+body:after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.19;background-image:radial-gradient(1px 1px at 12% 18%,var(--ab-accent-hi) 98%,transparent),radial-gradient(1px 1px at 79% 32%,var(--ab-text) 98%,transparent),radial-gradient(1px 1px at 37% 72%,var(--ab-accent) 98%,transparent),radial-gradient(1px 1px at 88% 86%,var(--ab-text) 98%,transparent),radial-gradient(1px 1px at 55% 14%,var(--ab-accent-hi) 98%,transparent);background-size:310px 260px}
+body>*{position:relative;z-index:1}
+.app-shell,.workspace{background:transparent!important}
+.sidebar,.card,.panel,.box,.hero,.metric,.extra-box,.metric-pill,.profile-setting,.profile,.carrier-tools,.client{background:var(--ab-panel)!important;border-color:var(--ab-line)!important;backdrop-filter:blur(18px) saturate(120%);-webkit-backdrop-filter:blur(18px) saturate(120%);box-shadow:0 14px 44px rgba(0,0,0,.10)}
+.sidebar{background:linear-gradient(165deg,var(--ab-panel),color-mix(in srgb,var(--ab-bg) 80%,transparent))!important}
+input,select,textarea,.linkbox{background:var(--ab-input)!important;color:var(--ab-text)!important;border-color:var(--ab-line)!important}
+button,.btn,a.button,.button-link,.nav-item,.profile-marks button{background:var(--ab-glass)!important;color:var(--ab-text)!important;border:1px solid var(--ab-line)!important;backdrop-filter:blur(16px) saturate(130%);-webkit-backdrop-filter:blur(16px) saturate(130%);box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 8px 24px rgba(0,0,0,.08);transition:background .25s ease,border-color .25s ease,transform .25s ease,box-shadow .25s ease}
+button.primary,.btn.primary,.button-link.primary{background:linear-gradient(135deg,var(--ab-glass),color-mix(in srgb,var(--ab-accent) 16%,transparent))!important;color:var(--ab-accent-hi)!important;border-color:color-mix(in srgb,var(--ab-accent) 58%,transparent)!important}
+button:hover,.btn:hover,a.button:hover,.button-link:hover,.nav-item:hover,.profile:hover{border-color:color-mix(in srgb,var(--ab-accent) 68%,transparent)!important;background:color-mix(in srgb,var(--ab-accent) 15%,transparent)!important;transform:translateY(-1px)}
+.nav-item.active{color:var(--ab-accent-hi)!important;border-color:var(--ab-line)!important;background:color-mix(in srgb,var(--ab-accent) 14%,transparent)!important;box-shadow:inset -3px 0 var(--ab-accent),0 8px 24px rgba(0,0,0,.08)!important}
+.mint,.eyebrow,.brand,.side-brand,.nav-item.active,.profile-open,#status,.section-title{color:var(--ab-accent)!important}
+.muted,small,.small,.side-caption,.field,.sub-field label{color:var(--ab-muted)!important}
+.badge{color:var(--ab-accent-hi)!important;border-color:var(--ab-line)!important;background:var(--ab-glass)!important}
+.gauge{background:conic-gradient(var(--ab-accent) calc(var(--value)*1%),var(--ab-line) 0)!important}.gauge:before{background:var(--ab-bg)!important;border-color:var(--ab-line)!important}
+dialog{background:var(--ab-bg)!important;color:var(--ab-text)!important;border-color:var(--ab-line)!important}dialog::backdrop{background:rgba(0,0,0,.48)!important;backdrop-filter:blur(12px)}
+#abyssThemeDock{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:6px 10px;border:1px solid var(--ab-line);border-radius:999px;background:var(--ab-glass);color:var(--ab-text);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);box-shadow:0 8px 28px rgba(0,0,0,.10);font:12px system-ui,sans-serif;white-space:nowrap}
+#abyssThemeDock .theme-mark{color:var(--ab-accent);font-size:14px}#abyssThemeSelect{width:auto;max-width:165px;min-width:0;margin:0;padding:4px 19px 4px 5px;border:0!important;outline:none;background:transparent!important;color:var(--ab-text)!important;font:inherit;box-shadow:none!important}#abyssThemeSelect option{background:var(--ab-bg);color:var(--ab-text)}
+#abyssThemeDock.floating{position:fixed;top:14px;right:14px;z-index:9999}
+@keyframes abyssAtmosphere{0%{background-position:0% 0%}100%{background-position:100% 100%}}@keyframes abyssOrbit{from{transform:rotate(0deg) scale(1)}to{transform:rotate(360deg) scale(1.035)}}
+html[data-abyss-theme="angel"] body:before{opacity:.55;background:radial-gradient(circle at 72% 23%,transparent 0 49px,rgba(163,146,111,.27) 50px,transparent 54px),radial-gradient(circle at 72% 23%,transparent 0 82px,rgba(163,146,111,.16) 83px,transparent 85px),radial-gradient(ellipse at 48% 8%,rgba(255,255,255,.94),transparent 52%),radial-gradient(ellipse at 12% 86%,rgba(207,215,232,.60),transparent 40%)}
+html[data-abyss-theme="angel"] body:after{opacity:.23;background-image:radial-gradient(1px 1px at 12% 18%,#b29c6b 98%,transparent),radial-gradient(1px 1px at 79% 32%,#a9b4c8 98%,transparent),radial-gradient(1px 1px at 37% 72%,#c1ad7b 98%,transparent)}
+html[data-abyss-theme="angel"] .card,html[data-abyss-theme="angel"] .panel,html[data-abyss-theme="angel"] .hero,html[data-abyss-theme="angel"] .sidebar{box-shadow:0 18px 48px rgba(74,77,93,.08),inset 0 1px rgba(255,255,255,.75)}
+@media(max-width:700px){#abyssThemeDock{gap:5px;padding:5px 8px}#abyssThemeSelect{max-width:130px;font-size:11px}#abyssThemeDock.floating{top:10px;right:10px}}
+@media(prefers-reduced-motion:reduce){body{animation:none!important}body:before{animation:none!important}*,*:before,*:after{transition:none!important}}
+</style>"""
+ABYSS_THEME_JS = r"""<script id="abyss-theme-controller">(()=>{const presets={royal:'سلطنتی · مشکی و طلایی',angel:'سپید · فرشته‌گون',amethyst:'کسوف · بنفش',ocean:'ژرفا · آبی',emerald:'شفق · سبز'};let saved='royal';try{saved=localStorage.getItem('abyss-visual-theme')||'royal'}catch(e){}if(!presets[saved])saved='royal';const apply=t=>{if(!presets[t])t='royal';document.documentElement.dataset.abyssTheme=t;try{localStorage.setItem('abyss-visual-theme',t)}catch(e){}const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=t==='angel'?'#f1f2f6':t==='amethyst'?'#090711':t==='ocean'?'#061015':t==='emerald'?'#07100c':'#050505'};apply(saved);const init=()=>{if(document.getElementById('abyssThemeDock'))return;const dock=document.createElement('label');dock.id='abyssThemeDock';dock.innerHTML='<span class="theme-mark" aria-hidden="true">◉</span><span>تم</span><select id="abyssThemeSelect" aria-label="انتخاب تم">'+Object.entries(presets).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>';const target=document.querySelector('.top .tools')||document.querySelector('.top');if(target)target.appendChild(dock);else{dock.classList.add('floating');document.body.appendChild(dock)}const select=dock.querySelector('select');select.value=document.documentElement.dataset.abyssTheme;select.addEventListener('change',()=>apply(select.value))};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();</script>"""
+LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
+DASH = DASH.replace("</head>", ABYSS_THEME_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
+
 @app.get("/dashboard.js",response_class=PlainTextResponse)
 async def dashboard_js():
     return PlainTextResponse(DASH_JS,media_type="application/javascript",headers={"Cache-Control":"no-store"})
@@ -771,7 +812,7 @@ input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:1
         .replace("__PROFILES__",cards)
         .replace("__COUNT__",str(len(links)))
         .replace("__QR_URL__",html_escape(qr_url,quote=True))
-        .replace("__SUB_JSON__",json.dumps(sub_url)))
+        .replace("__SUB_JSON__",json.dumps(sub_url))).replace("</head>",ABYSS_THEME_CSS+"</head>").replace("</body>",ABYSS_THEME_JS+"</body>")
 
 @app.get("/api/clients/{cid}/subscription")
 async def subscription_link(cid:str,r:Request):
