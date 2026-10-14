@@ -466,3 +466,83 @@ def test_backup_and_restore_round_trip(client):
     restored = client.post("/api/restore", content=backup.content, headers={**headers, "Content-Type": "application/octet-stream"})
     assert restored.status_code == 200, restored.text
     assert client.get("/api/overview").json()["total"] == 1
+
+def test_nested_reseller_allocation_is_atomic_and_scoped(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    parent = client.post(
+        "/api/resellers",
+        json={"username": "parent_reseller", "password": "ParentPassword123", "quota_gb": 2},
+        headers=headers,
+    )
+    assert parent.status_code == 200, parent.text
+
+    client.get("/logout")
+    page = client.get("/login")
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
+    login = client.post(
+        "/login",
+        data={"username": "parent_reseller", "password": "ParentPassword123", "csrf_token": html.unescape(token)},
+        follow_redirects=False,
+    )
+    assert login.status_code == 303
+    csrf = client.get("/api/overview").json()["csrf"]
+    headers = {"X-CSRF-Token": csrf}
+
+    child = client.post(
+        "/api/resellers",
+        json={"username": "child_reseller", "password": "ChildPassword123", "quota_gb": 1},
+        headers=headers,
+    )
+    assert child.status_code == 200, child.text
+    too_much = client.post(
+        "/api/resellers",
+        json={"username": "oversized_child", "password": "OtherPassword123", "quota_gb": 1.1},
+        headers=headers,
+    )
+    assert too_much.status_code == 422
+    assert client.get("/api/resellers").json()["resellers"][0]["id"] == child.json()["id"]
+
+    # Simulate two simultaneous allocation attempts competing for the same
+    # final GB. SQLite BEGIN IMMEDIATE must serialize the quota check + insert.
+    from concurrent.futures import ThreadPoolExecutor
+    def create_one(index):
+        return client.post(
+            "/api/clients",
+            json={"name": f"Concurrent {index}", "quota_gb": 1},
+            headers=headers,
+        ).status_code
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        statuses = list(pool.map(create_one, range(2)))
+    assert sorted(statuses) == [200, 422], statuses
+    assert client.get("/api/overview").json()["total"] == 1
+
+    # Parent account suspension must invalidate the child's session too.
+    client.get("/logout")
+    page = client.get("/login")
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
+    login = client.post(
+        "/login",
+        data={"username": "child_reseller", "password": "ChildPassword123", "csrf_token": html.unescape(token)},
+        follow_redirects=False,
+    )
+    assert login.status_code == 303
+    with panel.db() as conn:
+        conn.execute("UPDATE resellers SET enabled=0 WHERE id=?", (parent.json()["id"],))
+    assert client.get("/api/overview").status_code == 401
+
+
+def test_restore_rejects_corrupt_database_without_replacing_current(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post("/api/clients", json={"name": "Keep me", "quota_gb": 2}, headers=headers)
+    assert created.status_code == 200
+    before = client.get("/api/overview").json()["total"]
+    response = client.post(
+        "/api/restore",
+        content=b"not a sqlite database",
+        headers={**headers, "Content-Type": "application/octet-stream"},
+    )
+    assert response.status_code == 422
+    assert client.get("/api/overview").json()["total"] == before
+
