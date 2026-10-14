@@ -41,14 +41,26 @@ def wait_until(predicate, timeout, message):
 
 
 def read_client(client_id):
-    with sqlite3.connect(DB, timeout=10) as conn:
+    conn = sqlite3.connect(DB, timeout=10)
+    try:
         row = conn.execute(
             "SELECT id,client_uuid,used_bytes,quota_bytes,enabled FROM clients WHERE id=?",
             (client_id,),
         ).fetchone()
+    finally:
+        conn.close()
     if not row:
         raise RuntimeError("Smoke-test client disappeared from SQLite")
     return row
+
+
+def port_ready(port):
+    import socket
+    sock = socket.socket()
+    try:
+        return sock.connect_ex(("127.0.0.1", port)) == 0
+    finally:
+        sock.close()
 
 
 def main():
@@ -128,7 +140,7 @@ def main():
                                     stdout=subprocess.DEVNULL, stderr=stderr_file)
             try:
                 wait_until(
-                    lambda: proc.poll() is not None or __import__("socket").socket().connect_ex(("127.0.0.1", socks_port)) == 0,
+                    lambda: proc.poll() is not None or port_ready(socks_port),
                     5,
                     f"{network} {mode or ''} client did not start",
                 )
@@ -160,8 +172,12 @@ def main():
         )
         used = read_client(client_id)[2]
         print(f"PASS real traffic accounting: {used} bytes recorded")
-        with sqlite3.connect(DB, timeout=10) as conn:
+        conn = sqlite3.connect(DB, timeout=10)
+        try:
             conn.execute("UPDATE clients SET quota_bytes=1 WHERE id=?", (client_id,))
+            conn.commit()
+        finally:
+            conn.close()
         wait_until(
             lambda: read_client(client_id)[4] == 0,
             18,
