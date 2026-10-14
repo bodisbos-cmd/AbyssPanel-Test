@@ -373,7 +373,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 11
+    assert len(settings.json()["profiles"]) == 12
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
