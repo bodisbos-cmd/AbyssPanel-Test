@@ -3,6 +3,7 @@ import base64
 import html
 import os
 import re
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -535,6 +536,21 @@ def test_nested_reseller_allocation_is_atomic_and_scoped(client):
         follow_redirects=False,
     )
     assert login.status_code == 303
+    child_csrf = client.get("/api/overview").json()["csrf"]
+    own_client = client.post(
+        "/api/clients",
+        json={"name": "Child-owned client", "quota_gb": 1},
+        headers={"X-CSRF-Token": child_csrf},
+    )
+    assert own_client.status_code == 200, own_client.text
+    assert client.get("/api/overview").json()["total"] == 1
+    over_child_quota = client.post(
+        "/api/clients",
+        json={"name": "Over child quota", "quota_gb": 1},
+        headers={"X-CSRF-Token": child_csrf},
+    )
+    assert over_child_quota.status_code == 422
+
     with panel.db() as conn:
         conn.execute("UPDATE resellers SET enabled=0 WHERE id=?", (parent.json()["id"],))
     assert client.get("/api/overview").status_code == 401
@@ -594,6 +610,29 @@ def test_expired_client_is_not_served_a_subscription(client):
         token = conn.execute("SELECT sub_token FROM clients WHERE id=?", (cid,)).fetchone()["sub_token"]
     response = client.get(f"/sub/{token}")
     assert response.status_code == 404
+
+
+def test_restore_rejects_valid_sqlite_with_incompatible_schema(client, tmp_path):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post("/api/clients", json={"name": "Preserve current DB", "quota_gb": 1}, headers=headers)
+    assert created.status_code == 200
+    bad_path = tmp_path / "incompatible.sqlite3"
+    conn = sqlite3.connect(bad_path)
+    try:
+        conn.execute("CREATE TABLE admins (id INTEGER PRIMARY KEY, password TEXT)")
+        conn.execute("CREATE TABLE clients (id TEXT)")
+        conn.execute("CREATE TABLE settings (key TEXT, value TEXT)")
+        conn.commit()
+    finally:
+        conn.close()
+    response = client.post(
+        "/api/restore",
+        content=bad_path.read_bytes(),
+        headers={**headers, "Content-Type": "application/octet-stream"},
+    )
+    assert response.status_code == 422
+    assert client.get("/api/overview").json()["total"] == 1
 
 
 def test_health_reports_stopped_xray_as_unhealthy(client, monkeypatch):
