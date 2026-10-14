@@ -120,10 +120,9 @@ def test_create_pause_subscription_and_revoke(client):
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
     assert sum("mode=packet-up" in line for line in configs) == 1
-    assert sum("mode=stream-up" in line for line in configs) == 1
-    assert sum("mode=stream-one" in line for line in configs) == 1
-    assert any("xhttp-stream-up" in line for line in configs)
-    assert any("xhttp-stream-one" in line for line in configs)
+    assert sum("mode=auto" in line for line in configs) == 3
+    assert any("xhttp-auto-alt-a" in line for line in configs)
+    assert any("xhttp-auto-alt-b" in line for line in configs)
     ss_uri = next(line for line in configs if line.startswith("ss://"))
     assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
@@ -211,7 +210,7 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
 
 
 def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
@@ -394,9 +393,7 @@ def test_profile_settings_update_xray_and_subscription(client):
     links = base64.b64decode(raw.text).decode().splitlines()
     assert len(links) == 9
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
-    assert not any("mode=packet-up" in line for line in links)
-    assert any("mode=stream-up" in line for line in links)
-    assert any("mode=stream-one" in line for line in links)
+    assert any("mode=auto" in line for line in links)
     assert any("mode=stream-one" in line for line in links)
 
     rejected = client.patch(
