@@ -25,11 +25,11 @@ class CoreTests(unittest.TestCase):
 
     def test_xray_config_has_loopback_only_inbounds(self):
         config = mod.make_xray_config()
-        self.assertEqual(len(config["inbounds"]), 7)
+        self.assertEqual(len(config["inbounds"]), 10)
         self.assertTrue(all(i["listen"] == "127.0.0.1" for i in config["inbounds"]))
         client_inbounds = [i for i in config["inbounds"] if "clients" in i["settings"]]
-        self.assertEqual(len(client_inbounds), 6)
-        self.assertTrue(all(i["settings"]["decryption"] == "none" for i in client_inbounds))
+        self.assertEqual(len(client_inbounds), 9)
+        self.assertEqual({i["protocol"] for i in client_inbounds}, {"vless", "trojan", "vmess", "shadowsocks"})
         self.assertEqual(len({i["tag"] for i in config["inbounds"]}), len(config["inbounds"]))
         self.assertEqual(len({i["port"] for i in config["inbounds"]}), len(config["inbounds"]))
 
@@ -48,7 +48,7 @@ class CoreTests(unittest.TestCase):
                 ("disabled-id", "Disabled Phone", "disabled-uuid", "disabled-token", mod.utc_now(), ""))
         for inbound in mod.make_xray_config()["inbounds"]:
             if "clients" in inbound["settings"]:
-                self.assertNotIn("disabled-uuid", [item["id"] for item in inbound["settings"]["clients"]])
+                self.assertFalse(any(item.get("id") == "disabled-uuid" or item.get("email") == "client-disabled-id" for item in inbound["settings"]["clients"]))
 
     def test_valid_name(self):
         self.assertEqual(mod.valid_name("  My   Phone  "), "My Phone")
