@@ -439,12 +439,12 @@ def install_extended(app, namespace):
                 try: src.execute("PRAGMA wal_checkpoint(FULL)"); src.backup(dst)
                 finally: dst.close(); src.close()
             def replace(source_path):
-                src=sqlite3.connect(str(source_path),timeout=15); dst=sqlite3.connect(str(path),timeout=15)
-                try: src.backup(dst); dst.commit()
-                finally: dst.close(); src.close()
-            for suffix in ("-wal","-shm"):
-                try: Path(str(path)+suffix).unlink(missing_ok=True)
-                except OSError: pass
+                replacement=path.with_name(".restore-"+uuid.uuid4().hex+".sqlite3")
+                shutil.copyfile(source_path,replacement)
+                for suffix in ("-wal","-shm"):
+                    try: Path(str(path)+suffix).unlink(missing_ok=True)
+                    except OSError: pass
+                os.replace(replacement,path)
             replace(restored)
             p.init_db()
             _init(p)
