@@ -24,7 +24,7 @@ DB_PATH=DATA_DIR/"panel.sqlite3"; XRAY_CONFIG=DATA_DIR/"xray.json"
 XRAY_BIN=os.getenv("XRAY_BIN","/usr/local/bin/xray"); PUBLIC_DOMAIN=os.getenv("RAILWAY_PUBLIC_DOMAIN","").strip()
 BASE_URL=os.getenv("BASE_URL","").strip().rstrip("/")
 LOG=logging.getLogger("abysspanel"); logging.basicConfig(level=os.getenv("LOG_LEVEL","INFO").upper())
-xray_proc=None; xray_lock=asyncio.Lock()
+xray_proc=None; xray_lock=asyncio.Lock(); restore_lock=asyncio.Lock()
 
 def utc_now(): return datetime.now(timezone.utc).isoformat(timespec="seconds")
 @contextmanager
@@ -601,63 +601,64 @@ async def restore_database(r:Request):
     require_root(r); require_csrf(r)
     raw=await r.body()
     if not raw or len(raw)>100*1024*1024: raise HTTPException(413,"Backup must be between 1 byte and 100 MB")
-    candidate=DATA_DIR/".restore-candidate.sqlite3"
-    candidate.write_bytes(raw)
-    old=None
-    try:
-        check=sqlite3.connect(candidate)
+    async with restore_lock:
+        candidate=DATA_DIR/(".restore-candidate-"+uuid.uuid4().hex+".sqlite3")
+        candidate.write_bytes(raw)
+        old=None
         try:
+            check=sqlite3.connect(candidate)
             try:
-                if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
-                    raise HTTPException(422,"Backup database integrity check failed")
-                tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                if not {"admins","clients","settings"}.issubset(tables):
-                    raise HTTPException(422,"Incompatible AbyssPanel backup")
-            except sqlite3.DatabaseError as exc:
-                raise HTTPException(422,"Backup is not a valid SQLite database") from exc
-        finally:
-            check.close()
-        stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        old=DATA_DIR/("pre-restore-"+stamp+".sqlite3")
-        if DB_PATH.exists():
-            src=sqlite3.connect(DB_PATH,timeout=30)
-            dst=sqlite3.connect(old,timeout=30)
-            try:
-                src.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                src.backup(dst)
-            finally:
-                dst.close()
-                src.close()
-        candidate.replace(DB_PATH)
-        Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
-        Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
-        init_db()
-        try:
-            await start_xray()
-        except Exception:
-            # If the restored configuration cannot be applied, put the prior
-            # database back while retaining its dated backup for manual recovery.
-            if old and old.exists():
-                rollback=DATA_DIR/".restore-rollback.sqlite3"
-                shutil.copy2(old,rollback)
-                rollback.replace(DB_PATH)
-                Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
-                Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
-                init_db()
                 try:
-                    await start_xray()
-                except Exception as rollback_error:
-                    LOG.exception("Xray failed after restoring the previous database: %s",rollback_error)
+                    if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
+                        raise HTTPException(422,"Backup database integrity check failed")
+                    tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                    if not {"admins","clients","settings"}.issubset(tables):
+                        raise HTTPException(422,"Incompatible AbyssPanel backup")
+                except sqlite3.DatabaseError as exc:
+                    raise HTTPException(422,"Backup is not a valid SQLite database") from exc
+            finally:
+                check.close()
+            stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            old=DATA_DIR/("pre-restore-"+stamp+".sqlite3")
+            if DB_PATH.exists():
+                src=sqlite3.connect(DB_PATH,timeout=30)
+                dst=sqlite3.connect(old,timeout=30)
+                try:
+                    src.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    src.backup(dst)
+                finally:
+                    dst.close()
+                    src.close()
+            candidate.replace(DB_PATH)
+            Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
+            Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
+            init_db()
+            try:
+                await start_xray()
+            except Exception:
+                # If the restored configuration cannot be applied, put the prior
+                # database back while retaining its dated backup for manual recovery.
+                if old and old.exists():
+                    rollback=DATA_DIR/".restore-rollback.sqlite3"
+                    shutil.copy2(old,rollback)
+                    rollback.replace(DB_PATH)
+                    Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
+                    Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
+                    init_db()
+                    try:
+                        await start_xray()
+                    except Exception as rollback_error:
+                        LOG.exception("Xray failed after restoring the previous database: %s",rollback_error)
+                raise
+            event("WARNING","Database restore completed; a pre-restore database copy was retained.")
+            return {"ok":True,"message":"Restore completed; a pre-restore database copy was retained."}
+        except HTTPException:
             raise
-        event("WARNING","Database restore completed; a pre-restore database copy was retained.")
-        return {"ok":True,"message":"Restore completed; a pre-restore database copy was retained."}
-    except HTTPException:
-        raise
-    except Exception as e:
-        LOG.exception("Database restore failed")
-        raise HTTPException(500,"Restore failed; previous database retained when available") from e
-    finally:
-        candidate.unlink(missing_ok=True)
+        except Exception as e:
+            LOG.exception("Database restore failed")
+            raise HTTPException(500,"Restore failed; previous database retained when available") from e
+        finally:
+            candidate.unlink(missing_ok=True)
 
 @app.get("/api/resellers")
 async def list_resellers(r:Request):
