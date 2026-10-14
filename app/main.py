@@ -442,7 +442,7 @@ async def overview(r:Request):
         child["allocated_bytes"]=reseller_allocated_for(child["id"])
         child["remaining_bytes"]=child["quota_bytes"]-child["allocated_bytes"]
     remaining=None if owner is None else reseller_remaining(owner)
-    return {"csrf":r.session.get("csrf",""),"role":"root" if owner is None else "reseller","remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
+    return {"csrf":r.session.get("csrf",""),"role":"root" if is_root(r) else ("reseller" if not r.session.get("admin") else r.session.get("admin_role","admin")),"user":{"username":r.session.get("admin_username", "reseller" if not r.session.get("admin") else "admin"),"role":r.session.get("admin_role","owner") if r.session.get("admin") else "reseller"},"remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
 @app.get("/api/settings")
 async def read_settings(r:Request):
     require_admin(r)
@@ -687,7 +687,7 @@ async def subscription_page(token:str,r:Request):
     page=render_subscription_page(client,links,sub_url,f"{base}/sub/{token}/qr")
     return HTMLResponse(page,headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
-@app.get("/api/backup")
+@app.get("/api/backup/sqlite")
 async def backup_database(r:Request):
     require_root(r)
     target=DATA_DIR/("abyss-backup-"+datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".sqlite3")
