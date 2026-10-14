@@ -17,7 +17,7 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 - A private token per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible VPN clients; QR and help pages remain available.
 - Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
 - Owner-only ZIP backup/restore with integrity/schema checks and rollback attempt; backup includes credential hashes and client data, so keep it private.
-- Nine selectable profiles: six VLESS transports (WS, HTTPUpgrade and four XHTTP modes), plus Trojan/VMess/Shadowsocks over WebSocket. Actual client/operator compatibility still needs field testing.
+- Nine selectable profiles: six VLESS transports (WS, HTTPUpgrade and four XHTTP modes), plus Trojan/VMess/Shadowsocks over WebSocket. XHTTP stream-up/stream-one are marked experimental because they did not complete the local HTTP/1.1-edge smoke test; verify them on Railway before relying on them.
 - Separate owner/admin/viewer accounts, scoped bot API keys, protected Swagger/ReDoc, resource diagnostics, official client download links, and a hamburger navigation drawer.
 - Xray configuration validation, basic process recovery, route diagnostics and a health endpoint.
 
