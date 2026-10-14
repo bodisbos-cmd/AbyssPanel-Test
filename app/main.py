@@ -71,7 +71,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS resellers(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,quota_bytes INTEGER NOT NULL CHECK(quota_bytes>0),enabled INTEGER NOT NULL DEFAULT 1,parent_id TEXT,created_at TEXT NOT NULL,FOREIGN KEY(parent_id) REFERENCES resellers(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,level TEXT NOT NULL,message TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS profile_feedback(id INTEGER PRIMARY KEY AUTOINCREMENT,sub_token TEXT NOT NULL,carrier TEXT NOT NULL,profile_key TEXT NOT NULL,result TEXT NOT NULL CHECK(result IN ('ok','fail')),created_at TEXT NOT NULL,UNIQUE(sub_token,carrier,profile_key));
+        CREATE TABLE IF NOT EXISTS profile_feedback(id INTEGER PRIMARY KEY AUTOINCREMENT,client_id TEXT NOT NULL,carrier TEXT NOT NULL,profile_key TEXT NOT NULL,result TEXT NOT NULL CHECK(result IN ('ok','fail')),created_at TEXT NOT NULL,user_agent TEXT NOT NULL DEFAULT '',UNIQUE(client_id,carrier,profile_key));
         CREATE INDEX IF NOT EXISTS idx_profile_feedback_carrier ON profile_feedback(carrier,profile_key,created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at DESC);
         """)
@@ -877,8 +877,8 @@ async def subscription(token:str,r:Request):
 
 @app.post("/sub/{token}/feedback")
 async def submit_profile_feedback(token:str,r:Request):
-    active_subscription_client(token)
-    if not rate_check(r,"profile-feedback:"+token,limit=30,window=60):
+    client=active_subscription_client(token)
+    if not rate_check(r,"profile-feedback:"+client["id"],limit=30,window=60):
         raise HTTPException(429,"Too many feedback reports")
     body=await r.json()
     if not isinstance(body,dict):
@@ -893,7 +893,7 @@ async def submit_profile_feedback(token:str,r:Request):
     if result not in {"ok","fail"}:
         raise HTTPException(422,"Result must be ok or fail")
     with db() as c:
-        c.execute("INSERT INTO profile_feedback(sub_token,carrier,profile_key,result,created_at) VALUES(?,?,?,?,?) ON CONFLICT(sub_token,carrier,profile_key) DO UPDATE SET result=excluded.result,created_at=excluded.created_at",(token,carrier,profile_key,result,utc_now()))
+        c.execute("INSERT INTO profile_feedback(client_id,carrier,profile_key,result,created_at,user_agent) VALUES(?,?,?,?,?,?) ON CONFLICT(client_id,carrier,profile_key) DO UPDATE SET result=excluded.result,created_at=excluded.created_at,user_agent=excluded.user_agent",(client["id"],carrier,profile_key,result,utc_now(),r.headers.get("user-agent","")[:160]))
     return {"ok":True,"message":"نتیجه برای پیشنهادهای همین اپراتور ثبت شد."}
 
 @app.get("/sub/{token}/qr")
