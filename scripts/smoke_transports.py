@@ -127,7 +127,7 @@ def main():
             if mode:
                 transport_settings["mode"] = mode
             config = {
-                "log": {"loglevel": "warning"},
+                "log": {"loglevel": "debug"},
                 "inbounds": [{
                     "listen": "127.0.0.1",
                     "port": socks_port,
