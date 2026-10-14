@@ -251,7 +251,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert 'id="abyss-theme-polish"' in page.text
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
-    assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
+    assert "مسیر جایگزین A" in page.text and "مسیر جایگزین B" in page.text
     assert page.headers["cache-control"] == "no-store"
     assert "noindex, nofollow" in page.headers["x-robots-tag"]
 
@@ -394,7 +394,8 @@ def test_profile_settings_update_xray_and_subscription(client):
     assert len(links) == 9
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert any("mode=auto" in line for line in links)
-    assert any("mode=stream-one" in line for line in links)
+    assert any("xhttp-auto-alt-a" in line for line in links)
+    assert any("xhttp-auto-alt-b" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
