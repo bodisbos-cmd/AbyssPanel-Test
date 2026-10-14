@@ -191,7 +191,7 @@ def main():
         for cmdline in Path("/proc").glob("[0-9]*/cmdline"):
             try:
                 pid = int(cmdline.parent.name)
-                args = cmdline.read_bytes().replace(b"\\0", b" ").decode(errors="ignore")
+                args = cmdline.read_bytes().replace(b"\\x00", b" ").decode(errors="ignore")
                 if XRAY in args and "run" in args and "/data/xray.json" in args:
                     os.kill(pid, 15)
                     killed = True
