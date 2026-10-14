@@ -62,7 +62,6 @@ class CoreTests(unittest.TestCase):
         with mod.db() as conn:
             conn.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", ("context-close-test", "persisted"))
             raw = conn
-        self.assertEqual(mod.db().execute("SELECT 1").fetchone()[0], 1) if False else None
         with self.assertRaises(Exception):
             raw.execute("SELECT 1")
         with mod.db() as conn:
