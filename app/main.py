@@ -100,8 +100,8 @@ def event(level,message):
 def get_clients(include_client_uuid=False, owner_id=None, scoped=False):
     cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id"
     with db() as c:
-        if scoped: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients WHERE owner_id=? ORDER BY created_at DESC",(owner_id,))]
-        return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
+        if scoped: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients WHERE owner_id=? ORDER BY created_at DESC",(owner_id,))]  # nosec B608: cols is a fixed allowlisted projection
+        return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]  # nosec B608: cols is a fixed allowlisted projection
 def get_profile_flags():
     with db() as c:
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
@@ -560,7 +560,7 @@ async def update_client(cid:str,r:Request):
             children=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=?",(owner,)).fetchone()["n"] or 0)
             parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
             if allocated+children+new_quota>int(parent["quota_bytes"]): raise HTTPException(422,"Updated quota exceeds your remaining allocation")
-        c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))
+        c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))  # nosec B608: keys originate only from the explicit allowed-field mapping above
     if "enabled" in updates and updates["enabled"] != previous["enabled"]:
         try:
             await start_xray()
@@ -869,7 +869,7 @@ async def update_reseller(rid:str,r:Request):
             updates["quota_bytes"]=amount
         if not updates: raise HTTPException(422,"No supported changes")
         try:
-            c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))
+            c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))  # nosec B608: keys are added only by fixed-field validation branches above
         except sqlite3.IntegrityError as exc:
             raise HTTPException(409,"Username already exists") from exc
     return {"ok":True}
