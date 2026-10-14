@@ -280,7 +280,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     data = response.json()
     assert len(data["checks"]) == 11
     assert all(item["route_ok"] for item in data["checks"])
-    assert "پینگ واقعی تونل" in data["note"]
+    assert "پینگ یا تونل واقعی" in data["note"]
 
     made = client.post("/api/clients", json={"name": "route diagnostic"},
                        headers={"X-CSRF-Token": csrf})
