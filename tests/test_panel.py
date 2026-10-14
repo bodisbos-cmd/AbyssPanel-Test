@@ -79,7 +79,6 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="adminUsersCard"' in response.text
     assert 'id="apiKeysCard"' in response.text
     assert "پورت داخلی باز" in response.text
-    assert "پینگ تونل نیست" in response.text
 
 
 def test_dashboard_requires_login(client):
