@@ -114,6 +114,8 @@ def test_create_pause_subscription_and_revoke(client):
     assert sum(line.startswith("trojan://") for line in configs) == 1
     assert sum(line.startswith("vmess://") for line in configs) == 1
     assert sum(line.startswith("ss://") for line in configs) == 1
+    ss_uri = next(line for line in configs if line.startswith("ss://"))
+    assert "plugin=v2ray-plugin%3Btls%3Bhost%3Dtestserver%3Bpath%3D%2Fss-ws" in ss_uri
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
     assert sum("type=xhttp" in line for line in configs) == 6
