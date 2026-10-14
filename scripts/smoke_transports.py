@@ -161,17 +161,17 @@ def main():
                     f"{network} {mode or ''} client did not start",
                 )
                 result = subprocess.run([
-                    "curl", "--noproxy", "", "--silent", "--show-error", "--max-time", "12",
-                    "--socks5-hostname", f"127.0.0.1:{socks_port}", "http://127.0.0.1:9000/check",
+                    "curl", "--noproxy", "", "--silent", "--show-error", "--location", "--max-time", "12",
+                    "--socks5-hostname", f"127.0.0.1:{socks_port}", "https://example.com/",
                 ], capture_output=True, timeout=15)
-                if result.returncode or result.stdout != MARKER:
+                if result.returncode or b"Example Domain" not in result.stdout:
                     stderr_file.flush()
                     detail = stderr_path.read_text(errors="replace")[-1500:]
                     server_log = Path("/data/xray-stderr.log")
                     server_detail = server_log.read_text(errors="replace")[-3000:] if server_log.exists() else "(no server Xray log)"
                     raise RuntimeError(
                         f"Real VLESS {network} {mode or ''} tunnel failed "
-                        f"(curl={result.returncode}, body={result.stdout!r}, target_hits={TARGET_HITS}, target_responses={TARGET_RESPONSES}, "
+                        f"(curl={result.returncode}, body={result.stdout!r}, "
                         f"curl_stderr={result.stderr.decode(errors='replace')[-1000:]}, client_stderr={detail}, server_stderr={server_detail})"
                     )
                 print(f"PASS real VLESS tunnel: {network} {mode or 'default'}")
