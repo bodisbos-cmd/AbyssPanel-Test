@@ -184,6 +184,31 @@ def main():
             "Client was not automatically disabled after its used traffic exceeded quota",
         )
         print("PASS real quota enforcement: exhausted client disabled")
+
+        # Kill only the server-side Xray process and verify the app's watchdog
+        # brings it back. Client Xray processes have already been terminated.
+        killed = False
+        for cmdline in Path("/proc").glob("[0-9]*/cmdline"):
+            try:
+                pid = int(cmdline.parent.name)
+                args = cmdline.read_bytes().replace(b"\\0", b" ").decode(errors="ignore")
+                if XRAY in args and "run" in args and "/data/xray.json" in args:
+                    os.kill(pid, 15)
+                    killed = True
+                    break
+            except (OSError, ValueError, ProcessLookupError):
+                continue
+        if not killed:
+            raise RuntimeError("Could not locate the server-side Xray process for recovery test")
+
+        def xray_healthy():
+            try:
+                with urllib.request.urlopen(BASE + "/health", timeout=2) as response:
+                    return json.loads(response.read()).get("xray") == "running"
+            except Exception:
+                return False
+        wait_until(xray_healthy, 22, "Xray watchdog did not recover the stopped process")
+        print("PASS Xray watchdog recovery after process termination")
     finally:
         server.shutdown()
         server.server_close()
