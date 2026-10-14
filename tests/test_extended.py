@@ -346,7 +346,7 @@ def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
     config = panel.make_xray_config()
     inbound = [x for x in config["inbounds"] if x.get("tag", "").startswith("in-")]
     assert len(inbound) == 13
-    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess"}
+    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
     assert any(x["protocol"] == "shadowsocks" for x in config["inbounds"])
     assert len({x["port"] for x in inbound}) == 13
     for item in inbound:
