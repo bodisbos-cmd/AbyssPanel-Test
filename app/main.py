@@ -16,12 +16,15 @@ from starlette.middleware.sessions import SessionMiddleware
 
 APP_NAME="AbyssPanel-Test"
 PROFILES=[
-    {"key":"ws","label":"WebSocket","network":"ws","path":"/ws","port":10001,"mode":None},
-    {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
-    {"key":"xhttp_auto","label":"XHTTP · auto","network":"xhttp","path":"/xhttp","port":10003,"mode":"auto"},
-    {"key":"xhttp_packet_up","label":"XHTTP · packet-up","network":"xhttp","path":"/xhttp-packet","port":10004,"mode":"packet-up"},
-    {"key":"xhttp_stream_up","label":"XHTTP · stream-up","network":"xhttp","path":"/xhttp-stream-up","port":10005,"mode":"stream-up"},
-    {"key":"xhttp_stream_one","label":"XHTTP · stream-one","network":"xhttp","path":"/xhttp-stream-one","port":10006,"mode":"stream-one"},
+    {"key":"ws","label":"VLESS · WebSocket","protocol":"vless","network":"ws","path":"/ws","port":10001,"mode":None},
+    {"key":"httpupgrade","label":"VLESS · HTTPUpgrade","protocol":"vless","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
+    {"key":"xhttp_auto","label":"VLESS · XHTTP auto","protocol":"vless","network":"xhttp","path":"/xhttp","port":10003,"mode":"auto"},
+    {"key":"xhttp_packet_up","label":"VLESS · XHTTP packet-up","protocol":"vless","network":"xhttp","path":"/xhttp-packet","port":10004,"mode":"packet-up"},
+    {"key":"xhttp_stream_up","label":"VLESS · XHTTP stream-up","protocol":"vless","network":"xhttp","path":"/xhttp-stream-up","port":10005,"mode":"stream-up"},
+    {"key":"xhttp_stream_one","label":"VLESS · XHTTP stream-one","protocol":"vless","network":"xhttp","path":"/xhttp-stream-one","port":10006,"mode":"stream-one"},
+    {"key":"trojan_ws","label":"Trojan · WebSocket TLS","protocol":"trojan","network":"ws","path":"/trojan-ws","port":10007,"mode":None},
+    {"key":"vmess_ws","label":"VMess · WebSocket TLS","protocol":"vmess","network":"ws","path":"/vmess-ws","port":10008,"mode":None},
+    {"key":"ss_ws","label":"Shadowsocks · WebSocket TLS","protocol":"shadowsocks","network":"ws","path":"/ss-ws","port":10009,"mode":None},
 ]
 DATA_DIR=Path(os.getenv("DATA_DIR","/data")); DATA_DIR.mkdir(parents=True,exist_ok=True)
 DB_PATH=DATA_DIR/"panel.sqlite3"; XRAY_CONFIG=DATA_DIR/"xray.json"
@@ -106,8 +109,21 @@ def make_xray_config():
         port,network,path=profile["port"],profile["network"],profile["path"]
         stream={"network":network,"security":"none"}
         stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":profile["mode"]} if network=="xhttp" else {})}
-        ins.append({"tag":f"in-{network}-{port}","listen":"127.0.0.1","port":port,"protocol":"vless","settings":{"clients":clients,"decryption":"none"},"streamSettings":stream})
+        protocol=profile.get("protocol","vless")
+        if protocol=="vless":
+            settings={"clients":clients,"decryption":"none"}
+        elif protocol=="trojan":
+            settings={"clients":[{"password":x["id"],"email":x["email"]} for x in clients]}
+        elif protocol=="vmess":
+            settings={"clients":[{"id":x["id"],"alterId":0,"email":x["email"]} for x in clients]}
+        elif protocol=="shadowsocks":
+            settings={"method":"chacha20-ietf-poly1305","password":"abysstunnel-internal-unused","network":"tcp"}
+            settings["clients"]=[{"password":x["id"],"email":x["email"]} for x in clients]
+        else:
+            raise ValueError("Unsupported profile protocol: "+protocol)
+        ins.append({"tag":f"in-{profile['key']}","listen":"127.0.0.1","port":port,"protocol":protocol,"settings":settings,"streamSettings":stream})
     return {"log":{"loglevel":"warning"},"api":{"tag":"api","services":["StatsService"]},"stats":{},"policy":{"levels":{"0":{"statsUserUplink":True,"statsUserDownlink":True}}},"inbounds":ins,"outbounds":[{"protocol":"freedom","tag":"direct"},{"protocol":"blackhole","tag":"block"},{"protocol":"freedom","tag":"api"}],"routing":{"domainStrategy":"AsIs","rules":[{"type":"field","inboundTag":["api"],"outboundTag":"api"}]}}
+
 def validate_and_write_xray():
     tmp=XRAY_CONFIG.with_suffix(".tmp"); tmp.write_text(json.dumps(make_xray_config(),indent=2),encoding="utf-8"); tmp.replace(XRAY_CONFIG)
     if Path(XRAY_BIN).exists():
@@ -461,16 +477,32 @@ def active_subscription_client(token):
 
 def make_subscription_links(client, r):
     base=get_base_url(r)
-    host=urlsplit(base).hostname or PUBLIC_DOMAIN or "YOUR-RAILWAY-DOMAIN"
+    host=urlsplit(base).hostname or PUBLIC_DOMAIN or "YOUR-DOMAIN"
     links=[]
     flags=get_profile_flags()
     for profile in PROFILES:
         if not flags[profile["key"]]: continue
         network,path,mode=profile["network"],profile["path"],profile["mode"]
-        q=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}&encryption=none"
-        if mode: q+=f"&mode={quote(mode)}"
-        label={"xhttp_auto":"xhttp-auto","xhttp_packet_up":"xhttp-packet-up","xhttp_stream_up":"xhttp-stream-up","xhttp_stream_one":"xhttp-stream-one"}.get(profile["key"],profile["key"])
-        links.append({"key":profile["key"],"label":label,"url":f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}"})
+        proto=profile.get("protocol","vless")
+        label=profile["key"].replace("_","-")
+        common=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}"
+        if mode: common+=f"&mode={quote(mode,safe='')}"
+        uid=client["client_uuid"]
+        title=quote("abysstunnel-"+client["name"]+"-"+label)
+        if proto=="vless":
+            url=f"vless://{uid}@{host}:443?{common}&encryption=none#{title}"
+        elif proto=="trojan":
+            url=f"trojan://{uid}@{host}:443?{common}#{title}"
+        elif proto=="vmess":
+            vmess={"v":"2","ps":"abysstunnel-"+client["name"]+"-"+label,"add":host,"port":"443","id":uid,"aid":"0","scy":"auto","net":"ws","type":"none","host":host,"path":path,"tls":"tls","sni":host,"alpn":""}
+            url="vmess://"+base64.b64encode(json.dumps(vmess,separators=(",",":")).encode()).decode()
+        elif proto=="shadowsocks":
+            userinfo=base64.urlsafe_b64encode(("chacha20-ietf-poly1305:"+uid).encode()).decode().rstrip("=")
+            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
+            url=f"ss://{userinfo}@{host}:443?plugin={plugin}#{title}"
+        else:
+            continue
+        links.append({"key":profile["key"],"label":profile["label"],"url":url})
     return links
 
 def subscription_text(links):
