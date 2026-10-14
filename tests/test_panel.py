@@ -555,6 +555,47 @@ def test_restore_rejects_corrupt_database_without_replacing_current(client):
     assert client.get("/api/overview").json()["total"] == before
 
 
+def test_expiry_is_enforced_while_xray_is_stopped(client, monkeypatch, tmp_path):
+    csrf = admin_client(client)
+    created = client.post(
+        "/api/clients",
+        json={"name": "Expired during outage"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert created.status_code == 200
+    cid = created.json()["id"]
+    with panel.db() as conn:
+        conn.execute("UPDATE clients SET expires_at='2000-01-01T00:00:00+00:00' WHERE id=?", (cid,))
+    fake_xray = tmp_path / "xray-not-running"
+    fake_xray.write_text("test", encoding="utf-8")
+    monkeypatch.setattr(panel, "XRAY_BIN", str(fake_xray))
+    monkeypatch.setattr(panel, "xray_proc", None)
+    monkeypatch.setattr(panel, "read_xray_stats", lambda: pytest.fail("must not query a stopped Xray process"))
+    async def fake_restart():
+        return None
+    monkeypatch.setattr(panel, "start_xray", fake_restart)
+
+    asyncio.run(panel.enforce_client_limits())
+    with panel.db() as conn:
+        row = conn.execute("SELECT enabled FROM clients WHERE id=?", (cid,)).fetchone()
+    assert row["enabled"] == 0
+
+
+def test_expired_client_is_not_served_a_subscription(client):
+    csrf = admin_client(client)
+    created = client.post(
+        "/api/clients",
+        json={"name": "Expired subscription"},
+        headers={"X-CSRF-Token": csrf},
+    )
+    cid = created.json()["id"]
+    with panel.db() as conn:
+        conn.execute("UPDATE clients SET expires_at='2000-01-01T00:00:00+00:00' WHERE id=?", (cid,))
+        token = conn.execute("SELECT sub_token FROM clients WHERE id=?", (cid,)).fetchone()["sub_token"]
+    response = client.get(f"/sub/{token}")
+    assert response.status_code == 404
+
+
 def test_health_reports_stopped_xray_as_unhealthy(client, monkeypatch):
     monkeypatch.setattr(panel, "XRAY_BIN", "/bin/sh")
     monkeypatch.setattr(panel, "xray_proc", None)
