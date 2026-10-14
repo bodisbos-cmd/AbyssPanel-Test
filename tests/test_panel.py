@@ -595,3 +595,11 @@ def test_expired_client_is_not_served_a_subscription(client):
     response = client.get(f"/sub/{token}")
     assert response.status_code == 404
 
+
+def test_health_reports_stopped_xray_as_unhealthy(client, monkeypatch):
+    monkeypatch.setattr(panel, "XRAY_BIN", "/bin/sh")
+    monkeypatch.setattr(panel, "xray_proc", None)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.json() == {"ok": False, "xray": "stopped"}
+
