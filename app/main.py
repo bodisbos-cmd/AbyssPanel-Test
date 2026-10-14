@@ -643,13 +643,20 @@ async def change_password(r: Request):
     current = str(body.get("current_password", ""))
     new = str(body.get("new_password", ""))
     with db() as c:
-        row = c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
+        if is_root(r):
+            row = c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
+        else:
+            row = c.execute("SELECT id,password_hash FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
         if not row or not verify_password(current, row["password_hash"]):
             raise HTTPException(403, "Current password is incorrect")
         if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
             raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
-        c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1", (password_hash(new), utc_now()))
-    try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
-    except OSError: event("WARNING","Could not remove the initial administrator password file.")
-    event("INFO", "Administrator password changed.")
+        if is_root(r):
+            c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1", (password_hash(new), utc_now()))
+        else:
+            c.execute("UPDATE resellers SET password_hash=? WHERE id=?", (password_hash(new),owner_id_for(r)))
+    if is_root(r):
+        try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
+        except OSError: event("WARNING","Could not remove the initial administrator password file.")
+    event("INFO", "Account password changed.")
     return {"ok": True}
