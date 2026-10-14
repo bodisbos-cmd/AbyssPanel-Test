@@ -64,17 +64,6 @@ def read_client(client_id):
     return row
 
 
-def read_ss_server_password():
-    conn=sqlite3.connect(DB,timeout=10)
-    try:
-        row=conn.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()
-    finally:
-        conn.close()
-    if not row:
-        raise RuntimeError("Shadowsocks 2022 server key was not persisted")
-    return row[0]
-
-
 def port_ready(port):
     import socket
     sock = socket.socket()
