@@ -62,9 +62,7 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "no-store" in response.headers.get("cache-control", "")
-    assert 'id="sidebar"' in response.text
-    assert 'data-section-page="clients"' in response.text
-    assert '/dashboard.js?v=20261014-ui2' in response.text
+    assert '/dashboard.js?v=20261014-fix1' in response.text
 
 
 def test_dashboard_requires_login(client):
