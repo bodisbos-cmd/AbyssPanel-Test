@@ -126,6 +126,7 @@ def test_create_pause_subscription_and_revoke(client):
     ss_uri = next(line for line in configs if line.startswith("ss://"))
     assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
+    assert "plugin=v2ray-plugin%3Btls%3Bhost%3Dtestserver%3Bpath%3D%2Fss-ws" in ss_uri
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
