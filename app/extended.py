@@ -262,8 +262,10 @@ def install_extended(app, namespace):
         return {"checks":results,"note":"این بررسی فقط پورت داخلی و پاسخ مسیر وب را می‌سنجد؛ پینگ یا تونل واقعی کاربر از اینجا قابل تأیید نیست."}
 
     @app.get("/api/system/diagnostics")
-    async def system_diagnostics(request:Request):
+    async def system_diagnostics(request:Request, carrier:str="mci"):
         _admin(request,p)
+        if carrier not in {"auto","mci","irancell","rightel","wifi"}:
+            raise HTTPException(422,"Unsupported carrier")
         flags=p.get_profile_flags()
         profiles=[dict(profile,enabled=bool(flags.get(profile["key"],False))) for profile in p.PROFILES]
         checks=await asyncio.gather(*(asyncio.to_thread(_probe_profile,profile) for profile in profiles))
@@ -271,36 +273,101 @@ def install_extended(app, namespace):
         proc=_global(p,"xray_proc")
         running=bool(proc and proc.poll() is None)
         config_test=await asyncio.to_thread(_xray_config_test,p)
+        nginx_installed=shutil.which("nginx") is not None
+        nginx_ok=True
+        nginx_error=None
+        if nginx_installed:
+            try:
+                nginx_check=await asyncio.to_thread(subprocess.run,["nginx","-t"],capture_output=True,text=True,timeout=8)
+                nginx_ok=nginx_check.returncode==0
+                if not nginx_ok: nginx_error=(nginx_check.stderr or nginx_check.stdout)[-400:]
+            except (OSError,subprocess.SubprocessError) as exc:
+                nginx_ok=False
+                nginx_error=str(exc)[:250]
+        with p.db() as c:
+            rows=c.execute(
+                "SELECT profile_key,COUNT(*) AS reports,SUM(CASE WHEN result='ok' THEN 1 ELSE 0 END) AS successes "
+                "FROM profile_feedback WHERE carrier=? AND created_at>=? GROUP BY profile_key",
+                (carrier,(datetime.now(timezone.utc)-timedelta(days=30)).isoformat(timespec="seconds"))
+            ).fetchall()
+        feedback={row["profile_key"]:{"reports":int(row["reports"]),"successes":int(row["successes"] or 0)} for row in rows}
+        preferred={"ws","httpupgrade","xhttp_auto"}
+        for item in checks:
+            stats=feedback.get(item["key"],{"reports":0,"successes":0})
+            rate=round(100*stats["successes"]/stats["reports"]) if stats["reports"] else None
+            item["feedback_reports"]=stats["reports"]
+            item["feedback_success_rate"]=rate
+            item["status_text"]=item.get("hint") or item.get("status","unknown")
+            if not item["enabled"]:
+                item["recommendation"]="این پروفایل غیرفعال است؛ برای تست ابتدا آن را در تنظیمات فعال کن."
+            elif not item["route_ok"] or not item["listener_ok"]:
+                item["recommendation"]="فعلاً انتخابش نکن؛ ابتدا خطای مسیر یا listener داخل پنل را برطرف کن."
+            elif stats["reports"]>=3 and rate is not None and rate>=65:
+                item["recommendation"]=f"پیشنهادشده برای { {'auto':'شبکهٔ نامشخص','mci':'همراه اول','irancell':'ایرانسل','rightel':'رایتل','wifi':'وای‌فای'}[carrier] }؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
+            elif stats["reports"]>=3 and rate is not None and rate<=35:
+                item["recommendation"]=f"اولویت پایین برای { {'auto':'شبکهٔ نامشخص','mci':'همراه اول','irancell':'ایرانسل','rightel':'رایتل','wifi':'وای‌فای'}[carrier] }؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
+            elif item["key"] in preferred:
+                item["recommendation"]="گزینهٔ شروع؛ هنوز گزارش کافی از این اپراتور نداریم."
+            else:
+                item["recommendation"]="گزینهٔ جایگزین؛ نتیجه را با همین اپراتور و کلاینت ثبت کن."
+        checks.sort(key=lambda x:(
+            not (x["enabled"] and x["listener_ok"] and x["route_ok"]),
+            -(x["feedback_success_rate"] if x["feedback_success_rate"] is not None and x["feedback_reports"]>=3 else -1),
+            x["key"]
+        ))
         issues=[]
-        if not installed: issues.append("Xray نصب نیست؛ ساخت کانفیگ ممکن است انجام شود اما اتصال برقرار نمی‌شود.")
+        if not installed: issues.append("Xray نصب نیست.")
         elif not running: issues.append("پردازش Xray در حال اجرا نیست.")
-        if installed and not config_test["ok"]: issues.append("آزمون تنظیمات Xray موفق نبود: "+config_test["detail"])
+        if installed and not config_test["ok"]: issues.append("اعتبارسنجی تنظیمات Xray ناموفق بود: "+config_test["detail"])
+        if nginx_installed and not nginx_ok: issues.append("اعتبارسنجی Nginx ناموفق بود: "+str(nginx_error))
         for item in checks:
             if item["enabled"] and not item["listener_ok"]:
                 issues.append(item["label"]+": پورت داخلی بسته است.")
             elif item["enabled"] and not item["route_ok"]:
                 issues.append(item["label"]+": مسیر وب خطا می‌دهد.")
-        if not issues: issues.append("خطای ساختاری آشکاری در بررسی‌های محلی پیدا نشد؛ اتصال واقعی هنوز نیازمند تست از کلاینت و اپراتور مقصد است.")
-        return {"ok":bool(installed and running and config_test["ok"] and all((not x["enabled"]) or (x["listener_ok"] and x["route_ok"]) for x in checks)),
-          "xray_installed":installed,"xray_running":running,"config_test":config_test,"profiles":checks,
-          "issues":issues,"actual_tunnel_tested":False,
-          "note":"باز بودن پورت و پاسخ HTTP به‌تنهایی پینگ، عبور ترافیک یا سازگاری اپراتور را اثبات نمی‌کند. پیشنهاد اپراتوری فقط بر پایهٔ تست واقعی روی همان شبکه قابل اتکاست."}
+        if not issues: issues.append("خطای ساختاری آشکاری پیدا نشد؛ اتصال واقعی باید روی کلاینت و اپراتور مقصد آزمایش شود.")
+        summary=("تنظیمات Xray معتبر است" if config_test["ok"] else "تنظیمات Xray نیاز به بررسی دارد")
+        summary+=(" · پیکربندی Nginx معتبر است" if nginx_ok else " · خطا در پیکربندی Nginx")
+        summary+=(" · پردازش Xray فعال است" if running else " · پردازش Xray متوقف یا نصب‌نشده است")
+        summary+=f" · مسیرهای مشکل‌دار: {sum(1 for item in checks if item['enabled'] and not item['route_ok'])} از {sum(1 for item in checks if item['enabled'])}"
+        return {
+            "ok":bool(installed and running and config_test["ok"] and nginx_ok and all((not x["enabled"]) or (x["listener_ok"] and x["route_ok"]) for x in checks)),
+            "xray_installed":installed,"xray_running":running,"config_test":config_test,
+            "nginx_installed":nginx_installed,"nginx_ok":nginx_ok,"nginx_error":nginx_error,
+            "carrier":carrier,"carrier_label":{"auto":"نامشخص / انتخاب خودکار","mci":"همراه اول","irancell":"ایرانسل","rightel":"رایتل","wifi":"وای‌فای"}[carrier],
+            "summary":summary,"profiles":checks,"issues":issues,"actual_tunnel_tested":False,
+            "note":"این بررسی مسیر HTTP، پورت داخلی و تنظیمات را می‌سنجد؛ پینگ یا تونل واقعی از سیم‌کارت انتخاب‌شده را اجرا نمی‌کند."
+        }
 
     @app.post("/api/system/diagnostics/repair")
     async def repair_xray(request:Request):
         _role(request,p,"owner"); _csrf(request,p)
         if not Path(str(_global(p,"XRAY_BIN") or "")).is_file():
             raise HTTPException(503,"Xray is not installed; automatic restart is unavailable")
+        changes=[]
         try:
+            # Rebuild the generated config from the current database before testing it;
+            # this also recovers from a missing or stale generated file.
+            await asyncio.to_thread(p.validate_and_write_xray)
+            config_test=await asyncio.to_thread(_xray_config_test,p)
+            if not config_test["ok"]:
+                raise RuntimeError("Xray configuration validation failed: "+config_test["detail"])
+            changes.append("اعتبارسنجی تنظیمات Xray")
+            if shutil.which("nginx"):
+                nginx_check=await asyncio.to_thread(subprocess.run,["nginx","-t"],capture_output=True,text=True,timeout=8)
+                if nginx_check.returncode:
+                    raise RuntimeError((nginx_check.stderr or nginx_check.stdout)[-500:])
+                changes.append("اعتبارسنجی پیکربندی Nginx")
             await p.start_xray()
+            proc=_global(p,"xray_proc")
+            if not proc or proc.poll() is not None:
+                raise RuntimeError("Xray did not remain running after restart")
+            changes.append("راه‌اندازی مجدد Xray")
         except Exception as exc:
             p.event("ERROR",f"Automatic Xray repair failed: {str(exc)[:300]}")
-            raise HTTPException(503,"Xray restart failed; inspect /data/xray-stderr.log and the configuration test") from exc
-        proc=_global(p,"xray_proc")
-        if not proc or proc.poll() is not None:
-            raise HTTPException(503,"Xray did not remain running after restart")
-        p.event("WARNING","Administrator requested Xray self-repair; config validation and restart completed.")
-        return {"ok":True,"message":"تنظیمات اعتبارسنجی شد و Xray دوباره راه‌اندازی شد. اکنون بررسی هوشمند را دوباره اجرا کن."}
+            raise HTTPException(503,"تعمیر کامل نشد؛ تنظیمات Xray، پیکربندی Nginx و رویدادها را بررسی کن.") from exc
+        p.event("WARNING","Safe Xray repair completed: "+", ".join(changes))
+        return {"ok":True,"message":"تعمیر امن انجام شد: "+", ".join(changes)+". حالا بررسی را دوباره اجرا کن."}
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):
