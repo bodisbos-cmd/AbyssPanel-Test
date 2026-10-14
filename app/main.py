@@ -290,8 +290,9 @@ async function copyField(id){const el=document.getElementById(id);try{await navi
 async function editClient(id){const c=allClients.find(x=>x.id===id);if(!c)return;const name=prompt(tr('editName'),c.name);if(name===null)return;const note=prompt(tr('editNote'),c.note||'');if(note===null)return;const daysNow=c.expires_at?Math.max(1,Math.ceil((Date.parse(c.expires_at)-Date.now())/86400000)):'';const days=prompt(tr('editDays'),String(daysNow));if(days===null)return;const quotaNow=c.quota_bytes===null?'':String((c.quota_bytes/1073741824).toFixed(2));const quota=prompt(tr('editQuota'),quotaNow);if(quota===null)return;const changes={};if(name!==c.name)changes.name=name;if(note!==(c.note||''))changes.note=note;if(days.trim()!==String(daysNow))changes.duration_days=days.trim()?Number(days):null;if(quota.trim()!==quotaNow)changes.quota_gb=quota.trim()?Number(quota):null;if(!Object.keys(changes).length)return;try{await api('/api/clients/'+id,{method:'PATCH',body:JSON.stringify(changes)});await load();alert(tr('editSuccess'))}catch(e){alert(tr('changeError')+e.message)}}
 async function resetUsage(id){if(!confirm(tr('resetConfirm')))return;try{await api('/api/clients/'+id+'/reset-usage',{method:'POST'});await load();alert(tr('resetSuccess'))}catch(e){alert(e.message)}}
 async function changePassword(){let current=prompt(tr('currentPassword'));if(current===null)return;let next=prompt(tr('newPassword'));if(next===null)return;if(next.length<14||!/[A-Za-z]/.test(next)||!/[0-9]/.test(next)){alert(tr('passwordRule'));return}try{await api('/api/password',{method:'POST',body:JSON.stringify({current_password:current,new_password:next})});alert(tr('passwordChanged'))}catch(e){alert(tr('changeError')+e.message)}}
-function renderResellers(rows){const el=document.getElementById('resellerList');if(!rows.length){el.innerHTML='<div class="small">زیرپنلی ساخته نشده است.</div>';return}el.innerHTML=rows.map(x=>'<div class="client"><div class="client-info"><b>'+esc(x.username)+'</b><div class="small">'+(x.enabled?'فعال':'متوقف')+' · تخصیص '+(Number(x.quota_bytes)/1073741824).toFixed(2)+' GB · مصرف تخصیص‌یافته '+(Number(x.allocated_bytes||0)/1073741824).toFixed(2)+' GB · باقی‌مانده '+(Number(x.remaining_bytes||0)/1073741824).toFixed(2)+' GB</div></div><div class="actions"><button onclick="toggleReseller(\''+x.id+'\','+(!x.enabled)+')">'+(x.enabled?'توقف':'فعال‌سازی')+'</button><button class="danger" onclick="removeReseller(\''+x.id+'\')">حذف زیرپنل</button></div></div>').join('')}
+function renderResellers(rows){const el=document.getElementById('resellerList');if(!rows.length){el.innerHTML='<div class="small">زیرپنلی ساخته نشده است.</div>';return}el.innerHTML=rows.map(x=>'<div class="client"><div class="client-info"><b>'+esc(x.username)+'</b><div class="small">'+(x.enabled?'فعال':'متوقف')+' · تخصیص '+(Number(x.quota_bytes)/1073741824).toFixed(2)+' GB · مصرف تخصیص‌یافته '+(Number(x.allocated_bytes||0)/1073741824).toFixed(2)+' GB · باقی‌مانده '+(Number(x.remaining_bytes||0)/1073741824).toFixed(2)+' GB</div></div><div class="actions"><button onclick="editReseller(\''+x.id+'\',\''+esc(x.username)+'\','+(Number(x.quota_bytes)/1073741824).toFixed(2)+')">ویرایش</button><button onclick="toggleReseller(\''+x.id+'\','+(!x.enabled)+')">'+(x.enabled?'توقف':'فعال‌سازی')+'</button><button class="danger" onclick="removeReseller(\''+x.id+'\')">حذف زیرپنل</button></div></div>').join('')}
 async function addReseller(){const username=document.getElementById('resellerUsername').value.trim(),password=document.getElementById('resellerPassword').value,quota=Number(document.getElementById('resellerQuota').value);try{await api('/api/resellers',{method:'POST',body:JSON.stringify({username,password,quota_gb:quota})});document.getElementById('resellerUsername').value='';document.getElementById('resellerPassword').value='';document.getElementById('resellerQuota').value='';await load();alert('زیرپنل ساخته شد. نام کاربری و رمز را امن به صاحب آن بده.')}catch(e){alert('ساخت زیرپنل ناموفق بود: '+e.message)}}
+async function editReseller(id,currentUsername,currentQuota){const username=prompt('نام کاربری جدید:',currentUsername);if(username===null)return;const quotaText=prompt('سهمیه کل زیرپنل (GB):',String(currentQuota));if(quotaText===null)return;const quota=Number(quotaText);if(!Number.isFinite(quota)||quota<0.1){alert('سهمیه نامعتبر است.');return}const password=prompt('رمز جدید (حداقل ۱۴ نویسه، خالی برای حفظ رمز):','');if(password===null)return;const body={username:username.trim(),quota_gb:quota};if(password)body.password=password;try{await api('/api/resellers/'+id,{method:'PATCH',body:JSON.stringify(body)});await load();alert('اطلاعات زیرپنل به‌روزرسانی شد.')}catch(e){alert('ویرایش ناموفق بود: '+e.message)}}
 async function toggleReseller(id,enabled){try{await api('/api/resellers/'+id,{method:'PATCH',body:JSON.stringify({enabled})});await load()}catch(e){alert(e.message)}}
 async function removeReseller(id){if(!confirm('زیرپنل حذف شود؟ ابتدا باید سهمیه‌های تخصیص‌یافته‌اش صفر باشد.'))return;try{await api('/api/resellers/'+id,{method:'DELETE'});await load()}catch(e){alert(e.message)}}
 async function restoreBackup(){const f=document.getElementById('restoreFile').files[0];if(!f){alert('ابتدا فایل پشتیبان را انتخاب کن.');return}if(!confirm('بازیابی، پایگاه داده فعلی را جایگزین می‌کند. قبل از ادامه مطمئن شو فایل درست است.'))return;try{const r=await fetch('/api/restore',{method:'POST',headers:{'X-CSRF-Token':csrf,'Content-Type':'application/octet-stream'},body:await f.arrayBuffer()});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||'Restore failed');alert(d.message||'بازیابی انجام شد.');await load()}catch(e){alert('بازیابی ناموفق بود: '+e.message)}}
@@ -675,6 +676,16 @@ async def update_reseller(rid:str,r:Request):
         row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
         if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
         updates={}
+        if "username" in body:
+            username=str(body["username"]).strip()
+            if not username or len(username)>48 or not username.replace("_","").replace("-","").isalnum() or username=="admin":
+                raise HTTPException(422,"Invalid username")
+            updates["username"]=username
+        if "password" in body and body["password"] is not None and str(body["password"]):
+            password=str(body["password"])
+            if len(password)<14 or len(password)>256 or not any(x.isalpha() for x in password) or not any(x.isdigit() for x in password):
+                raise HTTPException(422,"Password must be at least 14 characters and include letters and numbers")
+            updates["password_hash"]=password_hash(password)
         if "enabled" in body:
             if not isinstance(body["enabled"],bool): raise HTTPException(422,"enabled must be boolean")
             updates["enabled"]=int(body["enabled"])
@@ -686,11 +697,15 @@ async def update_reseller(rid:str,r:Request):
             if owner is not None:
                 siblings=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=? AND id<>?",(owner,rid)).fetchone()["n"] or 0)
                 clients=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM clients WHERE owner_id=?",(owner,)).fetchone()["n"] or 0)
-                parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
+                parent=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(owner,)).fetchone()
+                if not parent or not parent["enabled"]: raise HTTPException(403,"Parent reseller account is disabled")
                 if siblings+clients+amount>int(parent["quota_bytes"]): raise HTTPException(422,"Allocation exceeds parent quota")
             updates["quota_bytes"]=amount
         if not updates: raise HTTPException(422,"No supported changes")
-        c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))
+        try:
+            c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))
+        except sqlite3.IntegrityError as exc:
+            raise HTTPException(409,"Username already exists") from exc
     return {"ok":True}
 @app.delete("/api/resellers/{rid}")
 async def delete_reseller(rid:str,r:Request):
