@@ -11,10 +11,12 @@ A responsive Xray/VLESS control panel designed to run on Railway. It includes a 
 - Signed HTTP-only session cookie, CSRF protection on mutations, login throttling, security headers, and scrypt password hashing.
 - SQLite database in `/data` for persistent Railway Volume storage.
 - Create, edit, pause/enable, revoke, and reset recorded usage for clients.
+- Hierarchical reseller accounts: the root admin allocates a finite GB pool to a reseller; resellers can delegate part of their remaining pool to sub-resellers and create finite-quota clients. Each account sees and manages only its own clients; over-allocation is rejected.
 - Optional expiry and traffic quota, with automatic disabling after expiry or quota exhaustion.
 - Settings page to enable/disable each connection profile; updates are rolled back if Xray cannot apply the configuration.
 - A private token per client. `/s/<token>` is a branded responsive subscription page with profile links and a QR code; `/sub/<token>` remains a Base64 subscription endpoint for compatible client apps.
 - Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
+- Admin-only SQLite backup download and validated restore endpoint; restore retains a pre-restore database copy. Backups contain credentials and client records, so keep them private.
 - Xray configuration validation, basic process recovery, and a health endpoint.
 
 ## Railway deployment
@@ -42,4 +44,4 @@ Open `http://localhost:8080`. The initial password is written to `data/INITIAL_A
 - A subscription token grants access to that client's connection profiles. Treat it like a password; revoking or disabling the client invalidates its subscription page, QR, and raw subscription endpoint.
 - The dashboard is a control plane, not an uptime guarantee. Railway edge/protocol compatibility and real client traffic must be tested in the target region.
 - TLS for public HTTPS is terminated at Railway's edge. Xray listens only on loopback behind Nginx.
-- Still not production-audited: multiple admins, backup/restore UI, and Reality/TCP inbounds are not implemented. Automated tests cover API lifecycle, profile settings and rollback, quota enforcement, subscription links, and QR rendering; real network latency and every third-party client app must still be validated from the intended user networks.
+- Still not production-audited: real end-to-end client connectivity must be tested in the target region and networks. Direct WireGuard UDP service is not implemented: Railway's public HTTP/HTTPS edge does not expose a general public UDP listener for this deployment design. Do not present WireGuard as working unless deployed on UDP-capable infrastructure. Automated tests cover API lifecycle, profile settings and rollback, quota enforcement, subscription links, and QR rendering; real network latency and every third-party client app must still be validated from the intended user networks.
