@@ -49,3 +49,29 @@ jobs:
             echo "Xray failed to start; see container logs above."
             exit 1
           fi
+          # Exercise genuine VLESS handshakes and traffic over every transport,
+          # not just an HTTP status code from the reverse-proxy route.
+          docker cp scripts/smoke_transports.py abysspanel-smoke:/tmp/smoke_transports.py
+          docker exec abysspanel-smoke python /tmp/smoke_transports.py
+          # Confirm the app watchdog recovers Xray after the smoke script kills it.
+          # Then restart the entire container and verify SQLite state on the volume.
+          docker restart abysspanel-smoke >/dev/null
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18080/health | grep -q '"xray":"running"'; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          python - "$RUNNER_TEMP/abyss-smoke-data/panel.sqlite3" <<'PY'
+          import sqlite3, sys
+          conn = sqlite3.connect(sys.argv[1], timeout=10)
+          try:
+              row = conn.execute(
+                  "SELECT used_bytes, quota_bytes, enabled FROM clients WHERE name=?",
+                  ("CI transport smoke",),
+              ).fetchone()
+          finally:
+              conn.close()
+          assert row is not None and row[0] > 0 and row[1] == 1 and row[2] == 0, row
+          print("PASS persistent volume after container restart:", row)
+          PY
