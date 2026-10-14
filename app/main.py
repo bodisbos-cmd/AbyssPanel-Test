@@ -9,7 +9,7 @@ from urllib.parse import quote, urlsplit
 import qrcode
 from qrcode.image.svg import SvgPathImage
 from fastapi import FastAPI, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 
 APP_NAME="AbyssPanel-Test"
