@@ -207,7 +207,24 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
+
+
+def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
+    admin_client(client)
+    response = client.get("/api/system/diagnostics")
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert len(data["profiles"]) == 11
+    assert data["actual_tunnel_tested"] is False
+    assert "tunnel" in data["note"].lower() or "تونل" in data["note"]
+    for profile in data["profiles"]:
+        assert "listener_ok" in profile
+        assert "route_ok" in profile
+        assert profile["tunnel_tested"] is False
+        assert profile["status"] in {
+            "disabled", "listener_missing", "gateway_error", "route_reachable_tunnel_unverified"
+        }
 
 
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
@@ -374,6 +391,8 @@ def test_profile_settings_update_xray_and_subscription(client):
     assert len(links) == 9
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert any("mode=packet-up" in line for line in links)
+    assert any("mode=stream-up" in line for line in links)
+    assert any("mode=stream-one" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
