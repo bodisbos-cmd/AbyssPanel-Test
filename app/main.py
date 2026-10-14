@@ -198,7 +198,21 @@ app.add_middleware(SessionMiddleware,secret_key=sf.read_text().strip(),session_c
 async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
 def require_admin(r):
-    if r.session.get("admin") is not True and not r.session.get("reseller_id"): raise HTTPException(401,"Authentication required")
+    if r.session.get("admin") is True: return
+    rid=r.session.get("reseller_id")
+    if not rid: raise HTTPException(401,"Authentication required")
+    with db() as c:
+        current=c.execute("SELECT id,enabled,parent_id FROM resellers WHERE id=?",(rid,)).fetchone()
+        if not current or not current["enabled"]:
+            r.session.clear()
+            raise HTTPException(401,"Reseller account is disabled")
+        parent_id=current["parent_id"]
+        while parent_id:
+            parent=c.execute("SELECT id,enabled,parent_id FROM resellers WHERE id=?",(parent_id,)).fetchone()
+            if not parent or not parent["enabled"]:
+                r.session.clear()
+                raise HTTPException(401,"Parent reseller account is disabled")
+            parent_id=parent["parent_id"]
 def is_root(r): return r.session.get("admin") is True
 def owner_id_for(r): return None if is_root(r) else str(r.session.get("reseller_id",""))
 def require_root(r):
