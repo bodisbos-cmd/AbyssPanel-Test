@@ -80,7 +80,10 @@ def test_create_pause_subscription_and_revoke(client):
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
     assert len(configs) == 9
-    assert all(line.startswith("vless://") for line in configs)
+    assert sum(line.startswith("vless://") for line in configs) == 6
+    assert sum(line.startswith("trojan://") for line in configs) == 1
+    assert sum(line.startswith("vmess://") for line in configs) == 1
+    assert sum(line.startswith("ss://") for line in configs) == 1
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
     assert sum("type=xhttp" in line for line in configs) == 4
