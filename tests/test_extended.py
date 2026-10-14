@@ -175,6 +175,8 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     page = client.get(info["page_url"].replace("https://testserver", "http://testserver"), headers={"Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 Chrome/130"})
     assert page.status_code == 200
     assert "بررسی اتصال" in page.text
+    assert "runSubDiagnostics" in page.text
+    assert "بررسی خودکار وضعیت سرویس" in page.text
     assert "دانلود برنامه‌های رسمی" in page.text
     assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
     assert "Trojan" in page.text and "VMess" in page.text and "Shadowsocks" in page.text
