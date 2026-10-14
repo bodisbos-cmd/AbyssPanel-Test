@@ -293,7 +293,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert 'id="abyss-theme-polish"' in page.text
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
-    assert "مسیر جایگزین A" in page.text and "مسیر جایگزین B" in page.text
+    assert "stream-up" in page.text and "stream-one" in page.text
     assert page.headers["cache-control"] == "no-store"
     assert "noindex, nofollow" in page.headers["x-robots-tag"]
 
