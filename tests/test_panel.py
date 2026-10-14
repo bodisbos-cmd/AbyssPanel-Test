@@ -229,8 +229,8 @@ def test_operator_diagnostics_calculates_profile_success_rate(client):
     with panel.db() as conn:
         for index, result in enumerate(("ok", "ok", "fail")):
             conn.execute(
-                "INSERT INTO profile_feedback(sub_token,carrier,profile_key,result,created_at) VALUES(?,?,?,?,?)",
-                ("sample-report-" + str(index), "irancell", "ws", result, panel.utc_now()),
+                "INSERT INTO profile_feedback(client_id,carrier,profile_key,result,created_at,user_agent) VALUES(?,?,?,?,?,?)",
+                ("sample-client-" + str(index), "irancell", "ws", result, panel.utc_now(), "test-agent"),
             )
     response = client.get("/api/system/diagnostics?carrier=irancell")
     assert response.status_code == 200, response.text
