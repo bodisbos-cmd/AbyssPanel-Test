@@ -109,20 +109,20 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 11
-    assert sum(line.startswith("vless://") for line in configs) == 8
+    assert len(configs) == 12
+    assert sum(line.startswith("vless://") for line in configs) == 9
     assert sum(line.startswith("trojan://") for line in configs) == 1
     assert sum(line.startswith("vmess://") for line in configs) == 1
-    assert sum(line.startswith("ss://") for line in configs) == 1
+    assert sum(line.startswith("ss://") for line in configs) == 0
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
-    assert sum("type=xhttp" in line for line in configs) == 4
+    assert sum("type=xhttp" in line for line in configs) == 6
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
-    assert sum("mode=packet-up" in line for line in configs) == 3
-    ss_uri = next(line for line in configs if line.startswith("ss://"))
-    assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
-    assert "@testserver:443/?plugin=" in ss_uri
+    assert sum("mode=packet-up" in line for line in configs) == 1
+    assert sum("mode=stream-up" in line for line in configs) == 2
+    assert sum("mode=stream-one" in line for line in configs) == 2
+    assert not any(line.startswith("ss://") for line in configs)
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
@@ -155,11 +155,28 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert subscription_client.status_code == 200
     assert "text/plain" in subscription_client.headers["content-type"]
     configs = base64.b64decode(subscription_client.text).decode().splitlines()
-    assert len(configs) == 11
+    assert len(configs) == 12
     assert "Accept, User-Agent" in subscription_client.headers["vary"]
     assert "Subscription-Userinfo" in subscription_client.headers
     assert "total=4294967296" in subscription_client.headers["Subscription-Userinfo"]
     assert client.get(f"/api/clients/{created.json()['id']}/subscription").json()["page_url"] == url
+
+
+def test_diagnostics_endpoints_require_auth_and_report_profiles(client):
+    assert client.get("/api/system/diagnostics").status_code == 401
+    csrf = admin_client(client)
+    result = client.get("/api/system/diagnostics?carrier=irancell")
+    assert result.status_code == 200, result.text
+    data = result.json()
+    assert data["carrier"] == "irancell"
+    assert data["carrier_label"] == "ایرانسل"
+    assert len(data["profiles"]) == 12
+    assert any(x["key"] == "xhttp_stream_up" and x["mode"] == "stream-up" for x in data["profiles"])
+    assert any(x["key"] == "xhttp_stream_one" and x["mode"] == "stream-one" for x in data["profiles"])
+    assert not any(x["key"] == "ss_ws" for x in data["profiles"])
+    repaired = client.post("/api/system/diagnostics/repair", json={}, headers={"X-CSRF-Token": csrf})
+    assert repaired.status_code == 200, repaired.text
+    assert repaired.json()["ok"] is True
 
 
 def _token_from_url(url):
@@ -200,14 +217,15 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 12  # Stats API plus eleven selectable profiles
+    assert len(inbounds) == 13  # Stats API plus twelve selectable profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
+    assert not any(item.get("protocol") == "shadowsocks" for item in inbounds)
 
 
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
@@ -232,6 +250,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
     assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
+    assert "xhttp-stream-up-alt" in page.text and "xhttp-stream-one-alt" in page.text
     assert page.headers["cache-control"] == "no-store"
     assert "noindex, nofollow" in page.headers["x-robots-tag"]
 
