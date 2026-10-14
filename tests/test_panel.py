@@ -122,6 +122,8 @@ def test_create_pause_subscription_and_revoke(client):
     assert sum("mode=packet-up" in line for line in configs) == 1
     assert sum("mode=stream-up" in line for line in configs) == 1
     assert sum("mode=stream-one" in line for line in configs) == 1
+    assert any("xhttp-stream-up" in line for line in configs)
+    assert any("xhttp-stream-one" in line for line in configs)
     ss_uri = next(line for line in configs if line.startswith("ss://"))
     assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
