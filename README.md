@@ -14,10 +14,10 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 - Hierarchical reseller accounts: the root admin allocates a finite GB pool to a reseller; resellers can delegate part of their remaining pool to sub-resellers and create finite-quota clients. Each account sees and manages only its own clients; over-allocation is rejected.
 - Optional expiry and traffic quota, with automatic disabling after expiry or quota exhaustion.
 - Settings page to enable/disable each connection profile; updates are rolled back if Xray cannot apply the configuration.
-- A private token per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible VPN clients; QR and help pages remain available.
+- A single private subscription URL per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible VPN clients; the standard `Subscription-Userinfo` header carries usage, quota, and expiry metadata to compatible apps. QR and help pages remain available.
 - Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
 - Owner-only ZIP backup/restore with integrity/schema checks and rollback attempt; backup includes credential hashes and client data, so keep it private.
-- Nine selectable profiles: six VLESS transports (WS, HTTPUpgrade and four XHTTP modes), plus Trojan/VMess/Shadowsocks over WebSocket. XHTTP stream-up/stream-one are marked experimental because they did not complete the local HTTP/1.1-edge smoke test; verify them on Railway before relying on them.
+- Eleven selectable profiles: eight VLESS paths (WebSocket, HTTPUpgrade, four XHTTP paths including HTTP/1.1-compatible packet-up fallbacks, and two alternate paths), plus Trojan, VMess, and Shadowsocks 2022 over WebSocket. The two profiles previously labeled XHTTP stream-up/stream-one are intentionally emitted as packet-up fallbacks because the Railway HTTP/1.1 edge cannot reliably carry those streaming modes.
 - Separate owner/admin/viewer accounts, scoped bot API keys, protected Swagger/ReDoc, resource diagnostics, official client download links, and a hamburger navigation drawer.
 - Xray configuration validation, basic process recovery, route diagnostics and a health endpoint.
 
