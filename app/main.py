@@ -152,7 +152,7 @@ async def start_xray():
             try: xray_proc.wait(timeout=4)
             except subprocess.TimeoutExpired: xray_proc.kill()
         err=open(DATA_DIR/"xray-stderr.log","ab")
-        try: xray_proc=subprocess.Popen([XRAY_BIN,"run","-config",str(XRAY_CONFIG)],stdout=subprocess.DEVNULL,stderr=err)
+        try: xray_proc=subprocess.Popen([XRAY_BIN,"run","-config",str(XRAY_CONFIG)],stdout=err,stderr=err)
         finally: err.close()
         await asyncio.sleep(.25)
         if xray_proc.poll() is not None: raise RuntimeError("Xray exited; inspect /data/xray-stderr.log")
