@@ -273,7 +273,7 @@ def require_admin(r):
             parent_id=parent["parent_id"]
 def require_role(r,*roles):
     require_admin(r)
-    role=r.session.get("admin_role","owner")
+    role=r.session.get("admin_role","owner") if r.session.get("admin") is True else "reseller"
     if role not in roles: raise HTTPException(403,"Insufficient permissions")
 def is_root(r): return r.session.get("admin") is True and r.session.get("admin_role","owner")=="owner"
 def owner_id_for(r):
@@ -878,24 +878,30 @@ async def change_password(r: Request):
     body = await r.json()
     current = str(body.get("current_password", ""))
     new = str(body.get("new_password", ""))
-    with db() as c:
+    if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
+        raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
+    if r.session.get("admin") is True:
+        admin_id=r.session.get("admin_id","owner-admin")
+        with db() as c:
+            row=c.execute("SELECT password_hash FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
+            if not row or not verify_password(current,row["password_hash"]):
+                raise HTTPException(403,"Current password is incorrect")
+            changed=utc_now(); hashed=password_hash(new)
+            c.execute("UPDATE panel_admins SET password_hash=?,password_changed_at=? WHERE id=?",(hashed,changed,admin_id))
+            if is_root(r):
+                c.execute("UPDATE admins SET password_hash=?,password_changed_at=? WHERE id=1",(hashed,changed))
+        r.session["admin_password_changed_at"]=changed
         if is_root(r):
-            row = c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
-        else:
-            row = c.execute("SELECT id,password_hash FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
-        if not row or not verify_password(current, row["password_hash"]):
-            raise HTTPException(403, "Current password is incorrect")
-        if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
-            raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
-        if is_root(r):
-            c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1", (password_hash(new), utc_now()))
-        else:
-            c.execute("UPDATE resellers SET password_hash=? WHERE id=?", (password_hash(new),owner_id_for(r)))
-    if is_root(r):
-        try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
-        except OSError: event("WARNING","Could not remove the initial administrator password file.")
-    event("INFO", "Account password changed.")
-    return {"ok": True}
+            try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
+            except OSError: event("WARNING","Could not remove the initial administrator password file.")
+    else:
+        with db() as c:
+            row=c.execute("SELECT id,password_hash FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
+            if not row or not verify_password(current,row["password_hash"]):
+                raise HTTPException(403,"Current password is incorrect")
+            c.execute("UPDATE resellers SET password_hash=? WHERE id=?",(password_hash(new),owner_id_for(r)))
+    event("INFO","Account password changed.")
+    return {"ok":True}
 # Register the optional platform extension after the core app and helpers are defined.
 try:
     from app.extended import install_extended
