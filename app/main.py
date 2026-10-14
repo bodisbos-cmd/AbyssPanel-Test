@@ -505,9 +505,39 @@ html[data-abyss-theme="angel"] .card,html[data-abyss-theme="angel"] .panel,html[
 @media(max-width:700px){#abyssThemeDock{gap:5px;padding:5px 8px}#abyssThemeSelect{max-width:130px;font-size:11px}#abyssThemeDock.floating{top:10px;right:10px}}
 @media(prefers-reduced-motion:reduce){body{animation:none!important}body:before{animation:none!important}*,*:before,*:after{transition:none!important}}
 </style>"""
+ABYSS_THEME_POLISH_CSS = r"""<style id="abyss-theme-polish">
+:root{--ab-radius-xl:25px;--ab-radius-lg:20px;--ab-radius-md:14px;--ab-radius-sm:11px;--ab-motion:.24s}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+body{background-image:radial-gradient(ellipse at 12% 8%,color-mix(in srgb,var(--ab-accent) 10%,transparent),transparent 36%),radial-gradient(ellipse at 88% 72%,var(--ab-glow),transparent 43%),radial-gradient(ellipse at 48% 110%,color-mix(in srgb,var(--ab-text) 4%,transparent),transparent 48%),linear-gradient(145deg,var(--ab-bg),color-mix(in srgb,var(--ab-bg) 82%,var(--ab-accent) 4%));background-size:160% 160%;animation:abyssGlowDrift 38s ease-in-out infinite alternate}
+body:before{opacity:.43}
+body:after{opacity:.13;background-size:370px 310px}
+@keyframes abyssGlowDrift{0%{background-position:0% 0%}50%{background-position:65% 25%}100%{background-position:100% 100%}}
+.card,.panel,.box,.section,.stat,.metric,.hero,.extra-box,.metric-pill,.profile-setting,.profile,.app,.client,.client-card,.section-head,.api-key-row{border-radius:var(--ab-radius-lg)!important;border-color:var(--ab-line)!important;background:linear-gradient(145deg,color-mix(in srgb,var(--ab-panel) 92%,var(--ab-accent) 3%),var(--ab-panel))!important;box-shadow:0 16px 42px rgba(0,0,0,.10),inset 0 1px 0 color-mix(in srgb,var(--ab-text) 5%,transparent)!important;transition:background var(--ab-motion) ease,border-color var(--ab-motion) ease,box-shadow var(--ab-motion) ease,transform var(--ab-motion) ease}
+.card,.panel,.box,.hero,.extra-box,.metric,.metric-pill,.profile-setting,.profile,.app,.client,.client-card{backdrop-filter:blur(20px) saturate(125%);-webkit-backdrop-filter:blur(20px) saturate(125%)}
+.card:hover,.panel:hover,.box:hover,.profile:hover,.app:hover,.client-card:hover{border-color:color-mix(in srgb,var(--ab-accent) 34%,var(--ab-line))!important;box-shadow:0 18px 46px rgba(0,0,0,.13),0 0 24px color-mix(in srgb,var(--ab-glow) 70%,transparent)!important}
+.stats>.card:first-child,.stats>.card:nth-child(3),.hero,.subscription-hero,.usage-card,.highlight,.featured,.metric-pill{background:radial-gradient(ellipse at 95% 0%,color-mix(in srgb,var(--ab-accent) 12%,transparent),transparent 62%),linear-gradient(145deg,color-mix(in srgb,var(--ab-panel) 86%,var(--ab-accent) 6%),var(--ab-panel))!important;border-color:color-mix(in srgb,var(--ab-accent) 32%,var(--ab-line))!important;box-shadow:0 16px 42px rgba(0,0,0,.12),0 0 28px color-mix(in srgb,var(--ab-glow) 55%,transparent),inset 0 1px 0 color-mix(in srgb,var(--ab-text) 7%,transparent)!important}
+.sidebar{border-radius:0!important;box-shadow:inset -1px 0 color-mix(in srgb,var(--ab-line) 80%,transparent),10px 0 42px rgba(0,0,0,.08)!important}
+.section-heading,.section-title,.section-head h2{letter-spacing:-.015em}
+.section-title:before,.section-heading:before,.section-head h2:before{content:"";display:inline-block;width:4px;height:1em;margin-left:10px;vertical-align:-.13em;border-radius:99px;background:var(--ab-accent);box-shadow:0 0 14px var(--ab-glow)}
+button,.btn,a.button,.button-link,.nav-item,.profile-marks button{min-height:40px;border-radius:13px!important;transition:background var(--ab-motion) ease,border-color var(--ab-motion) ease,box-shadow var(--ab-motion) ease,transform var(--ab-motion) ease!important}
+button:hover,.btn:hover,a.button:hover,.button-link:hover,.nav-item:hover,.profile:hover{transform:translateY(-1px)}
+button.primary,.btn.primary,.button-link.primary{box-shadow:0 8px 24px color-mix(in srgb,var(--ab-glow) 80%,transparent),inset 0 1px 0 rgba(255,255,255,.08)!important}
+input,select,textarea,.linkbox{border-radius:13px!important;min-height:42px;transition:border-color var(--ab-motion) ease,box-shadow var(--ab-motion) ease,background var(--ab-motion) ease}
+input:focus,select:focus,textarea:focus,.linkbox:focus{border-color:color-mix(in srgb,var(--ab-accent) 68%,var(--ab-line))!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--ab-accent) 13%,transparent)!important;outline:none}
+:focus-visible{outline:2px solid var(--ab-accent)!important;outline-offset:3px}
+.badge,.pill,.tag{border-radius:999px!important}
+dialog{border-radius:25px!important;box-shadow:0 28px 100px rgba(0,0,0,.25),0 0 40px color-mix(in srgb,var(--ab-glow) 55%,transparent)!important}
+#abyssThemeDock{border-radius:999px!important}
+html[data-abyss-theme="angel"] body:before{opacity:.28}
+html[data-abyss-theme="angel"] body:after{opacity:.075}
+html[data-abyss-theme="angel"] .card,html[data-abyss-theme="angel"] .panel,html[data-abyss-theme="angel"] .box,html[data-abyss-theme="angel"] .hero,html[data-abyss-theme="angel"] .profile,html[data-abyss-theme="angel"] .app{box-shadow:0 15px 40px rgba(75,79,96,.075),inset 0 1px 0 rgba(255,255,255,.78)!important}
+html[data-abyss-theme="angel"] button.primary,html[data-abyss-theme="angel"] .btn.primary,html[data-abyss-theme="angel"] .button-link.primary{color:var(--ab-accent)!important;border-color:color-mix(in srgb,var(--ab-accent) 45%,transparent)!important;background:linear-gradient(135deg,rgba(255,255,255,.85),color-mix(in srgb,var(--ab-accent) 10%,white))!important}
+@media(max-width:700px){:root{--ab-radius-xl:22px;--ab-radius-lg:18px}.card,.panel,.box,.hero,.extra-box,.metric,.profile,.app,.client,.client-card{padding:clamp(12px,3.5vw,18px)}button,.btn,a.button,.button-link{min-height:42px}.stats>.card:first-child,.stats>.card:nth-child(3){box-shadow:0 12px 30px rgba(0,0,0,.10),0 0 18px color-mix(in srgb,var(--ab-glow) 50%,transparent)!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}body{animation:none!important}*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>"""
 ABYSS_THEME_JS = r"""<script id="abyss-theme-controller">(()=>{const presets={royal:'سلطنتی · مشکی و طلایی',angel:'سپید · فرشته‌گون',amethyst:'کسوف · بنفش',ocean:'ژرفا · آبی',emerald:'شفق · سبز'};let saved='royal';try{saved=localStorage.getItem('abyss-visual-theme')||'royal'}catch(e){}if(!presets[saved])saved='royal';const apply=t=>{if(!presets[t])t='royal';document.documentElement.dataset.abyssTheme=t;try{localStorage.setItem('abyss-visual-theme',t)}catch(e){}const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=t==='angel'?'#f1f2f6':t==='amethyst'?'#090711':t==='ocean'?'#061015':t==='emerald'?'#07100c':'#050505'};apply(saved);const init=()=>{if(document.getElementById('abyssThemeDock'))return;const dock=document.createElement('label');dock.id='abyssThemeDock';dock.innerHTML='<span class="theme-mark" aria-hidden="true">◉</span><span>تم</span><select id="abyssThemeSelect" aria-label="انتخاب تم">'+Object.entries(presets).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>';const target=document.querySelector('.top .tools')||document.querySelector('.top');if(target)target.appendChild(dock);else{dock.classList.add('floating');document.body.appendChild(dock)}const select=dock.querySelector('select');select.value=document.documentElement.dataset.abyssTheme;select.addEventListener('change',()=>apply(select.value))};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();</script>"""
-LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
-DASH = DASH.replace("</head>", ABYSS_THEME_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
+LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
+DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
 
 @app.get("/dashboard.js",response_class=PlainTextResponse)
 async def dashboard_js():
@@ -812,7 +842,7 @@ input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:1
         .replace("__PROFILES__",cards)
         .replace("__COUNT__",str(len(links)))
         .replace("__QR_URL__",html_escape(qr_url,quote=True))
-        .replace("__SUB_JSON__",json.dumps(sub_url))).replace("</head>",ABYSS_THEME_CSS+"</head>").replace("</body>",ABYSS_THEME_JS+"</body>")
+        .replace("__SUB_JSON__",json.dumps(sub_url))).replace("</head>",ABYSS_THEME_CSS+ABYSS_THEME_POLISH_CSS+"</head>").replace("</body>",ABYSS_THEME_JS+"</body>")
 
 @app.get("/api/clients/{cid}/subscription")
 async def subscription_link(cid:str,r:Request):
