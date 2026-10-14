@@ -165,7 +165,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     token = info["page_url"].rsplit("/", 1)[1]
     diag = client.get(f"/s/{token}/diagnostics")
     assert diag.status_code == 200, diag.text
-    assert diag.json()["profile_count"] == 12
+    assert diag.json()["profile_count"] == 13
     help_page = client.get(f"/s/{token}/help")
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
@@ -177,7 +177,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     assert "بررسی اتصال" in page.text
     assert "دانلود برنامه‌های رسمی" in page.text
     assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
-    assert "Trojan" in page.text and "VMess" in page.text
+    assert "Trojan" in page.text and "VMess" in page.text and "Shadowsocks 2022" in page.text
     assert 'id="carrierSelect"' in page.text
     assert 'data-profile-choice="ws"' in page.text
     assert 'data-mark="ok"' in page.text and 'data-mark="fail"' in page.text
@@ -278,7 +278,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     response = client.get("/api/system/profiles/check")
     assert response.status_code == 200, response.text
     data = response.json()
-    assert len(data["checks"]) == 12
+    assert len(data["checks"]) == 13
     assert all(item["route_ok"] for item in data["checks"])
     assert "پینگ یا تونل واقعی" in data["note"]
 
@@ -287,7 +287,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     token = client.get(f"/api/clients/{made.json()['id']}/subscription").json()["page_url"].rsplit("/", 1)[1]
     customer_diag = client.get(f"/s/{token}/diagnostics")
     assert customer_diag.status_code == 200, customer_diag.text
-    assert len(customer_diag.json()["route_checks"]) == 12
+    assert len(customer_diag.json()["route_checks"]) == 13
     assert all(item["http_status"] != 502 for item in customer_diag.json()["route_checks"])
     assert "cannot prove" in customer_diag.json()["note"]
 
@@ -337,16 +337,18 @@ def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
     token = info["page_url"].rsplit("/", 1)[1]
     links = client.get(f"/sub/{token}").text
     decoded = base64.b64decode(links).decode().splitlines()
-    assert len(decoded) == 12, decoded
+    assert len(decoded) == 13, decoded
     assert sum(x.startswith("vless://") for x in decoded) == 10
     assert sum(x.startswith("trojan://") for x in decoded) == 1
     assert sum(x.startswith("vmess://") for x in decoded) == 1
-    assert sum(x.startswith("ss://") for x in decoded) == 0
+    assert sum(x.startswith("ss://") for x in decoded) == 1
     assert all("abysstunnel-" in x or x.startswith("vmess://") for x in decoded)
     config = panel.make_xray_config()
     inbound = [x for x in config["inbounds"] if x.get("tag", "").startswith("in-")]
-    assert len(inbound) == 12
-    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess"}
-    assert len({x["port"] for x in inbound}) == 12
+    assert len(inbound) == 13
+    # The Shadowsocks inbound is counted separately from URI generation and smoke coverage.
+    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
+    assert any(x["protocol"] == "shadowsocks" for x in config["inbounds"])
+    assert len({x["port"] for x in inbound}) == 13
     for item in inbound:
         assert item["streamSettings"]["network"] in {"ws", "httpupgrade", "xhttp"}

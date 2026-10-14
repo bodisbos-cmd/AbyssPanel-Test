@@ -26,6 +26,7 @@ PROFILES=[
     {"key":"httpupgrade_alt","label":"HTTPUpgrade · مسیر جایگزین","network":"httpupgrade","path":"/upgrade","port":10011,"mode":None,"subscription_label":"vless-httpupgrade-alt"},
     {"key":"xhttp_stream_up_alt","label":"XHTTP · stream-up · مسیر جایگزین","network":"xhttp","path":"/xhttp-stream-up-alt","port":10012,"mode":"stream-up","subscription_label":"xhttp-stream-up-alt"},
     {"key":"xhttp_stream_one_alt","label":"XHTTP · stream-one · مسیر جایگزین","network":"xhttp","path":"/xhttp-stream-one-alt","port":10013,"mode":"stream-one","subscription_label":"xhttp-stream-one-alt"},
+    {"key":"ss_ws","label":"Shadowsocks 2022 · WebSocket TLS","protocol":"shadowsocks","network":"ws","path":"/ss-ws","port":10009,"mode":None},
 ]
 DATA_DIR=Path(os.getenv("DATA_DIR","/data")); DATA_DIR.mkdir(parents=True,exist_ok=True)
 DB_PATH=DATA_DIR/"panel.sqlite3"; XRAY_CONFIG=DATA_DIR/"xray.json"
@@ -790,7 +791,7 @@ def make_subscription_links(client, r):
             combined_password=get_ss2022_server_password()+":"+ss_password
             # SIP022 requires the AEAD-2022 method and a percent-encoded server:user PSK pair.
             userinfo="2022-blake3-aes-128-gcm:"+quote(combined_password,safe="")
-            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
+            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe="")
             url=f"ss://{userinfo}@{host}:443/?plugin={plugin}#{title}"
         else:
             continue
