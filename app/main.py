@@ -314,6 +314,9 @@ async def overview(r:Request):
             total=c.execute("SELECT COUNT(*) n FROM clients WHERE owner_id=?",(owner,)).fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE owner_id=? AND enabled=1",(owner,)).fetchone()["n"]
             children=[dict(x) for x in c.execute("SELECT id,username,quota_bytes,enabled,created_at,parent_id FROM resellers WHERE parent_id=? ORDER BY created_at DESC",(owner,))]
         events=[dict(x) for x in c.execute("SELECT at,level,message FROM events ORDER BY id DESC LIMIT 8")] if owner is None else []
+    for child in children:
+        child["allocated_bytes"]=reseller_allocated_for(child["id"])
+        child["remaining_bytes"]=child["quota_bytes"]-child["allocated_bytes"]
     remaining=None if owner is None else reseller_remaining(owner)
     return {"csrf":r.session.get("csrf",""),"role":"root" if owner is None else "reseller","remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
 @app.get("/api/settings")
