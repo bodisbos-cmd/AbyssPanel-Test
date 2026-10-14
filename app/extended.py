@@ -346,6 +346,9 @@ def install_extended(app, namespace):
             raise HTTPException(503,"Xray is not installed; automatic restart is unavailable")
         changes=[]
         try:
+            # Rebuild the generated config from the current database before testing it;
+            # this also recovers from a missing or stale generated file.
+            await asyncio.to_thread(p.validate_and_write_xray)
             config_test=await asyncio.to_thread(_xray_config_test,p)
             if not config_test["ok"]:
                 raise RuntimeError("Xray configuration validation failed: "+config_test["detail"])
