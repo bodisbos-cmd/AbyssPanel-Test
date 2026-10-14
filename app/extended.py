@@ -344,16 +344,27 @@ def install_extended(app, namespace):
         _role(request,p,"owner"); _csrf(request,p)
         if not Path(str(_global(p,"XRAY_BIN") or "")).is_file():
             raise HTTPException(503,"Xray is not installed; automatic restart is unavailable")
+        changes=[]
         try:
+            config_test=await asyncio.to_thread(_xray_config_test,p)
+            if not config_test["ok"]:
+                raise RuntimeError("Xray configuration validation failed: "+config_test["detail"])
+            changes.append("اعتبارسنجی تنظیمات Xray")
+            if shutil.which("nginx"):
+                nginx_check=await asyncio.to_thread(subprocess.run,["nginx","-t"],capture_output=True,text=True,timeout=8)
+                if nginx_check.returncode:
+                    raise RuntimeError((nginx_check.stderr or nginx_check.stdout)[-500:])
+                changes.append("اعتبارسنجی پیکربندی Nginx")
             await p.start_xray()
+            proc=_global(p,"xray_proc")
+            if not proc or proc.poll() is not None:
+                raise RuntimeError("Xray did not remain running after restart")
+            changes.append("راه‌اندازی مجدد Xray")
         except Exception as exc:
             p.event("ERROR",f"Automatic Xray repair failed: {str(exc)[:300]}")
-            raise HTTPException(503,"Xray restart failed; inspect /data/xray-stderr.log and the configuration test") from exc
-        proc=_global(p,"xray_proc")
-        if not proc or proc.poll() is not None:
-            raise HTTPException(503,"Xray did not remain running after restart")
-        p.event("WARNING","Administrator requested Xray self-repair; config validation and restart completed.")
-        return {"ok":True,"message":"تنظیمات اعتبارسنجی شد و Xray دوباره راه‌اندازی شد. اکنون بررسی هوشمند را دوباره اجرا کن."}
+            raise HTTPException(503,"تعمیر کامل نشد؛ تنظیمات Xray، پیکربندی Nginx و رویدادها را بررسی کن.") from exc
+        p.event("WARNING","Safe Xray repair completed: "+", ".join(changes))
+        return {"ok":True,"message":"تعمیر امن انجام شد: "+", ".join(changes)+". حالا بررسی را دوباره اجرا کن."}
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):
