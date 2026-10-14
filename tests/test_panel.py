@@ -436,7 +436,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ws_alt": False, "httpupgrade_alt": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ws_alt": False, "httpupgrade_alt": False, "xhttp_stream_up_alt": False, "xhttp_stream_one_alt": False}},
         headers=headers,
     )
     assert rejected.status_code == 422
