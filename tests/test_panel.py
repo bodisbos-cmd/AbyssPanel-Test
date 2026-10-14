@@ -422,7 +422,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws" , "ws_alt", "httpupgrade_alt", "xhttp_stream_up_alt", "xhttp_stream_one_alt"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws", "ws_alt", "httpupgrade_alt", "xhttp_stream_up_alt", "xhttp_stream_one_alt"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
