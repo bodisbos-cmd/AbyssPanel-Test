@@ -783,7 +783,7 @@ def make_subscription_links(client, r):
             combined_password=get_ss2022_server_password()+":"+ss_password
             # SIP022 requires the AEAD-2022 method and a percent-encoded server:user PSK pair.
             userinfo="2022-blake3-aes-128-gcm:"+quote(combined_password,safe="")
-            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
+            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe="")
             url=f"ss://{userinfo}@{host}:443/?plugin={plugin}#{title}"
         else:
             continue
