@@ -23,7 +23,6 @@
 | PATCH | /api/v1/clients/{id} | clients:write | تغییر نام، یادداشت، فعال‌بودن، مدت یا حجم |
 | POST | /api/v1/clients/{id}/reset-usage | clients:write | صفرکردن مصرف ثبت‌شده |
 | DELETE | /api/v1/clients/{id} | clients:write | حذف دسترسی و سرویس |
-| POST | /api/v1/clients/{id}/reset-usage | clients:write | صفرکردن مصرف ثبت‌شده |
 | GET | /api/v1/clients/{id}/subscription | subscriptions:read | دریافت لینک صفحه، اشتراک و QR |
 | GET | /api/v1/system/metrics | metrics:read | پایش منابع کانتینر و روند مصرف ثبت‌شده |
 
