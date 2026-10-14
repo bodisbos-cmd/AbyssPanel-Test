@@ -540,7 +540,7 @@ async def backup_database(r:Request):
         try: source.backup(dest)
         finally: dest.close()
     event("INFO","Administrator created a database backup.")
-    return FileResponse(target,media_type="application/vnd.sqlite3",filename=target.name)
+    return FileResponse(target,media_type="application/vnd.sqlite3",filename=target.name,headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
 @app.post("/api/restore")
 async def restore_database(r:Request):
