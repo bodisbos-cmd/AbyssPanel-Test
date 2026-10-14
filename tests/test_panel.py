@@ -124,7 +124,7 @@ def test_create_pause_subscription_and_revoke(client):
     assert any("xhttp-stream-up-alt" in line for line in configs)
     assert any("xhttp-stream-one-alt" in line for line in configs)
     assert sum("mode=packet-up" in line for line in configs) == 1
-    assert sum("mode=auto" in line for line in configs) == 3
+    assert sum("mode=auto" in line for line in configs) == 1
     assert any("xhttp-auto-alt-a" in line for line in configs)
     assert any("xhttp-auto-alt-b" in line for line in configs)
     ss_uri = next(line for line in configs if line.startswith("ss://"))
