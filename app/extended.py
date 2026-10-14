@@ -394,9 +394,13 @@ def install_extended(app, namespace):
         if not path.exists(): raise HTTPException(503,"Database is not initialized yet")
         with tempfile.TemporaryDirectory(prefix="abyss-backup-") as temp:
             target_path=Path(temp)/"panel.sqlite3"
-            source=sqlite3.connect(str(path),timeout=15); target=sqlite3.connect(str(target_path),timeout=15)
-            try: source.execute("PRAGMA wal_checkpoint(FULL)"); source.backup(target); target.commit()
-            finally: target.close(); source.close()
+            target=sqlite3.connect(str(target_path),timeout=15)
+            try:
+                with p.db() as source:
+                    source.execute("PRAGMA wal_checkpoint(FULL)")
+                    source.backup(target)
+                target.commit()
+            finally: target.close()
             meta={"format":"abysspanel-backup-v1","created_at":_utc(),"database":"panel.sqlite3",
               "contains":["clients","admin credential hashes","settings","events","API-key hashes"],
               "excludes":["session secret","initial password file","Xray runtime logs"]}
