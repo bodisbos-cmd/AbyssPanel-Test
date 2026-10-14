@@ -99,8 +99,8 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 9
-    assert sum(line.startswith("vless://") for line in configs) == 6
+    assert len(configs) == 11
+    assert sum(line.startswith("vless://") for line in configs) == 8
     assert sum(line.startswith("trojan://") for line in configs) == 1
     assert sum(line.startswith("vmess://") for line in configs) == 1
     assert sum(line.startswith("ss://") for line in configs) == 1
@@ -109,8 +109,10 @@ def test_create_pause_subscription_and_revoke(client):
     assert sum("type=xhttp" in line for line in configs) == 4
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
-    assert any("mode=stream-up" in line for line in configs)
-    assert any("mode=stream-one" in line for line in configs)
+    assert sum("mode=packet-up" in line for line in configs) == 3
+    ss_uri = next(line for line in configs if line.startswith("ss://"))
+    assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
+    assert "@testserver:443/?plugin=" in ss_uri
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
@@ -140,8 +142,11 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert subscription_client.status_code == 200
     assert "text/plain" in subscription_client.headers["content-type"]
     configs = base64.b64decode(subscription_client.text).decode().splitlines()
-    assert len(configs) == 9
+    assert len(configs) == 11
     assert "Accept, User-Agent" in subscription_client.headers["vary"]
+    assert "Subscription-Userinfo" in subscription_client.headers
+    assert "total=4294967296" in subscription_client.headers["Subscription-Userinfo"]
+    assert client.get(f"/api/clients/{created.json()['id']}/subscription").json()["page_url"] == url
 
 
 def _token_from_url(url):
@@ -182,14 +187,14 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 10  # Stats API plus nine selectable profiles
+    assert len(inbounds) == 12  # Stats API plus eleven selectable profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
 
 
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
@@ -203,10 +208,10 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     cid = created.json()["id"]
     info = client.get(f"/api/clients/{cid}/subscription").json()
     assert info["url"].startswith("https://testserver/sub/")
-    assert info["page_url"].startswith("https://testserver/s/")
+    assert info["page_url"] == info["url"] and info["page_url"].startswith("https://testserver/sub/")
     assert info["qr_url"].endswith("/qr")
 
-    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
+    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"), headers={"Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 Chrome/130"})
     assert page.status_code == 200
     assert "viewport-fit=cover" in page.text
     assert "Abyss Tunnel" in page.text
@@ -335,7 +340,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 9
+    assert len(settings.json()["profiles"]) == 11
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -344,7 +349,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws", "ws_alt", "httpupgrade_alt"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -352,13 +357,13 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 7
+    assert len(links) == 9
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
-    assert all("packet-up" not in line for line in links)
+    assert any("mode=packet-up" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ss_ws": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ss_ws": False, "ws_alt": False, "httpupgrade_alt": False}},
         headers=headers,
     )
     assert rejected.status_code == 422

@@ -63,7 +63,7 @@ def test_api_key_scopes_and_bot_client_lifecycle(client):
     assert made.status_code == 200, made.text
     item = made.json()
     assert item["subscription_url"].endswith("/sub/" + item["subscription_url"].rsplit("/", 1)[1])
-    assert item["subscription_page_url"].startswith("https://")
+    assert item["subscription_page_url"] == item["subscription_url"]
     cid = item["id"]
 
     listing = client.get("/api/v1/clients", headers=auth)
@@ -165,14 +165,14 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     token = info["page_url"].rsplit("/", 1)[1]
     diag = client.get(f"/s/{token}/diagnostics")
     assert diag.status_code == 200, diag.text
-    assert diag.json()["profile_count"] == 9
+    assert diag.json()["profile_count"] == 11
     help_page = client.get(f"/s/{token}/help")
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
     assert "https://github.com/2dust/v2rayNG/releases" in help_page.text
     assert "https://apps.apple.com/app/hiddify-proxy-vpn/id6596777532" in help_page.text
     assert "https://github.com/2dust/v2rayN/releases" in help_page.text
-    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
+    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"), headers={"Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 Chrome/130"})
     assert page.status_code == 200
     assert "بررسی اتصال" in page.text
     assert "دانلود برنامه‌های رسمی" in page.text
@@ -204,7 +204,7 @@ def test_subscription_html_escapes_names_and_shows_friendly_disabled_state(clien
     assert created.status_code == 200
     cid = created.json()["id"]
     info = client.get(f"/api/clients/{cid}/subscription").json()
-    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"))
+    page = client.get(info["page_url"].replace("https://testserver", "http://testserver"), headers={"Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 Chrome/130"})
     assert page.status_code == 200
     assert "&lt;img" in page.text
     assert '<img src=x onerror="alert(1)">' not in page.text
@@ -278,7 +278,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     response = client.get("/api/system/profiles/check")
     assert response.status_code == 200, response.text
     data = response.json()
-    assert len(data["checks"]) == 9
+    assert len(data["checks"]) == 11
     assert all(item["route_ok"] for item in data["checks"])
     assert "پینگ واقعی تونل" in data["note"]
 
@@ -287,7 +287,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     token = client.get(f"/api/clients/{made.json()['id']}/subscription").json()["page_url"].rsplit("/", 1)[1]
     customer_diag = client.get(f"/s/{token}/diagnostics")
     assert customer_diag.status_code == 200, customer_diag.text
-    assert len(customer_diag.json()["route_checks"]) == 9
+    assert len(customer_diag.json()["route_checks"]) == 11
     assert all(item["http_status"] != 502 for item in customer_diag.json()["route_checks"])
     assert "cannot prove" in customer_diag.json()["note"]
 
@@ -337,16 +337,16 @@ def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
     token = info["page_url"].rsplit("/", 1)[1]
     links = client.get(f"/sub/{token}").text
     decoded = base64.b64decode(links).decode().splitlines()
-    assert len(decoded) == 9, decoded
-    assert sum(x.startswith("vless://") for x in decoded) == 6
+    assert len(decoded) == 11, decoded
+    assert sum(x.startswith("vless://") for x in decoded) == 8
     assert sum(x.startswith("trojan://") for x in decoded) == 1
     assert sum(x.startswith("vmess://") for x in decoded) == 1
     assert sum(x.startswith("ss://") for x in decoded) == 1
     assert all("abysstunnel-" in x or x.startswith("vmess://") for x in decoded)
     config = panel.make_xray_config()
     inbound = [x for x in config["inbounds"] if x.get("tag", "").startswith("in-")]
-    assert len(inbound) == 9
+    assert len(inbound) == 11
     assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
-    assert len({x["port"] for x in inbound}) == 9
+    assert len({x["port"] for x in inbound}) == 11
     for item in inbound:
         assert item["streamSettings"]["network"] in {"ws", "httpupgrade", "xhttp"}
