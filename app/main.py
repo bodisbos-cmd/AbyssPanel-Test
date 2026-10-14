@@ -945,3 +945,18 @@ except ModuleNotFoundError:
     _extension_spec.loader.exec_module(_extension_module)
     install_extended = _extension_module.install_extended
 install_extended(app, globals())
+@app.get("/api-docs",response_class=HTMLResponse)
+async def protected_api_docs(r:Request):
+    require_admin(r)
+    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel API Docs</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"></head><body style="margin:0;background:#080b12"><div id="swagger-ui"></div><script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api-docs/openapi.json',dom_id:'#swagger-ui',deepLinking:true,persistAuthorization:false})</script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/api-docs/redoc",response_class=HTMLResponse)
+async def protected_redoc_docs(r:Request):
+    require_admin(r)
+    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel API Reference</title></head><body style="margin:0;background:#080b12"><redoc spec-url="/api-docs/openapi.json"></redoc><script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/api-docs/openapi.json")
+async def protected_openapi_schema(r:Request):
+    require_admin(r)
+    return app.openapi()
+
