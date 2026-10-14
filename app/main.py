@@ -276,7 +276,7 @@ async def dashboard_js():
     return PlainTextResponse(DASH_JS,media_type="application/javascript",headers={"Cache-Control":"no-store"})
 
 @app.get("/",response_class=HTMLResponse)
-async def home(r:Request): return HTMLResponse(DASH) if r.session.get("admin") is True else RedirectResponse("/login",303)
+async def home(r:Request): return HTMLResponse(DASH) if (r.session.get("admin") is True or r.session.get("reseller_id")) else RedirectResponse("/login",303)
 @app.get("/login",response_class=HTMLResponse)
 async def login_page(r:Request):
     t=secrets.token_urlsafe(24); r.session["login_csrf"]=t
@@ -397,6 +397,13 @@ async def update_client(cid:str,r:Request):
             updates["expires_at"]=(datetime.now(timezone.utc)+timedelta(days=int(b["duration_days"]))).isoformat(timespec="seconds") if b["duration_days"] is not None else None
         if "quota_gb" in b: updates["quota_bytes"]=int(float(b["quota_gb"])*1024**3) if b["quota_gb"] is not None else None
         if not updates: raise HTTPException(422,"No fields to update")
+        if owner_id_for(r) is not None and "quota_bytes" in updates:
+            new_quota=updates["quota_bytes"]
+            if new_quota is None: raise HTTPException(422,"Reseller clients must have a finite quota")
+            allocated=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM clients WHERE owner_id=? AND id<>?",(owner_id_for(r),cid)).fetchone()["n"] or 0)
+            children=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=?",(owner_id_for(r),)).fetchone()["n"] or 0)
+            parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
+            if allocated+children+new_quota>int(parent["quota_bytes"]): raise HTTPException(422,"Updated quota exceeds your remaining allocation")
         c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))
     if "enabled" in updates and updates["enabled"] != previous["enabled"]:
         try:
@@ -523,7 +530,7 @@ async def subscription_page(token:str,r:Request):
 
 @app.get("/api/backup")
 async def backup_database(r:Request):
-    require_admin(r)
+    require_root(r)
     target=DATA_DIR/("abyss-backup-"+datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".sqlite3")
     with db() as source:
         dest=sqlite3.connect(target)
@@ -534,7 +541,7 @@ async def backup_database(r:Request):
 
 @app.post("/api/restore")
 async def restore_database(r:Request):
-    require_admin(r); require_csrf(r)
+    require_root(r); require_csrf(r)
     raw=await r.body()
     if not raw or len(raw)>100*1024*1024: raise HTTPException(413,"Backup must be between 1 byte and 100 MB")
     candidate=DATA_DIR/".restore-candidate.sqlite3"
