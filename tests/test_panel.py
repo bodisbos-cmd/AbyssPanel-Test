@@ -127,6 +127,7 @@ def test_create_pause_subscription_and_revoke(client):
     decoded_ss = base64.urlsafe_b64decode(userinfo + "=" * (-len(userinfo) % 4)).decode()
     assert decoded_ss.startswith("aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
+    assert "%3Btls%3Bhost%3Dtestserver%3Bpath%3D%2Fss-ws" in ss_uri
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
