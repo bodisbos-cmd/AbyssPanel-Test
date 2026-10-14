@@ -47,6 +47,7 @@ def init_db():
         c.executescript("""
         CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY CHECK(id=1),password_hash TEXT NOT NULL,password_changed_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS clients(id TEXT PRIMARY KEY,name TEXT NOT NULL,client_uuid TEXT NOT NULL UNIQUE,sub_token TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,note TEXT NOT NULL DEFAULT '',expires_at TEXT,quota_bytes INTEGER,used_bytes INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS resellers(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,quota_bytes INTEGER NOT NULL CHECK(quota_bytes>0),enabled INTEGER NOT NULL DEFAULT 1,parent_id TEXT,created_at TEXT NOT NULL,FOREIGN KEY(parent_id) REFERENCES resellers(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,level TEXT NOT NULL,message TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at DESC);
@@ -62,6 +63,9 @@ def init_db():
         cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
         for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0")):
             if name not in cols: c.execute(f"ALTER TABLE clients ADD COLUMN {name} {declaration}")
+        if "owner_id" not in cols: c.execute("ALTER TABLE clients ADD COLUMN owner_id TEXT")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_clients_owner ON clients(owner_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_resellers_parent ON resellers(parent_id)")
         c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('created_at',?)",(utc_now(),))
 def event(level,message):
     LOG.log(getattr(logging,level.upper(),logging.INFO),message)
@@ -192,7 +196,25 @@ app.add_middleware(SessionMiddleware,secret_key=sf.read_text().strip(),session_c
 async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
 def require_admin(r):
-    if r.session.get("admin") is not True: raise HTTPException(401,"Authentication required")
+    if r.session.get("admin") is not True and not r.session.get("reseller_id"): raise HTTPException(401,"Authentication required")
+def is_root(r): return r.session.get("admin") is True
+def owner_id_for(r): return None if is_root(r) else str(r.session.get("reseller_id",""))
+def require_root(r):
+    require_admin(r)
+    if not is_root(r): raise HTTPException(403,"Root administrator permission required")
+def require_client_access(r,cid):
+    if is_root(r): return
+    with db() as c: row=c.execute("SELECT owner_id FROM clients WHERE id=?",(cid,)).fetchone()
+    if not row or row["owner_id"] != owner_id_for(r): raise HTTPException(404,"Client not found")
+def reseller_allocated(c,rid):
+    a=c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM clients WHERE owner_id=?",(rid,)).fetchone()["n"]
+    b=c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=?",(rid,)).fetchone()["n"]
+    return int(a or 0)+int(b or 0)
+def reseller_remaining(rid):
+    with db() as c:
+        row=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(rid,)).fetchone()
+        if not row or not row["enabled"]: raise HTTPException(403,"Reseller account is disabled")
+        return int(row["quota_bytes"])-reseller_allocated(c,rid)
 def require_csrf(r):
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
