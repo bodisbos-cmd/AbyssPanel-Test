@@ -377,7 +377,8 @@ def test_profile_settings_update_xray_and_subscription(client):
     links = base64.b64decode(raw.text).decode().splitlines()
     assert len(links) == 12
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
-    assert any("mode=packet-up" in line for line in links)
+    assert any("mode=stream-up" in line for line in links)
+    assert any("mode=stream-one" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
