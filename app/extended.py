@@ -442,6 +442,9 @@ def install_extended(app, namespace):
                 src=sqlite3.connect(str(source_path),timeout=15); dst=sqlite3.connect(str(path),timeout=15)
                 try: src.backup(dst); dst.commit()
                 finally: dst.close(); src.close()
+            for suffix in ("-wal","-shm"):
+                try: Path(str(path)+suffix).unlink(missing_ok=True)
+                except OSError: pass
             replace(restored)
             p.init_db()
             _init(p)
