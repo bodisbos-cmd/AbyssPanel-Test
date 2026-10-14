@@ -290,6 +290,7 @@ def require_csrf(r):
 def rate_check(r,key,limit=8,window=300):
     now=int(time.time())
     with db() as c:
+        c.execute("BEGIN IMMEDIATE")
         k="rate:"+key; row=c.execute("SELECT value FROM settings WHERE key=?",(k,)).fetchone()
         if not row: c.execute("INSERT INTO settings VALUES(?,?)",(k,f"{now}:1")); return True
         try: start,count=map(int,row["value"].split(":",1))
@@ -642,6 +643,15 @@ async def restore_database(r:Request):
                     tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                     if not {"admins","clients","settings"}.issubset(tables):
                         raise HTTPException(422,"Incompatible AbyssPanel backup")
+                    required_columns={
+                        "admins":{"username","password_hash"},
+                        "clients":{"id","name","client_uuid","sub_token","enabled","created_at"},
+                        "settings":{"key","value"},
+                    }
+                    for table,required in required_columns.items():
+                        columns={row[1] for row in check.execute("PRAGMA table_info("+table+")")}
+                        if not required.issubset(columns):
+                            raise HTTPException(422,"Backup schema is incompatible with AbyssPanel")
                 except sqlite3.DatabaseError as exc:
                     raise HTTPException(422,"Backup is not a valid SQLite database") from exc
             finally:
@@ -660,8 +670,8 @@ async def restore_database(r:Request):
             candidate.replace(DB_PATH)
             Path(str(DB_PATH)+"-wal").unlink(missing_ok=True)
             Path(str(DB_PATH)+"-shm").unlink(missing_ok=True)
-            init_db()
             try:
+                init_db()
                 await start_xray()
             except Exception:
                 # If the restored configuration cannot be applied, put the prior
@@ -764,7 +774,10 @@ async def delete_reseller(rid:str,r:Request):
         c.execute("BEGIN IMMEDIATE")
         row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
         if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
-        if reseller_allocated(c,rid): raise HTTPException(409,"Remove allocated client/reseller quotas before deleting")
+        has_clients=c.execute("SELECT 1 FROM clients WHERE owner_id=? LIMIT 1",(rid,)).fetchone()
+        has_children=c.execute("SELECT 1 FROM resellers WHERE parent_id=? LIMIT 1",(rid,)).fetchone()
+        if has_clients or has_children or reseller_allocated(c,rid):
+            raise HTTPException(409,"Delete this reseller's clients and child resellers before deleting the account")
         c.execute("DELETE FROM resellers WHERE id=?",(rid,))
     return {"ok":True}
 
