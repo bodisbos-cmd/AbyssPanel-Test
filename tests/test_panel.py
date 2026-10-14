@@ -67,7 +67,7 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "no-store" in response.headers.get("cache-control", "")
-    assert '/dashboard.js?v=20261014-ui3' in response.text
+    assert '/dashboard.js?v=20261014-assistant1' in response.text
     assert 'id="abyss-theme-system"' in response.text
     assert 'id="abyss-theme-polish"' in response.text
     assert 'id="abyss-theme-controller"' in response.text
