@@ -109,11 +109,11 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 13
+    assert len(configs) == 12
     assert sum(line.startswith("vless://") for line in configs) == 10
     assert sum(line.startswith("trojan://") for line in configs) == 1
     assert sum(line.startswith("vmess://") for line in configs) == 1
-    assert sum(line.startswith("ss://") for line in configs) == 1
+    assert sum(line.startswith("ss://") for line in configs) == 0
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
     assert sum("type=xhttp" in line for line in configs) == 6
@@ -125,10 +125,6 @@ def test_create_pause_subscription_and_revoke(client):
     assert any("xhttp-stream-one-alt" in line for line in configs)
     assert sum("mode=packet-up" in line for line in configs) == 1
     assert sum("mode=auto" in line for line in configs) == 1
-    ss_uri = next(line for line in configs if line.startswith("ss://"))
-    assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
-    assert "@testserver:443/?plugin=" in ss_uri
-
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
     assert client.get(f"/sub/{_token_from_url(link.json()['url'])}").status_code == 404
@@ -160,7 +156,7 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert subscription_client.status_code == 200
     assert "text/plain" in subscription_client.headers["content-type"]
     configs = base64.b64decode(subscription_client.text).decode().splitlines()
-    assert len(configs) == 13
+    assert len(configs) == 12
     assert "Accept, User-Agent" in subscription_client.headers["vary"]
     assert "Subscription-Userinfo" in subscription_client.headers
     assert "total=4294967296" in subscription_client.headers["Subscription-Userinfo"]
@@ -205,7 +201,7 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 14  # Stats API plus thirteen selectable profiles
+    assert len(inbounds) == 13  # Stats API plus twelve selectable profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
@@ -232,7 +228,7 @@ def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
     response = client.get("/api/system/diagnostics")
     assert response.status_code == 200, response.text
     data = response.json()
-    assert len(data["profiles"]) == 13
+    assert len(data["profiles"]) == 12
     assert data["actual_tunnel_tested"] is False
     assert "تست واقعی" in data["note"]
     for profile in data["profiles"]:
@@ -388,7 +384,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 13
+    assert len(settings.json()["profiles"]) == 12
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -397,7 +393,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws", "ws_alt", "httpupgrade_alt", "xhttp_stream_up_alt", "xhttp_stream_one_alt"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws" , "ws_alt", "httpupgrade_alt", "xhttp_stream_up_alt", "xhttp_stream_one_alt"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -405,7 +401,7 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 11
+    assert len(links) == 10
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert any("mode=auto" in line for line in links)
     assert any("xhttp-auto-alt-a" in line for line in links)
@@ -413,7 +409,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ss_ws": False, "ws_alt": False, "httpupgrade_alt": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ws_alt": False, "httpupgrade_alt": False}},
         headers=headers,
     )
     assert rejected.status_code == 422
