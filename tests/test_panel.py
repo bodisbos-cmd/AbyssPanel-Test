@@ -603,3 +603,8 @@ def test_health_reports_stopped_xray_as_unhealthy(client, monkeypatch):
     assert response.status_code == 503
     assert response.json() == {"ok": False, "xray": "stopped"}
 
+
+def test_invalid_expiry_metadata_fails_closed():
+    assert panel.client_is_expired("not-a-timestamp")
+    assert not panel.client_is_expired(None)
+
