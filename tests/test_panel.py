@@ -212,6 +212,18 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert len({item["streamSettings"]["xhttpSettings"]["path"] for item in xhttp}) == 6
 
 
+def test_subscription_feedback_validates_operator_and_result(client):
+    csrf = admin_client(client)
+    made = client.post("/api/clients", json={"name": "Feedback test"}, headers={"X-CSRF-Token": csrf})
+    assert made.status_code == 200
+    info = client.get("/api/clients/" + made.json()["id"] + "/subscription").json()
+    token = info["url"].rsplit("/", 1)[1]
+    invalid = client.post("/sub/" + token + "/feedback", json={"carrier": "invalid", "profile_key": "ws", "result": "ok"})
+    assert invalid.status_code == 422
+    accepted = client.post("/sub/" + token + "/feedback", json={"carrier": "irancell", "profile_key": "ws", "result": "ok"})
+    assert accepted.status_code == 200
+
+
 def test_xhttp_modes_are_real_and_alternate_paths_are_unique(client):
     profiles = {p["key"]: p for p in panel.PROFILES}
     assert profiles["xhttp_stream_up"]["mode"] == "stream-up"
