@@ -324,9 +324,9 @@ def assert_reseller_chain_enabled(c,rid):
         if not row or not row["enabled"]:
             raise HTTPException(403,"Reseller account or parent is disabled")
         current_id=row["parent_id"]
-def require_csrf(r):
+def require_csrf(r,allow_viewer=False):
     require_admin(r)
-    if r.session.get("admin") is True and r.session.get("admin_role")=="viewer":
+    if not allow_viewer and r.session.get("admin") is True and r.session.get("admin_role")=="viewer":
         raise HTTPException(403,"Read-only viewer account")
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
@@ -467,7 +467,7 @@ async def read_settings(r:Request):
 
 @app.patch("/api/settings/profiles")
 async def update_profile_settings(r:Request):
-    require_root(r); require_csrf(r); body=await r.json()
+    require_role(r,"owner","admin"); require_csrf(r); body=await r.json()
     profiles=body.get("profiles") if isinstance(body,dict) else None
     keys={p["key"] for p in PROFILES}
     if not isinstance(profiles,dict) or not profiles or set(profiles)-keys or any(not isinstance(v,bool) for v in profiles.values()):
@@ -907,7 +907,7 @@ async def unhandled(r:Request,e:Exception):
 @app.post("/api/password")
 async def change_password(r: Request):
     require_admin(r)
-    require_csrf(r)
+    require_csrf(r,allow_viewer=True)
     body = await r.json()
     current = str(body.get("current_password", ""))
     new = str(body.get("new_password", ""))
