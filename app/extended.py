@@ -1,6 +1,6 @@
 from __future__ import annotations
 import asyncio
-import hashlib, hmac, io, json, os, shutil, sqlite3, tempfile, time, zipfile, secrets, uuid, http.client
+import hashlib, hmac, io, json, os, shutil, sqlite3, tempfile, time, zipfile, secrets, uuid, http.client, socket, subprocess
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -107,21 +107,65 @@ def _metrics(p):
 
 def _probe_profile(profile):
     started=time.monotonic()
-    result={"key":profile["key"],"label":profile["label"],"path":profile["path"],"latency_ms":None,"http_status":None,"route_ok":False,"error":None}
+    result={"key":profile["key"],"label":profile["label"],"path":profile["path"],
+      "port":profile["port"],"network":profile["network"],"mode":profile.get("mode"),
+      "protocol":profile.get("protocol","vless"),"enabled":profile.get("enabled",True),
+      "latency_ms":None,"http_status":None,"route_ok":False,"listener_ok":False,
+      "tunnel_tested":False,"error":None}
+    if not result["enabled"]:
+        result["status"]="disabled"
+        result["hint"]="این پروفایل در تنظیمات پنل غیرفعال است."
+        result["latency_ms"]=round((time.monotonic()-started)*1000,1)
+        return result
+    try:
+        with socket.create_connection(("127.0.0.1",int(profile["port"])),timeout=0.5):
+            result["listener_ok"]=True
+    except (TimeoutError,OSError) as exc:
+        result["listener_error"]=str(exc)[:100]
     connection=None
     try:
-        connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=0.8)
+        connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=1.0)
         connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
         response=connection.getresponse()
         result["http_status"]=response.status
         response.read(1)
-        result["route_ok"]=result["http_status"] not in {502,503,504}
+        result["route_ok"]=response.status not in {502,503,504}
     except (http.client.HTTPException,TimeoutError,OSError) as exc:
         result["error"]="Gateway/route did not respond: "+str(exc)[:120]
     finally:
         if connection: connection.close()
+    if not result["listener_ok"]:
+        result["status"]="listener_missing"
+        result["hint"]="پورت داخلی Xray پاسخ نمی‌دهد؛ وضعیت اجرای Xray و تنظیمات این پروفایل را بررسی کن."
+    elif not result["route_ok"]:
+        result["status"]="gateway_error"
+        result["hint"]="مسیر Nginx به این پروفایل خطا می‌دهد؛ مسیر و proxy_pass را بررسی کن."
+    else:
+        result["status"]="route_reachable_tunnel_unverified"
+        if result["network"]=="xhttp" and result["mode"] in {"stream-one","stream-up"}:
+            result["hint"]="مسیر و پورت داخلی در دسترس‌اند؛ اتصال واقعی را با کلاینت و شبکهٔ مقصد آزمایش کن. stream-up معمولاً سازگارتر از stream-one است."
+        elif result["protocol"]=="shadowsocks":
+            result["hint"]="باز بودن مسیر، سازگاری Shadowsocks 2022 و پلاگین WebSocket را اثبات نمی‌کند؛ با کلاینتی که v2ray-plugin و روش رمزنگاری را پشتیبانی کند تست کن."
+        else:
+            result["hint"]="مسیر وب و پورت داخلی پاسخ می‌دهند؛ تونل واقعی هنوز از اینجا تأیید نشده است."
     result["latency_ms"]=round((time.monotonic()-started)*1000,1)
     return result
+
+def _xray_config_test(panel):
+    binary=Path(str(_global(panel,"XRAY_BIN") or ""))
+    config=Path(str(_global(panel,"XRAY_CONFIG") or ""))
+    if not binary.is_file():
+        return {"ok":False,"status":"xray_not_installed","detail":"باینری Xray پیدا نشد."}
+    if not config.is_file():
+        return {"ok":False,"status":"config_missing","detail":"فایل تنظیمات Xray هنوز ساخته نشده است."}
+    try:
+        result=subprocess.run([str(binary),"run","-test","-config",str(config)],
+          capture_output=True,text=True,timeout=15)
+        detail=(result.stderr or result.stdout or "").strip()[-600:]
+        return {"ok":result.returncode==0,"status":"valid" if result.returncode==0 else "invalid",
+          "detail":detail or ("تنظیمات معتبر است." if result.returncode==0 else "Xray تنظیمات را رد کرد.")}
+    except (OSError,subprocess.SubprocessError) as exc:
+        return {"ok":False,"status":"test_failed","detail":str(exc)[:300]}
 
 def _download_items():
     return [
@@ -212,26 +256,51 @@ def install_extended(app, namespace):
     @app.get("/api/system/profiles/check")
     async def check_profile_routes(request:Request):
         _admin(request,p)
-        results=[]
-        for profile in p.PROFILES:
-            started=time.monotonic()
-            result={"key":profile["key"],"label":profile["label"],"path":profile["path"],"latency_ms":None,"http_status":None,"route_ok":False,"error":None}
-            connection=None
-            try:
-                connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=1.5)
-                connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
-                resp=connection.getresponse()
-                result["http_status"]=resp.status
-                resp.read(1)
-                result["latency_ms"]=round((time.monotonic()-started)*1000,1)
-                result["route_ok"]=result["http_status"] not in {502,503,504}
-            except (http.client.HTTPException,TimeoutError,OSError) as exc:
-                result["latency_ms"]=round((time.monotonic()-started)*1000,1)
-                result["error"]="Nginx/route did not respond: "+str(exc)[:140]
-            finally:
-                if connection: connection.close()
-            results.append(result)
-        return {"checks":results,"note":"این تست فقط مسیر HTTP داخل کانتینر تا Nginx/Xray را می‌سنجد؛ پینگ واقعی تونل یا سرعت اینترنت مشتری نیست."}
+        flags=p.get_profile_flags()
+        profiles=[dict(profile,enabled=bool(flags.get(profile["key"],False))) for profile in p.PROFILES]
+        results=await asyncio.gather(*(asyncio.to_thread(_probe_profile,profile) for profile in profiles))
+        return {"checks":results,"note":"این بررسی فقط پورت داخلی و پاسخ مسیر وب را می‌سنجد؛ پینگ یا تونل واقعی کاربر از اینجا قابل تأیید نیست."}
+
+    @app.get("/api/system/diagnostics")
+    async def system_diagnostics(request:Request):
+        _admin(request,p)
+        flags=p.get_profile_flags()
+        profiles=[dict(profile,enabled=bool(flags.get(profile["key"],False))) for profile in p.PROFILES]
+        checks=await asyncio.gather(*(asyncio.to_thread(_probe_profile,profile) for profile in profiles))
+        installed=Path(str(_global(p,"XRAY_BIN") or "")).is_file()
+        proc=_global(p,"xray_proc")
+        running=bool(proc and proc.poll() is None)
+        config_test=await asyncio.to_thread(_xray_config_test,p)
+        issues=[]
+        if not installed: issues.append("Xray نصب نیست؛ ساخت کانفیگ ممکن است انجام شود اما اتصال برقرار نمی‌شود.")
+        elif not running: issues.append("پردازش Xray در حال اجرا نیست.")
+        if installed and not config_test["ok"]: issues.append("آزمون تنظیمات Xray موفق نبود: "+config_test["detail"])
+        for item in checks:
+            if item["enabled"] and not item["listener_ok"]:
+                issues.append(item["label"]+": پورت داخلی بسته است.")
+            elif item["enabled"] and not item["route_ok"]:
+                issues.append(item["label"]+": مسیر وب خطا می‌دهد.")
+        if not issues: issues.append("خطای ساختاری آشکاری در بررسی‌های محلی پیدا نشد؛ اتصال واقعی هنوز نیازمند تست از کلاینت و اپراتور مقصد است.")
+        return {"ok":bool(installed and running and config_test["ok"] and all((not x["enabled"]) or (x["listener_ok"] and x["route_ok"]) for x in checks)),
+          "xray_installed":installed,"xray_running":running,"config_test":config_test,"profiles":checks,
+          "issues":issues,"actual_tunnel_tested":False,
+          "note":"باز بودن پورت و پاسخ HTTP به‌تنهایی پینگ، عبور ترافیک یا سازگاری اپراتور را اثبات نمی‌کند. پیشنهاد اپراتوری فقط بر پایهٔ تست واقعی روی همان شبکه قابل اتکاست."}
+
+    @app.post("/api/system/diagnostics/repair")
+    async def repair_xray(request:Request):
+        _role(request,p,"owner"); _csrf(request,p)
+        if not Path(str(_global(p,"XRAY_BIN") or "")).is_file():
+            raise HTTPException(503,"Xray is not installed; automatic restart is unavailable")
+        try:
+            await p.start_xray()
+        except Exception as exc:
+            p.event("ERROR",f"Automatic Xray repair failed: {str(exc)[:300]}")
+            raise HTTPException(503,"Xray restart failed; inspect /data/xray-stderr.log and the configuration test") from exc
+        proc=_global(p,"xray_proc")
+        if not proc or proc.poll() is not None:
+            raise HTTPException(503,"Xray did not remain running after restart")
+        p.event("WARNING","Administrator requested Xray self-repair; config validation and restart completed.")
+        return {"ok":True,"message":"تنظیمات اعتبارسنجی شد و Xray دوباره راه‌اندازی شد. اکنون بررسی هوشمند را دوباره اجرا کن."}
 
     @app.get("/api/admin/api-keys")
     async def list_api_keys(request:Request):

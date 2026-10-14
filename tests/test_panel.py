@@ -119,7 +119,10 @@ def test_create_pause_subscription_and_revoke(client):
     assert sum("type=xhttp" in line for line in configs) == 4
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
-    assert sum("mode=packet-up" in line for line in configs) == 3
+    assert sum("mode=packet-up" in line for line in configs) == 1
+    assert sum("mode=auto" in line for line in configs) == 3
+    assert any("xhttp-auto-alt-a" in line for line in configs)
+    assert any("xhttp-auto-alt-b" in line for line in configs)
     ss_uri = next(line for line in configs if line.startswith("ss://"))
     assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
@@ -210,6 +213,23 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
 
 
+def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
+    admin_client(client)
+    response = client.get("/api/system/diagnostics")
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert len(data["profiles"]) == 11
+    assert data["actual_tunnel_tested"] is False
+    assert "تست واقعی" in data["note"]
+    for profile in data["profiles"]:
+        assert "listener_ok" in profile
+        assert "route_ok" in profile
+        assert profile["tunnel_tested"] is False
+        assert profile["status"] in {
+            "disabled", "listener_missing", "gateway_error", "route_reachable_tunnel_unverified"
+        }
+
+
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     csrf = admin_client(client)
     created = client.post(
@@ -231,7 +251,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert 'id="abyss-theme-polish"' in page.text
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
-    assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
+    assert "مسیر جایگزین A" in page.text and "مسیر جایگزین B" in page.text
     assert page.headers["cache-control"] == "no-store"
     assert "noindex, nofollow" in page.headers["x-robots-tag"]
 
@@ -373,7 +393,9 @@ def test_profile_settings_update_xray_and_subscription(client):
     links = base64.b64decode(raw.text).decode().splitlines()
     assert len(links) == 9
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
-    assert any("mode=packet-up" in line for line in links)
+    assert any("mode=auto" in line for line in links)
+    assert any("xhttp-auto-alt-a" in line for line in links)
+    assert any("xhttp-auto-alt-b" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
