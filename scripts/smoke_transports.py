@@ -64,6 +64,17 @@ def read_client(client_id):
     return row
 
 
+def read_ss_server_password():
+    conn=sqlite3.connect(DB,timeout=10)
+    try:
+        row=conn.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()
+    finally:
+        conn.close()
+    if not row:
+        raise RuntimeError("Shadowsocks 2022 server key was not persisted")
+    return row[0]
+
+
 def port_ready(port):
     import socket
     sock = socket.socket()
@@ -139,7 +150,7 @@ def main():
                 outbound_settings = {"vnext":[{"address":"127.0.0.1","port":8080,"users":[{"id":client_uuid,"alterId":0,"security":"auto"}]}]}
             else:
                 ss_password = __import__("base64").b64encode(__import__("hashlib").sha256(client_uuid.encode()).digest()[:16]).decode()
-                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"method":"2022-blake3-aes-128-gcm","password":ss_password}]}
+                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"method":"2022-blake3-aes-128-gcm","password":read_ss_server_password()+":"+ss_password}]}
             config = {
                 "log": {"loglevel": "debug"},
                 "inbounds": [{
