@@ -411,7 +411,7 @@ def test_nginx_xhttp_uses_prefix_locations():
 def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"ok": True}
+    assert response.json() == {"ok": True, "xray": "running"}
 
 
 def test_reseller_login_is_scoped_and_cannot_overallocate(client):
