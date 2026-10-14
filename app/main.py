@@ -871,6 +871,27 @@ async def subscription(token:str,r:Request):
         return HTMLResponse(page,headers=headers)
     return PlainTextResponse(subscription_text(links),headers=headers)
 
+@app.post("/sub/{token}/feedback")
+async def submit_profile_feedback(token:str,r:Request):
+    active_subscription_client(token)
+    if not rate_check(r,"profile-feedback:"+token,limit=30,window=60):
+        raise HTTPException(429,"Too many feedback reports")
+    body=await r.json()
+    if not isinstance(body,dict):
+        raise HTTPException(422,"JSON object required")
+    carrier=body.get("carrier")
+    profile_key=body.get("profile_key")
+    result=body.get("result")
+    if carrier not in {"auto","mci","irancell","rightel","wifi"}:
+        raise HTTPException(422,"Unsupported carrier")
+    if profile_key not in {p["key"] for p in PROFILES}:
+        raise HTTPException(422,"Unsupported profile")
+    if result not in {"ok","fail"}:
+        raise HTTPException(422,"Result must be ok or fail")
+    with db() as c:
+        c.execute("INSERT INTO profile_feedback(sub_token,carrier,profile_key,result,created_at) VALUES(?,?,?,?,?) ON CONFLICT(sub_token,carrier,profile_key) DO UPDATE SET result=excluded.result,created_at=excluded.created_at",(token,carrier,profile_key,result,utc_now()))
+    return {"ok":True,"message":"نتیجه برای پیشنهادهای همین اپراتور ثبت شد."}
+
 @app.get("/sub/{token}/qr")
 async def subscription_qr(token:str,r:Request):
     client=active_subscription_client(token)
