@@ -510,6 +510,8 @@ def test_nested_reseller_allocation_is_atomic_and_scoped(client):
     listed = client.get("/api/resellers").json()["resellers"]
     assert listed[0]["id"] == child.json()["id"]
     assert listed[0]["username"] == "child_renamed"
+    assert listed[0]["allocated_bytes"] == 0
+    assert listed[0]["remaining_bytes"] == 1024**3
 
     # Simulate two simultaneous allocation attempts competing for the same
     # final GB. SQLite BEGIN IMMEDIATE must serialize the quota check + insert.
