@@ -165,7 +165,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     token = info["page_url"].rsplit("/", 1)[1]
     diag = client.get(f"/s/{token}/diagnostics")
     assert diag.status_code == 200, diag.text
-    assert diag.json()["profile_count"] == 6
+    assert diag.json()["profile_count"] == 9
     help_page = client.get(f"/s/{token}/help")
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
@@ -278,7 +278,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     response = client.get("/api/system/profiles/check")
     assert response.status_code == 200, response.text
     data = response.json()
-    assert len(data["checks"]) == 6
+    assert len(data["checks"]) == 9
     assert all(item["route_ok"] for item in data["checks"])
     assert "پینگ واقعی تونل" in data["note"]
 
@@ -287,7 +287,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     token = client.get(f"/api/clients/{made.json()['id']}/subscription").json()["page_url"].rsplit("/", 1)[1]
     customer_diag = client.get(f"/s/{token}/diagnostics")
     assert customer_diag.status_code == 200, customer_diag.text
-    assert len(customer_diag.json()["route_checks"]) == 6
+    assert len(customer_diag.json()["route_checks"]) == 9
     assert all(item["http_status"] == 404 for item in customer_diag.json()["route_checks"])
     assert "cannot prove" in customer_diag.json()["note"]
 
