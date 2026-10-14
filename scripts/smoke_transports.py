@@ -129,13 +129,16 @@ def main():
         ("vless", "httpupgrade", "/httpupgrade", None, 11082, False),
         ("vless", "xhttp", "/xhttp", "auto", 11083, False),
         ("vless", "xhttp", "/xhttp-packet", "packet-up", 11084, False),
-        ("vless", "xhttp", "/xhttp-stream-up", "packet-up", 11085, False),
-        ("vless", "xhttp", "/xhttp-stream-one", "packet-up", 11086, False),
+        ("vless", "xhttp", "/xhttp-stream-up", "stream-up", 11085, False),
+        ("vless", "xhttp", "/xhttp-stream-one", "stream-one", 11086, False),
         ("trojan", "ws", "/trojan-ws", None, 11087, False),
         ("vmess", "ws", "/vmess-ws", None, 11088, False),
         ("shadowsocks", "ws", "/ss-ws", None, 11089, False),
         ("vless", "ws", "/connect", None, 11090, False),
         ("vless", "httpupgrade", "/upgrade", None, 11091, False),
+        ("vless", "ws", "/ws-early?ed=2560", None, 11092, False),
+        ("trojan", "httpupgrade", "/trojan-upgrade", None, 11093, False),
+        ("vmess", "httpupgrade", "/vmess-upgrade", None, 11094, False),
     ]
     errors = []
     try:
@@ -151,8 +154,8 @@ def main():
             elif protocol == "vmess":
                 outbound_settings = {"vnext":[{"address":"127.0.0.1","port":8080,"users":[{"id":client_uuid,"alterId":0,"security":"auto"}]}]}
             else:
-                ss_password = __import__("base64").b64encode(__import__("hashlib").sha256(client_uuid.encode()).digest()[:16]).decode()
-                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"method":"2022-blake3-aes-128-gcm","password":read_ss_server_password()+":"+ss_password}]}
+                ss_password = __import__("hashlib").sha256(client_uuid.encode()).hexdigest()[:32]
+                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"method":"aes-128-gcm","password":ss_password}]}
             config = {
                 "log": {"loglevel": "debug"},
                 "inbounds": [{
