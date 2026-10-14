@@ -117,8 +117,8 @@ def make_xray_config():
         elif protocol=="vmess":
             settings={"clients":[{"id":x["id"],"alterId":0,"email":x["email"]} for x in clients]}
         elif protocol=="shadowsocks":
-            settings={"method":"chacha20-ietf-poly1305","password":"abysstunnel-internal-unused","network":"tcp"}
-            settings["clients"]=[{"password":x["id"],"email":x["email"]} for x in clients]
+            ss_clients=[{"password":base64.b64encode(hashlib.sha256(x["id"].encode()).digest()[:16]).decode(),"email":x["email"]} for x in clients]
+            settings={"method":"2022-blake3-aes-128-gcm","password":ss_clients[0]["password"] if ss_clients else base64.b64encode(secrets.token_bytes(16)).decode(),"network":"tcp","clients":ss_clients}
         else:
             raise ValueError("Unsupported profile protocol: "+protocol)
         ins.append({"tag":f"in-{profile['key']}","listen":"127.0.0.1","port":port,"protocol":protocol,"settings":settings,"streamSettings":stream})
@@ -497,7 +497,8 @@ def make_subscription_links(client, r):
             vmess={"v":"2","ps":"abysstunnel-"+client["name"]+"-"+label,"add":host,"port":"443","id":uid,"aid":"0","scy":"auto","net":"ws","type":"none","host":host,"path":path,"tls":"tls","sni":host,"alpn":""}
             url="vmess://"+base64.b64encode(json.dumps(vmess,separators=(",",":")).encode()).decode()
         elif proto=="shadowsocks":
-            userinfo=base64.urlsafe_b64encode(("chacha20-ietf-poly1305:"+uid).encode()).decode().rstrip("=")
+            ss_password=base64.b64encode(hashlib.sha256(uid.encode()).digest()[:16]).decode()
+            userinfo=base64.urlsafe_b64encode(("2022-blake3-aes-128-gcm:"+ss_password).encode()).decode().rstrip("=")
             plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
             url=f"ss://{userinfo}@{host}:443?plugin={plugin}#{title}"
         else:
