@@ -62,9 +62,9 @@ jobs:
             sleep 1
           done
           test "$ready" = "1"
-          python - "$RUNNER_TEMP/abyss-smoke-data/panel.sqlite3" <<'PY'
-          import sqlite3, sys
-          conn = sqlite3.connect(sys.argv[1], timeout=10)
+          docker exec -i abysspanel-smoke python - <<'PY'
+          import sqlite3
+          conn = sqlite3.connect("/data/panel.sqlite3", timeout=10)
           try:
               row = conn.execute(
                   "SELECT used_bytes, quota_bytes, enabled FROM clients WHERE name=?",
