@@ -74,9 +74,11 @@ def event(level,message):
             c.execute("INSERT INTO events(at,level,message) VALUES(?,?,?)",(utc_now(),level.upper(),message[:500]))
             c.execute("DELETE FROM events WHERE id NOT IN (SELECT id FROM events ORDER BY id DESC LIMIT 250)")
     except Exception: LOG.exception("event storage failed")
-def get_clients(include_client_uuid=False):
-    cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes"
-    with db() as c: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
+def get_clients(include_client_uuid=False, owner_id=None, scoped=False):
+    cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id"
+    with db() as c:
+        if scoped: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients WHERE owner_id=? ORDER BY created_at DESC",(owner_id,))]
+        return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
 def get_profile_flags():
     with db() as c:
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
@@ -285,31 +287,40 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
     if not rate_check(r,"login:"+ip):
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","تلاش‌های زیادی انجام شده؛ پنج دقیقه صبر کن.").replace("{{CSRF}}",token),status_code=429)
-    with db() as c: row=c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
-    if not row or username!="admin" or not verify_password(password,row["password_hash"]):
+    with db() as c:
+        row=c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone() if username=="admin" else c.execute("SELECT id,password_hash,enabled FROM resellers WHERE username=?",(username,)).fetchone()
+    if not row or (username=="admin" and not verify_password(password,row["password_hash"])) or (username!="admin" and (not row["enabled"] or not verify_password(password,row["password_hash"]))):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","نام کاربری یا رمز عبور اشتباه است.").replace("{{CSRF}}",token),status_code=401)
-    r.session.clear(); r.session["admin"]=True; r.session["csrf"]=secrets.token_urlsafe(32); event("INFO","Administrator signed in.")
+    r.session.clear(); r.session["csrf"]=secrets.token_urlsafe(32)
+    if username=="admin": r.session["admin"]=True; event("INFO","Administrator signed in.")
+    else: r.session["reseller_id"]=row["id"]; event("INFO",f"Reseller {username!r} signed in.")
     return RedirectResponse("/",303)
 @app.get("/logout")
 async def logout(r:Request): r.session.clear(); return RedirectResponse("/login",303)
 @app.get("/api/overview")
 async def overview(r:Request):
-    require_admin(r)
+    require_admin(r); owner=owner_id_for(r)
     with db() as c:
-        total=c.execute("SELECT COUNT(*) n FROM clients").fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE enabled=1").fetchone()["n"]
+        if owner is None:
+            total=c.execute("SELECT COUNT(*) n FROM clients").fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE enabled=1").fetchone()["n"]
+            children=[dict(x) for x in c.execute("SELECT id,username,quota_bytes,enabled,created_at,parent_id FROM resellers ORDER BY created_at DESC")]
+        else:
+            total=c.execute("SELECT COUNT(*) n FROM clients WHERE owner_id=?",(owner,)).fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE owner_id=? AND enabled=1",(owner,)).fetchone()["n"]
+            children=[dict(x) for x in c.execute("SELECT id,username,quota_bytes,enabled,created_at,parent_id FROM resellers WHERE parent_id=? ORDER BY created_at DESC",(owner,))]
         events=[dict(x) for x in c.execute("SELECT at,level,message FROM events ORDER BY id DESC LIMIT 8")]
-    return {"csrf":r.session.get("csrf",""),"total":total,"active":active,"clients":get_clients(),"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
+    remaining=None if owner is None else reseller_remaining(owner)
+    return {"csrf":r.session.get("csrf",""),"role":"root" if owner is None else "reseller","remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
 @app.get("/api/settings")
 async def read_settings(r:Request):
-    require_admin(r)
+    require_root(r)
     flags=get_profile_flags()
     return {"profiles":[{"key":p["key"],"label":p["label"],"enabled":flags[p["key"]]} for p in PROFILES]}
 
 @app.patch("/api/settings/profiles")
 async def update_profile_settings(r:Request):
-    require_admin(r); require_csrf(r); body=await r.json()
+    require_root(r); require_csrf(r); body=await r.json()
     profiles=body.get("profiles") if isinstance(body,dict) else None
     keys={p["key"] for p in PROFILES}
     if not isinstance(profiles,dict) or not profiles or set(profiles)-keys or any(not isinstance(v,bool) for v in profiles.values()):
