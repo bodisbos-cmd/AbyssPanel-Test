@@ -457,7 +457,7 @@ def test_backup_and_restore_round_trip(client):
     assert created.status_code == 200
     backup = client.get("/api/backup")
     assert backup.status_code == 200
-    assert backup.content[:16] == b"SQLite format 3\\x00"
+    assert backup.content.startswith(b"SQLite format 3")
 
     deleted = client.delete(f"/api/clients/{created.json()['id']}", headers=headers)
     assert deleted.status_code == 200
