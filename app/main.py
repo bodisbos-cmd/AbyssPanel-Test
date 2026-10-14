@@ -18,14 +18,14 @@ PROFILES=[
     {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
     {"key":"xhttp_auto","label":"XHTTP · auto","network":"xhttp","path":"/xhttp","port":10003,"mode":"auto"},
     {"key":"xhttp_packet_up","label":"XHTTP · packet-up","network":"xhttp","path":"/xhttp-packet","port":10004,"mode":"packet-up"},
-    {"key":"xhttp_stream_up","label":"XHTTP · stream-up","network":"xhttp","path":"/xhttp-stream-up","port":10005,"mode":"stream-up"},
-    {"key":"xhttp_stream_one","label":"XHTTP · stream-one","protocol":"vless","network":"xhttp","path":"/xhttp-stream-one","port":10006,"mode":"stream-one"},
+    {"key":"xhttp_stream_up","label":"XHTTP · stream-up · آزمایشی","network":"xhttp","path":"/xhttp-stream-up","port":10005,"mode":"stream-up","experimental":True},
+    {"key":"xhttp_stream_one","label":"XHTTP · stream-one · آزمایشی","protocol":"vless","network":"xhttp","path":"/xhttp-stream-one","port":10006,"mode":"stream-one","experimental":True},
     {"key":"trojan_ws","label":"Trojan · WebSocket TLS","protocol":"trojan","network":"ws","path":"/trojan-ws","port":10007,"mode":None},
     {"key":"vmess_ws","label":"VMess · WebSocket TLS","protocol":"vmess","network":"ws","path":"/vmess-ws","port":10008,"mode":None},
     {"key":"ws_alt","label":"WebSocket · مسیر جایگزین","network":"ws","path":"/connect","port":10010,"mode":None,"subscription_label":"vless-ws-alt"},
     {"key":"httpupgrade_alt","label":"HTTPUpgrade · مسیر جایگزین","network":"httpupgrade","path":"/upgrade","port":10011,"mode":None,"subscription_label":"vless-httpupgrade-alt"},
-    {"key":"xhttp_stream_up_alt","label":"XHTTP · stream-up · مسیر جایگزین","network":"xhttp","path":"/xhttp-stream-up-alt","port":10012,"mode":"stream-up","subscription_label":"xhttp-stream-up-alt"},
-    {"key":"xhttp_stream_one_alt","label":"XHTTP · stream-one · مسیر جایگزین","network":"xhttp","path":"/xhttp-stream-one-alt","port":10013,"mode":"stream-one","subscription_label":"xhttp-stream-one-alt"},
+    {"key":"xhttp_stream_up_alt","label":"XHTTP · stream-up · مسیر جایگزین · آزمایشی","network":"xhttp","path":"/xhttp-stream-up-alt","port":10012,"mode":"stream-up","experimental":True,"subscription_label":"xhttp-stream-up-alt"},
+    {"key":"xhttp_stream_one_alt","label":"XHTTP · stream-one · مسیر جایگزین · آزمایشی","network":"xhttp","path":"/xhttp-stream-one-alt","port":10013,"mode":"stream-one","experimental":True,"subscription_label":"xhttp-stream-one-alt"},
     {"key":"ss_ws","label":"Shadowsocks 2022 · WebSocket TLS","protocol":"shadowsocks","network":"ws","path":"/ss-ws","port":10009,"mode":None},
 ]
 DATA_DIR=Path(os.getenv("DATA_DIR","/data")); DATA_DIR.mkdir(parents=True,exist_ok=True)
