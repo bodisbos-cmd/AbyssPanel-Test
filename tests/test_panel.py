@@ -404,8 +404,8 @@ def test_profile_settings_update_xray_and_subscription(client):
     assert len(links) == 10
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert any("mode=auto" in line for line in links)
-    assert any("xhttp-auto-alt-a" in line for line in links)
-    assert any("xhttp-auto-alt-b" in line for line in links)
+    assert any("xhttp-stream-up-alt" in line for line in links)
+    assert any("xhttp-stream-one-alt" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
