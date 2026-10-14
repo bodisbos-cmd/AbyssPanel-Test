@@ -165,7 +165,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     token = info["page_url"].rsplit("/", 1)[1]
     diag = client.get(f"/s/{token}/diagnostics")
     assert diag.status_code == 200, diag.text
-    assert diag.json()["profile_count"] == 6
+    assert diag.json()["profile_count"] == 9
     help_page = client.get(f"/s/{token}/help")
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
@@ -177,6 +177,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     assert "بررسی اتصال" in page.text
     assert "دانلود برنامه‌های رسمی" in page.text
     assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
+    assert "trojan-ws" in page.text and "vmess-ws" in page.text and "ss-ws" in page.text
     assert 'id="carrierSelect"' in page.text
     assert 'data-profile-choice="ws"' in page.text
     assert 'data-mark="ok"' in page.text and 'data-mark="fail"' in page.text
@@ -277,7 +278,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     response = client.get("/api/system/profiles/check")
     assert response.status_code == 200, response.text
     data = response.json()
-    assert len(data["checks"]) == 6
+    assert len(data["checks"]) == 9
     assert all(item["route_ok"] for item in data["checks"])
     assert "پینگ واقعی تونل" in data["note"]
 
@@ -286,7 +287,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     token = client.get(f"/api/clients/{made.json()['id']}/subscription").json()["page_url"].rsplit("/", 1)[1]
     customer_diag = client.get(f"/s/{token}/diagnostics")
     assert customer_diag.status_code == 200, customer_diag.text
-    assert len(customer_diag.json()["route_checks"]) == 6
+    assert len(customer_diag.json()["route_checks"]) == 9
     assert all(item["http_status"] == 404 for item in customer_diag.json()["route_checks"])
     assert "cannot prove" in customer_diag.json()["note"]
 
@@ -325,3 +326,27 @@ def test_api_tokens_can_expire_and_are_revoked_on_use(client):
     assert expired.status_code == 401
     key = next(x for x in client.get("/api/admin/api-keys").json()["keys"] if x["id"] == key_id)
     assert key["enabled"] is False
+
+
+def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
+    csrf = admin_login(client)
+    made = client.post("/api/clients", json={"name": "protocol matrix"}, headers={"X-CSRF-Token": csrf})
+    assert made.status_code == 200, made.text
+    cid = made.json()["id"]
+    info = client.get(f"/api/clients/{cid}/subscription").json()
+    token = info["page_url"].rsplit("/", 1)[1]
+    links = client.get(f"/sub/{token}").text
+    decoded = base64.b64decode(links).decode().splitlines()
+    assert len(decoded) == 9, decoded
+    assert sum(x.startswith("vless://") for x in decoded) == 6
+    assert sum(x.startswith("trojan://") for x in decoded) == 1
+    assert sum(x.startswith("vmess://") for x in decoded) == 1
+    assert sum(x.startswith("ss://") for x in decoded) == 1
+    assert all("abysstunnel-" in x or x.startswith("vmess://") for x in decoded)
+    config = panel.make_xray_config()
+    inbound = [x for x in config["inbounds"] if x.get("tag", "").startswith("in-")]
+    assert len(inbound) == 9
+    assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
+    assert len({x["port"] for x in inbound}) == 9
+    for item in inbound:
+        assert item["streamSettings"]["network"] in {"ws", "httpupgrade", "xhttp"}
