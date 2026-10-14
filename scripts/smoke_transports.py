@@ -114,18 +114,32 @@ def main():
     TARGET_HITS = 0
     TARGET_RESPONSES = 0
     profiles = [
-        ("ws", "/ws", None, 11081),
-        ("httpupgrade", "/httpupgrade", None, 11082),
-        ("xhttp", "/xhttp", "auto", 11083),
-        ("xhttp", "/xhttp-packet", "packet-up", 11084),
+        ("vless", "ws", "/ws", None, 11081),
+        ("vless", "httpupgrade", "/httpupgrade", None, 11082),
+        ("vless", "xhttp", "/xhttp", "auto", 11083),
+        ("vless", "xhttp", "/xhttp-packet", "packet-up", 11084),
+        ("vless", "xhttp", "/xhttp-stream-up", "stream-up", 11085),
+        ("vless", "xhttp", "/xhttp-stream-one", "stream-one", 11086),
+        ("trojan", "ws", "/trojan-ws", None, 11087),
+        ("vmess", "ws", "/vmess-ws", None, 11088),
+        ("shadowsocks", "ws", "/ss-ws", None, 11089),
     ]
     errors = []
     try:
-        for network, path, mode, socks_port in profiles:
+        for protocol, network, path, mode, socks_port in profiles:
             setting_key = {"ws": "wsSettings", "httpupgrade": "httpupgradeSettings", "xhttp": "xhttpSettings"}[network]
             transport_settings = {"path": path}
             if mode:
                 transport_settings["mode"] = mode
+            if protocol == "vless":
+                outbound_settings = {"vnext": [{"address":"127.0.0.1","port":8080,"users":[{"id":client_uuid,"encryption":"none"}]}]}
+            elif protocol == "trojan":
+                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"password":client_uuid}]}
+            elif protocol == "vmess":
+                outbound_settings = {"vnext":[{"address":"127.0.0.1","port":8080,"users":[{"id":client_uuid,"alterId":0,"security":"auto"}]}]}
+            else:
+                ss_password = __import__("base64").b64encode(__import__("hashlib").sha256(client_uuid.encode()).digest()[:16]).decode()
+                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"method":"2022-blake3-aes-128-gcm","password":ss_password}]}
             config = {
                 "log": {"loglevel": "debug"},
                 "inbounds": [{
@@ -135,12 +149,8 @@ def main():
                     "settings": {"auth": "noauth", "udp": False},
                 }],
                 "outbounds": [{
-                    "protocol": "vless",
-                    "settings": {"vnext": [{
-                        "address": "127.0.0.1",
-                        "port": 8080,
-                        "users": [{"id": client_uuid, "encryption": "none"}],
-                    }]},
+                    "protocol": protocol,
+                    "settings": outbound_settings,
                     "streamSettings": {
                         "network": network,
                         "security": "none",
@@ -170,11 +180,11 @@ def main():
                     server_log = Path("/data/xray-stderr.log")
                     server_detail = server_log.read_text(errors="replace")[-3000:] if server_log.exists() else "(no server Xray log)"
                     raise RuntimeError(
-                        f"Real VLESS {network} {mode or ''} tunnel failed "
+                        f"Real {protocol.upper()} {network} {mode or ''} tunnel failed "
                         f"(curl={result.returncode}, body={result.stdout!r}, "
                         f"curl_stderr={result.stderr.decode(errors='replace')[-1000:]}, client_stderr={detail}, server_stderr={server_detail})"
                     )
-                print(f"PASS real VLESS tunnel: {network} {mode or 'default'}")
+                print(f"PASS real {protocol.upper()} tunnel: {network} {mode or 'default'}")
             finally:
                 proc.terminate()
                 try:
