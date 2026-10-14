@@ -257,7 +257,7 @@ def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
     data = response.json()
     assert len(data["profiles"]) == 12
     assert data["actual_tunnel_tested"] is False
-    assert "تست واقعی" in data["note"]
+    assert "پینگ یا تونل واقعی" in data["note"]
     for profile in data["profiles"]:
         assert "listener_ok" in profile
         assert "route_ok" in profile
