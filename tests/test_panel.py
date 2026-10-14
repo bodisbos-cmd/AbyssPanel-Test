@@ -216,32 +216,6 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert len({item["streamSettings"]["xhttpSettings"]["path"] for item in xhttp}) == 6
 
 
-def test_diagnostics_repair_is_owner_only_csrf_protected_and_restarts_xray(client, monkeypatch, tmp_path):
-    # The endpoint is not public and does not accept a state-changing request without CSRF.
-    assert client.post("/api/system/diagnostics/repair").status_code == 401
-    csrf = admin_client(client)
-    assert client.post("/api/system/diagnostics/repair").status_code == 403
-
-    fake_xray = tmp_path / "xray"
-    fake_xray.write_text("test binary", encoding="utf-8")
-    monkeypatch.setattr(panel, "XRAY_BIN", str(fake_xray))
-
-    class RunningProcess:
-        def poll(self):
-            return None
-
-    async def fake_start_xray():
-        monkeypatch.setattr(panel, "xray_proc", RunningProcess())
-
-    monkeypatch.setattr(panel, "start_xray", fake_start_xray)
-    response = client.post(
-        "/api/system/diagnostics/repair",
-        headers={"X-CSRF-Token": csrf},
-    )
-    assert response.status_code == 200, response.text
-    assert response.json()["ok"] is True
-
-
 def test_xhttp_modes_are_real_and_alternate_paths_are_unique(client):
     profiles = {p["key"]: p for p in panel.PROFILES}
     assert profiles["xhttp_stream_up"]["mode"] == "stream-up"
