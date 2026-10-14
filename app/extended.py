@@ -109,7 +109,7 @@ def _probe_profile(profile):
     started=time.monotonic()
     result={"key":profile["key"],"label":profile["label"],"path":profile["path"],
       "port":profile["port"],"network":profile["network"],"mode":profile.get("mode"),
-      "protocol":profile.get("protocol","vless"),"enabled":profile.get("enabled",True),
+      "protocol":profile.get("protocol","vless"),"enabled":profile.get("enabled",True),"experimental":bool(profile.get("experimental",False)),
       "latency_ms":None,"http_status":None,"route_ok":False,"listener_ok":False,
       "tunnel_tested":False,"error":None}
     if not result["enabled"]:
@@ -306,6 +306,8 @@ def install_extended(app, namespace):
                 item["recommendation"]=f"پیشنهادشده برای { {'auto':'شبکهٔ نامشخص','mci':'همراه اول','irancell':'ایرانسل','rightel':'رایتل','wifi':'وای‌فای'}[carrier] }؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
             elif stats["reports"]>=3 and rate is not None and rate<=35:
                 item["recommendation"]=f"اولویت پایین برای { {'auto':'شبکهٔ نامشخص','mci':'همراه اول','irancell':'ایرانسل','rightel':'رایتل','wifi':'وای‌فای'}[carrier] }؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
+            elif item.get("experimental"):
+                item["recommendation"]="آزمایشی؛ این حالت در edge فعلی Railway تست تونل واقعی را پاس نکرده، اما برای تست دستی اپراتورها نگه داشته شده است."
             elif item["key"] in preferred:
                 item["recommendation"]="گزینهٔ شروع؛ هنوز گزارش کافی از این اپراتور نداریم."
             else:
