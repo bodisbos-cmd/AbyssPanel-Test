@@ -243,6 +243,9 @@ def reseller_remaining(rid):
         row=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(rid,)).fetchone()
         if not row or not row["enabled"]: raise HTTPException(403,"Reseller account is disabled")
         return int(row["quota_bytes"])-reseller_allocated(c,rid)
+def reseller_allocated_for(rid):
+    with db() as c:
+        return reseller_allocated(c,rid)
 def require_csrf(r):
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
@@ -590,11 +593,14 @@ async def restore_database(r:Request):
     try:
         check=sqlite3.connect(candidate)
         try:
-            if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
-                raise HTTPException(422,"Backup database integrity check failed")
-            tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            if not {"admins","clients","settings"}.issubset(tables):
-                raise HTTPException(422,"Incompatible AbyssPanel backup")
+            try:
+                if check.execute("PRAGMA integrity_check").fetchone()[0]!="ok":
+                    raise HTTPException(422,"Backup database integrity check failed")
+                tables={x[0] for x in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                if not {"admins","clients","settings"}.issubset(tables):
+                    raise HTTPException(422,"Incompatible AbyssPanel backup")
+            except sqlite3.DatabaseError as exc:
+                raise HTTPException(422,"Backup is not a valid SQLite database") from exc
         finally:
             check.close()
         stamp=datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
