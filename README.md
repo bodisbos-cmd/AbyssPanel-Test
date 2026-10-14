@@ -17,9 +17,9 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 - A single private subscription URL per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible VPN clients; the standard `Subscription-Userinfo` header carries usage, quota, and expiry metadata to compatible apps. QR and help pages remain available.
 - Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
 - Owner-only ZIP backup/restore with integrity/schema checks and rollback attempt; backup includes credential hashes and client data, so keep it private.
-- Thirteen selectable profiles: ten VLESS profiles across WebSocket, HTTPUpgrade, XHTTP auto/packet-up/stream-up/stream-one, alternate WS/HTTPUpgrade paths, and separate XHTTP stream-up/stream-one fallback paths; plus Trojan, VMess, and Shadowsocks 2022. XHTTP stream-up/stream-one are now configured with their actual transport modes instead of being mislabeled as auto. The CI smoke test attempts all four stream-mode paths and reports unsupported behavior as experimental because Railway’s HTTP/1.1 edge may limit them.
+- Twelve supported profiles: ten VLESS paths across WebSocket, HTTPUpgrade, XHTTP auto/packet-up/stream-up/stream-one and alternate paths, plus Trojan and VMess over WebSocket. The known-invalid Shadowsocks-over-WebSocket profile was removed instead of being advertised as working. XHTTP stream-up/stream-one use their actual modes; all four stream-mode paths are attempted by CI and marked experimental because Railway’s HTTP/1.1 edge may limit them.
 - Separate owner/admin/viewer accounts, scoped bot API keys, protected Swagger/ReDoc, resource diagnostics, official client download links, and a hamburger navigation drawer.
-- Xray configuration validation, basic process recovery, route diagnostics and a health endpoint.
+- Operator-aware diagnostics with carrier-specific profile feedback aggregation, recent success-rate recommendations, Xray/Nginx validation, safe self-repair, route diagnostics and a health endpoint. Feedback is based on user-reported results; local route checks do not claim to be real carrier ping tests.
 
 ## Railway deployment
 
