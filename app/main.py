@@ -644,7 +644,7 @@ async def restore_database(r:Request):
                     if not {"admins","clients","settings"}.issubset(tables):
                         raise HTTPException(422,"Incompatible AbyssPanel backup")
                     required_columns={
-                        "admins":{"username","password_hash"},
+                        "admins":{"id","password_hash","password_changed_at"},
                         "clients":{"id","name","client_uuid","sub_token","enabled","created_at"},
                         "settings":{"key","value"},
                     }
