@@ -264,7 +264,7 @@ def install_extended(app, namespace):
     @app.get("/api/system/diagnostics")
     async def system_diagnostics(request:Request, carrier:str="mci"):
         _admin(request,p)
-        if carrier not in {"mci","irancell","rightel","wifi"}:
+        if carrier not in {"auto","mci","irancell","rightel","wifi"}:
             raise HTTPException(422,"Unsupported carrier")
         flags=p.get_profile_flags()
         profiles=[dict(profile,enabled=bool(flags.get(profile["key"],False))) for profile in p.PROFILES]
@@ -303,9 +303,9 @@ def install_extended(app, namespace):
             elif not item["route_ok"] or not item["listener_ok"]:
                 item["recommendation"]="فعلاً انتخابش نکن؛ ابتدا خطای مسیر یا listener داخل پنل را برطرف کن."
             elif stats["reports"]>=3 and rate is not None and rate>=65:
-                item["recommendation"]=f"پیشنهادشده برای {carrier}؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
+                item["recommendation"]=f"پیشنهادشده برای { {'auto':'شبکهٔ نامشخص','mci':'همراه اول','irancell':'ایرانسل','rightel':'رایتل','wifi':'وای‌فای'}[carrier] }؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
             elif stats["reports"]>=3 and rate is not None and rate<=35:
-                item["recommendation"]=f"اولویت پایین برای {carrier}؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
+                item["recommendation"]=f"اولویت پایین برای { {'auto':'شبکهٔ نامشخص','mci':'همراه اول','irancell':'ایرانسل','rightel':'رایتل','wifi':'وای‌فای'}[carrier] }؛ {rate}% موفقیت از {stats['reports']} گزارش ۳۰ روز اخیر."
             elif item["key"] in preferred:
                 item["recommendation"]="گزینهٔ شروع؛ هنوز گزارش کافی از این اپراتور نداریم."
             else:
@@ -334,7 +334,7 @@ def install_extended(app, namespace):
             "ok":bool(installed and running and config_test["ok"] and nginx_ok and all((not x["enabled"]) or (x["listener_ok"] and x["route_ok"]) for x in checks)),
             "xray_installed":installed,"xray_running":running,"config_test":config_test,
             "nginx_installed":nginx_installed,"nginx_ok":nginx_ok,"nginx_error":nginx_error,
-            "carrier":carrier,"carrier_label":{"mci":"همراه اول","irancell":"ایرانسل","rightel":"رایتل","wifi":"وای‌فای"}[carrier],
+            "carrier":carrier,"carrier_label":{"auto":"نامشخص / انتخاب خودکار","mci":"همراه اول","irancell":"ایرانسل","rightel":"رایتل","wifi":"وای‌فای"}[carrier],
             "summary":summary,"profiles":checks,"issues":issues,"actual_tunnel_tested":False,
             "note":"این بررسی مسیر HTTP، پورت داخلی و تنظیمات را می‌سنجد؛ پینگ یا تونل واقعی از سیم‌کارت انتخاب‌شده را اجرا نمی‌کند."
         }
