@@ -110,6 +110,9 @@ def main():
     with urllib.request.urlopen("http://127.0.0.1:9000/check", timeout=3) as direct:
         if direct.read() != MARKER:
             raise RuntimeError("Local smoke target is not responding correctly")
+    # Exclude the direct sanity request from tunnel-only counters.
+    TARGET_HITS = 0
+    TARGET_RESPONSES = 0
     profiles = [
         ("ws", "/ws", None, 11081),
         ("httpupgrade", "/httpupgrade", None, 11082),
