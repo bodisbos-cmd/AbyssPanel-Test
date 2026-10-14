@@ -683,6 +683,9 @@ async def system_diagnostics(r:Request,carrier:str="mci"):
             config_error=str(exc)[:300]
     installed=Path(XRAY_BIN).exists()
     running=bool(xray_proc and xray_proc.poll() is None) if installed else False
+    with db() as c:
+        rows=c.execute("SELECT profile_key,COUNT(*) AS reports,SUM(CASE WHEN result='ok' THEN 1 ELSE 0 END) AS successes FROM profile_feedback WHERE carrier=? AND created_at>=? GROUP BY profile_key",(carrier,(datetime.now(timezone.utc)-timedelta(days=30)).isoformat(timespec="seconds"))).fetchall()
+    feedback={row["profile_key"]:{"reports":int(row["reports"]),"successes":int(row["successes"] or 0)} for row in rows}
     profiles=[]
     preferred={"ws","httpupgrade","xhttp_auto"}
     for profile in PROFILES:
@@ -690,13 +693,22 @@ async def system_diagnostics(r:Request,carrier:str="mci"):
             continue
         item=_diagnostic_route(profile)
         item["status_text"]="مسیر داخلی پاسخ می‌دهد" if item["route_ok"] else "مسیر داخلی پاسخ نمی‌دهد"
+        stats=feedback.get(profile["key"],{"reports":0,"successes":0})
+        rate=round(100*stats["successes"]/stats["reports"]) if stats["reports"] else None
+        item["feedback_reports"]=stats["reports"]
+        item["feedback_success_rate"]=rate
         if not item["route_ok"]:
             item["recommendation"]="فعلاً انتخابش نکن؛ مسیر داخلی خطا دارد و باید ابتدا سرور بررسی شود."
+        elif stats["reports"]>=3 and rate is not None and rate>=65:
+            item["recommendation"]=f"پیشنهادشده برای {_carrier_label(carrier)}؛ {rate}% موفقیت از {stats['reports']} گزارش اخیر."
+        elif stats["reports"]>=3 and rate is not None and rate<=35:
+            item["recommendation"]=f"فعلاً برای {_carrier_label(carrier)} اولویت پایین؛ {rate}% موفقیت از {stats['reports']} گزارش اخیر."
         elif profile["key"] in preferred:
-            item["recommendation"]="گزینهٔ شروع برای مقایسه روی همین اپراتور؛ اتصال واقعی را در کلاینت تأیید کن."
+            item["recommendation"]="گزینهٔ شروع؛ هنوز گزارش کافی از کاربران این اپراتور نداریم."
         else:
-            item["recommendation"]="گزینهٔ جایگزین برای مقایسه؛ پشتیبانی نسخهٔ کلاینت از این حالت را تأیید کن."
+            item["recommendation"]="گزینهٔ جایگزین؛ پشتیبانی کلاینت و نتیجهٔ واقعی روی همین شبکه را بررسی کن."
         profiles.append(item)
+    profiles.sort(key=lambda x:(not x["route_ok"],-(x.get("feedback_success_rate") if x.get("feedback_success_rate") is not None and x.get("feedback_reports",0)>=3 else -1),x["key"]))
     failures=[x for x in profiles if not x["route_ok"]]
     summary=("تنظیمات Xray معتبر است" if config_ok else "خطا در اعتبارسنجی تنظیمات Xray")
     summary+=(" · پردازش Xray فعال است" if running else (" · Xray نصب نیست" if not installed else " · پردازش Xray متوقف است"))
