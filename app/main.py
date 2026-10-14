@@ -246,6 +246,17 @@ def reseller_remaining(rid):
 def reseller_allocated_for(rid):
     with db() as c:
         return reseller_allocated(c,rid)
+def assert_reseller_chain_enabled(c,rid):
+    current_id=rid
+    seen=set()
+    while current_id:
+        if current_id in seen:
+            raise HTTPException(403,"Invalid reseller hierarchy")
+        seen.add(current_id)
+        row=c.execute("SELECT enabled,parent_id FROM resellers WHERE id=?",(current_id,)).fetchone()
+        if not row or not row["enabled"]:
+            raise HTTPException(403,"Reseller account or parent is disabled")
+        current_id=row["parent_id"]
 def require_csrf(r):
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
@@ -401,9 +412,8 @@ async def create_client(r:Request):
         # from spending the same remaining reseller quota twice.
         c.execute("BEGIN IMMEDIATE")
         if owner is not None:
-            parent=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(owner,)).fetchone()
-            if not parent or not parent["enabled"]:
-                raise HTTPException(403,"Reseller account is disabled")
+            assert_reseller_chain_enabled(c,owner)
+            parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
             allocated=reseller_allocated(c,owner)
             if quota_bytes>int(parent["quota_bytes"])-allocated:
                 raise HTTPException(422,"Client quota exceeds your remaining allocation")
@@ -429,6 +439,10 @@ async def update_client(cid:str,r:Request):
     if "duration_days" in b and b["duration_days"] is not None and (not isinstance(b["duration_days"],(int,float)) or isinstance(b["duration_days"],bool) or not float(b["duration_days"]).is_integer() or not 1<=b["duration_days"]<=3650): raise HTTPException(422,"duration_days must be a whole number from 1 to 3650, or null")
     if "quota_gb" in b and b["quota_gb"] is not None and (not isinstance(b["quota_gb"],(int,float)) or isinstance(b["quota_gb"],bool) or not 1<=b["quota_gb"]<=100000): raise HTTPException(422,"quota_gb must be 1–100000, or null")
     with db() as c:
+        c.execute("BEGIN IMMEDIATE")
+        owner=owner_id_for(r)
+        if owner is not None:
+            assert_reseller_chain_enabled(c,owner)
         row=c.execute("SELECT * FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
         previous=dict(row)
@@ -440,12 +454,12 @@ async def update_client(cid:str,r:Request):
             updates["expires_at"]=(datetime.now(timezone.utc)+timedelta(days=int(b["duration_days"]))).isoformat(timespec="seconds") if b["duration_days"] is not None else None
         if "quota_gb" in b: updates["quota_bytes"]=int(float(b["quota_gb"])*1024**3) if b["quota_gb"] is not None else None
         if not updates: raise HTTPException(422,"No fields to update")
-        if owner_id_for(r) is not None and "quota_bytes" in updates:
+        if owner is not None and "quota_bytes" in updates:
             new_quota=updates["quota_bytes"]
             if new_quota is None: raise HTTPException(422,"Reseller clients must have a finite quota")
-            allocated=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM clients WHERE owner_id=? AND id<>?",(owner_id_for(r),cid)).fetchone()["n"] or 0)
-            children=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=?",(owner_id_for(r),)).fetchone()["n"] or 0)
-            parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
+            allocated=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM clients WHERE owner_id=? AND id<>?",(owner,cid)).fetchone()["n"] or 0)
+            children=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=?",(owner,)).fetchone()["n"] or 0)
+            parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
             if allocated+children+new_quota>int(parent["quota_bytes"]): raise HTTPException(422,"Updated quota exceeds your remaining allocation")
         c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))
     if "enabled" in updates and updates["enabled"] != previous["enabled"]:
@@ -665,9 +679,8 @@ async def create_reseller(r:Request):
         with db() as c:
             c.execute("BEGIN IMMEDIATE")
             if owner is not None:
-                parent=c.execute("SELECT quota_bytes,enabled FROM resellers WHERE id=?",(owner,)).fetchone()
-                if not parent or not parent["enabled"]:
-                    raise HTTPException(403,"Reseller account is disabled")
+                assert_reseller_chain_enabled(c,owner)
+                parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
                 if quota_bytes>int(parent["quota_bytes"])-reseller_allocated(c,owner):
                     raise HTTPException(422,"Allocation exceeds your remaining quota")
             c.execute("INSERT INTO resellers(id,username,password_hash,quota_bytes,enabled,parent_id,created_at) VALUES(?,?,?,?,1,?,?)",(rid,username,password_hash(password),quota_bytes,owner,utc_now()))
@@ -679,6 +692,8 @@ async def update_reseller(rid:str,r:Request):
     require_admin(r); require_csrf(r); body=await r.json(); owner=owner_id_for(r)
     with db() as c:
         c.execute("BEGIN IMMEDIATE")
+        if owner is not None:
+            assert_reseller_chain_enabled(c,owner)
         row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
         if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
         updates={}
