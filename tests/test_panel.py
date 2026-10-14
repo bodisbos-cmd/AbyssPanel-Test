@@ -554,3 +554,11 @@ def test_restore_rejects_corrupt_database_without_replacing_current(client):
     assert response.status_code == 422
     assert client.get("/api/overview").json()["total"] == before
 
+
+def test_health_reports_stopped_xray_as_unhealthy(client, monkeypatch):
+    monkeypatch.setattr(panel, "XRAY_BIN", "/bin/sh")
+    monkeypatch.setattr(panel, "xray_proc", None)
+    response = client.get("/health")
+    assert response.status_code == 503
+    assert response.json() == {"ok": False, "xray": "stopped"}
+
