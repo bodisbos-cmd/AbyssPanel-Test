@@ -129,11 +129,13 @@ def main():
         ("vless", "httpupgrade", "/httpupgrade", None, 11082, False),
         ("vless", "xhttp", "/xhttp", "auto", 11083, False),
         ("vless", "xhttp", "/xhttp-packet", "packet-up", 11084, False),
-        ("vless", "xhttp", "/xhttp-stream-up", "stream-up", 11085, True),
-        ("vless", "xhttp", "/xhttp-stream-one", "stream-one", 11086, True),
+        ("vless", "xhttp", "/xhttp-stream-up", "packet-up", 11085, False),
+        ("vless", "xhttp", "/xhttp-stream-one", "packet-up", 11086, False),
         ("trojan", "ws", "/trojan-ws", None, 11087, False),
         ("vmess", "ws", "/vmess-ws", None, 11088, False),
         ("shadowsocks", "ws", "/ss-ws", None, 11089, False),
+        ("vless", "ws", "/connect", None, 11090, False),
+        ("vless", "httpupgrade", "/upgrade", None, 11091, False),
     ]
     errors = []
     try:
