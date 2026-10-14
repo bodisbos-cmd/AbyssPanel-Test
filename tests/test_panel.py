@@ -179,6 +179,38 @@ def test_diagnostics_endpoints_require_auth_and_report_profiles(client):
     assert repaired.json()["ok"] is True
 
 
+def test_subscription_feedback_is_aggregated_by_carrier(client, monkeypatch):
+    csrf = admin_client(client)
+    created = client.post("/api/clients", json={"name": "Feedback test"}, headers={"X-CSRF-Token": csrf})
+    assert created.status_code == 200
+    token = client.get(f"/api/clients/{created.json()['id']}/subscription").json()["url"].rsplit("/", 1)[1]
+
+    class FakeResponse:
+        status = 400
+        def read(self, *args, **kwargs): return b""
+    class FakeConnection:
+        def __init__(self, *args, **kwargs): pass
+        def request(self, *args, **kwargs): pass
+        def getresponse(self): return FakeResponse()
+        def close(self): pass
+    monkeypatch.setattr(panel.http.client, "HTTPConnection", FakeConnection)
+
+    first = client.post(f"/sub/{token}/feedback", json={"carrier": "irancell", "profile_key": "ws", "result": "ok"})
+    assert first.status_code == 200, first.text
+    report = client.get("/api/system/diagnostics?carrier=irancell").json()
+    ws = next(x for x in report["profiles"] if x["key"] == "ws")
+    assert ws["feedback_reports"] == 1
+    assert ws["feedback_success_rate"] == 100
+
+    updated = client.post(f"/sub/{token}/feedback", json={"carrier": "irancell", "profile_key": "ws", "result": "fail"})
+    assert updated.status_code == 200, updated.text
+    report = client.get("/api/system/diagnostics?carrier=irancell").json()
+    ws = next(x for x in report["profiles"] if x["key"] == "ws")
+    assert ws["feedback_reports"] == 1
+    assert ws["feedback_success_rate"] == 0
+    assert client.post(f"/sub/{token}/feedback", json={"carrier": "invalid", "profile_key": "ws", "result": "ok"}).status_code == 422
+
+
 def _token_from_url(url):
     return url.rsplit("/sub/", 1)[1]
 
