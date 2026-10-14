@@ -119,7 +119,9 @@ def test_create_pause_subscription_and_revoke(client):
     assert sum("type=xhttp" in line for line in configs) == 4
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
-    assert sum("mode=packet-up" in line for line in configs) == 3
+    assert sum("mode=packet-up" in line for line in configs) == 1
+    assert sum("mode=stream-up" in line for line in configs) == 1
+    assert sum("mode=stream-one" in line for line in configs) == 1
     ss_uri = next(line for line in configs if line.startswith("ss://"))
     assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
@@ -217,7 +219,7 @@ def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
     data = response.json()
     assert len(data["profiles"]) == 11
     assert data["actual_tunnel_tested"] is False
-    assert "tunnel" in data["note"].lower() or "تونل" in data["note"]
+    assert "تست واقعی" in data["note"]
     for profile in data["profiles"]:
         assert "listener_ok" in profile
         assert "route_ok" in profile
@@ -390,8 +392,9 @@ def test_profile_settings_update_xray_and_subscription(client):
     links = base64.b64decode(raw.text).decode().splitlines()
     assert len(links) == 9
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
-    assert any("mode=packet-up" in line for line in links)
+    assert not any("mode=packet-up" in line for line in links)
     assert any("mode=stream-up" in line for line in links)
+    assert any("mode=stream-one" in line for line in links)
     assert any("mode=stream-one" in line for line in links)
 
     rejected = client.patch(
