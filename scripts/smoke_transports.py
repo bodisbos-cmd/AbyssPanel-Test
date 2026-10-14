@@ -17,10 +17,13 @@ BASE = "http://127.0.0.1:8080"
 DB = Path("/data/panel.sqlite3")
 XRAY = os.getenv("XRAY_BIN", "/usr/local/bin/xray")
 MARKER = b"abyss-xray-tunnel-ok"
+TARGET_HITS = 0
 
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        global TARGET_HITS
+        TARGET_HITS += 1
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(MARKER)))
@@ -158,8 +161,8 @@ def main():
                     server_detail = server_log.read_text(errors="replace")[-3000:] if server_log.exists() else "(no server Xray log)"
                     raise RuntimeError(
                         f"Real VLESS {network} {mode or ''} tunnel failed "
-                        f"(curl={result.returncode}, body={result.stdout!r}, curl_stderr={result.stderr.decode(errors='replace')[-1000:]}, "
-                        f"client_stderr={detail}, server_stderr={server_detail})"
+                        f"(curl={result.returncode}, body={result.stdout!r}, target_hits={TARGET_HITS}, "
+                        f"curl_stderr={result.stderr.decode(errors='replace')[-1000:]}, client_stderr={detail}, server_stderr={server_detail})"
                     )
                 print(f"PASS real VLESS tunnel: {network} {mode or 'default'}")
             finally:
