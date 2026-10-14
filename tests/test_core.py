@@ -25,10 +25,10 @@ class CoreTests(unittest.TestCase):
 
     def test_xray_config_has_loopback_only_inbounds(self):
         config = mod.make_xray_config()
-        self.assertEqual(len(config["inbounds"]), 12)
+        self.assertEqual(len(config["inbounds"]), 14)
         self.assertTrue(all(i["listen"] == "127.0.0.1" for i in config["inbounds"]))
         client_inbounds = [i for i in config["inbounds"] if "clients" in i["settings"]]
-        self.assertEqual(len(client_inbounds), 11)
+        self.assertEqual(len(client_inbounds), 13)
         self.assertTrue(all(i["settings"]["decryption"] == "none" for i in client_inbounds if i["protocol"] == "vless"))
         self.assertEqual(len({i["tag"] for i in config["inbounds"]}), len(config["inbounds"]))
         self.assertEqual(len({i["port"] for i in config["inbounds"]}), len(config["inbounds"]))
