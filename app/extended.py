@@ -42,17 +42,7 @@ def _init(panel):
             FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
         )""")
         c.execute("CREATE INDEX IF NOT EXISTS idx_profile_reports_lookup ON profile_reports(carrier,profile_key,created_at DESC)")
-        c.execute("""CREATE TABLE IF NOT EXISTS profile_reports(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            client_id TEXT NOT NULL,
-            profile_key TEXT NOT NULL,
-            carrier TEXT NOT NULL,
-            result TEXT NOT NULL CHECK(result IN ('ok','fail')),
-            created_at TEXT NOT NULL,
-            user_agent TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE
-        )""")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_profile_reports_lookup ON profile_reports(carrier,profile_key,created_at DESC)")
+        c.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_reports_per_client ON profile_reports(client_id,profile_key,carrier)")
 
 def _admin(r, p): p.require_admin(r)
 def _role(r, p, *roles): p.require_role(r, *roles)
@@ -294,7 +284,7 @@ def install_extended(app, namespace):
         recommendations=[]
         for row in rows:
             recommendations.append({"carrier":row["carrier"],"carrier_label":carriers.get(row["carrier"],row["carrier"]),"profile_key":row["profile_key"],"profile_label":labels.get(row["profile_key"],row["profile_key"]),"total":row["total"],"success":row["success"],"success_rate":round(100*row["success"]/row["total"])})
-        failed=sum(x["status"]=="خطا" for x in checks)
+        failed=sum(x["status"] not in {"سالم","فعال","پاسخ‌گو"} for x in checks)
         summary=("بررسی انجام شد؛ "+str(failed)+" مورد نیازمند توجه است." if failed else "بررسی انجام شد؛ مشکل قطعی در تست‌های محلی پیدا نشد. برای تأیید واقعی، تست روی دیتای اپراتورها لازم است.")
         return {"summary":summary,"checks":checks,"recommendations":recommendations,"limitations":["بررسی HTTP مسیر، پینگ یا handshake واقعی VPN نیست.","سرور نمی‌تواند از راه دور بفهمد یک پروفایل روی دیتای همراه اول/ایرانسل/رایتل کار می‌کند؛ نتیجه‌ها از گزارش کاربران جمع می‌شوند."]}
 
@@ -311,9 +301,14 @@ def install_extended(app, namespace):
             outcomes.append({"item":"Xray","ok":False,"detail":"Xray binary is not installed; automatic restart is unavailable."})
         else:
             try:
-                await p.start_xray()
+                p.validate_and_write_xray()
                 running=bool(_global(p,"xray_proc") and _global(p,"xray_proc").poll() is None)
-                outcomes.append({"item":"Xray validate/restart","ok":running,"detail":"Xray configuration validated and service restart attempted." if running else "Restart returned, but the process is not running."})
+                if running:
+                    outcomes.append({"item":"Xray validate/restart","ok":True,"detail":"Configuration validates and Xray is already running; restart skipped to avoid disconnecting active users."})
+                else:
+                    await p.start_xray()
+                    running=bool(_global(p,"xray_proc") and _global(p,"xray_proc").poll() is None)
+                    outcomes.append({"item":"Xray validate/restart","ok":running,"detail":"Xray configuration validated and service restart attempted." if running else "Restart returned, but the process is not running."})
             except Exception as exc:
                 outcomes.append({"item":"Xray validate/restart","ok":False,"detail":str(exc)[:260]})
         ok=all(x["ok"] for x in outcomes)
@@ -336,7 +331,8 @@ def install_extended(app, namespace):
         if carrier not in {"auto","mci","irancell","rightel","wifi"}: raise HTTPException(422,"Unsupported carrier")
         if result not in {"ok","fail"}: raise HTTPException(422,"Result must be ok or fail")
         with p.db() as c:
-            c.execute("INSERT INTO profile_reports(client_id,profile_key,carrier,result,created_at,user_agent) VALUES(?,?,?,?,?,?)",
+            c.execute("""INSERT INTO profile_reports(client_id,profile_key,carrier,result,created_at,user_agent) VALUES(?,?,?,?,?,?)
+                ON CONFLICT(client_id,profile_key,carrier) DO UPDATE SET result=excluded.result,created_at=excluded.created_at,user_agent=excluded.user_agent""",
                 (client["id"],profile_key,carrier,result,_utc(),request.headers.get("user-agent","")[:160]))
         return {"ok":True,"message":"گزارش برای پیشنهادهای اپراتوری ثبت شد."}
 
