@@ -355,9 +355,12 @@ async def create_client(r:Request):
     if days is not None and (not isinstance(days,(int,float)) or isinstance(days,bool) or not float(days).is_integer() or days<1 or days>3650): raise HTTPException(422,"duration_days must be a whole number from 1 to 3650")
     if quota is not None and (not isinstance(quota,(int,float)) or isinstance(quota,bool) or not 1<=quota<=100000): raise HTTPException(422,"quota_gb must be 1–100000")
     expires=(datetime.now(timezone.utc)+timedelta(days=int(days))).isoformat(timespec="seconds") if days is not None else None
-    quota_bytes=int(float(quota)*1024**3) if quota is not None else None
+    owner=owner_id_for(r); quota_bytes=int(float(quota)*1024**3) if quota is not None else None
+    if owner is not None:
+        if quota_bytes is None: raise HTTPException(422,"Resellers must assign a finite quota to every client")
+        if quota_bytes>reseller_remaining(owner): raise HTTPException(422,"Client quota exceeds your remaining allocation")
     cid,uid,token=str(uuid.uuid4()),str(uuid.uuid4()),secrets.token_urlsafe(32)
-    with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes) VALUES(?,?,?,?,1,?,?,?,?,0)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes))
+    with db() as c: c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id) VALUES(?,?,?,?,1,?,?,?,?,0,?)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes,owner))
     try:
         await start_xray()
     except Exception as e:
@@ -370,7 +373,7 @@ async def create_client(r:Request):
     event("INFO",f"Created client {name!r} ({cid[:8]})."); return {"id":cid,"name":name,"enabled":True}
 @app.patch("/api/clients/{cid}")
 async def update_client(cid:str,r:Request):
-    require_admin(r); require_csrf(r); b=await r.json()
+    require_admin(r); require_csrf(r); require_client_access(r,cid); b=await r.json()
     allowed={"enabled","name","note","duration_days","quota_gb"}
     if not isinstance(b,dict) or not b or set(b)-allowed: raise HTTPException(422,"Provide supported client fields only")
     if "enabled" in b and not isinstance(b["enabled"],bool): raise HTTPException(422,"enabled must be true or false")
@@ -404,7 +407,7 @@ async def update_client(cid:str,r:Request):
 
 @app.post("/api/clients/{cid}/reset-usage")
 async def reset_client_usage(cid:str,r:Request):
-    require_admin(r); require_csrf(r)
+    require_admin(r); require_csrf(r); require_client_access(r,cid)
     with db() as c:
         row=c.execute("SELECT name FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
@@ -416,7 +419,7 @@ async def reset_client_usage(cid:str,r:Request):
     return {"ok":True}
 @app.delete("/api/clients/{cid}")
 async def delete_client(cid:str,r:Request):
-    require_admin(r); require_csrf(r)
+    require_admin(r); require_csrf(r); require_client_access(r,cid)
     with db() as c:
         row=c.execute("SELECT * FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
@@ -486,7 +489,7 @@ def render_subscription_page(client, links, sub_url, qr_url):
 
 @app.get("/api/clients/{cid}/subscription")
 async def subscription_link(cid:str,r:Request):
-    require_admin(r)
+    require_admin(r); require_client_access(r,cid)
     with db() as c: row=c.execute("SELECT sub_token FROM clients WHERE id=?",(cid,)).fetchone()
     if not row: raise HTTPException(404,"Client not found")
     base=get_base_url(r); token=row["sub_token"]
@@ -553,6 +556,62 @@ async def restore_database(r:Request):
         raise HTTPException(500,"Restore failed; inspect service logs and the pre-restore backup") from e
     finally:
         candidate.unlink(missing_ok=True)
+
+@app.get("/api/resellers")
+async def list_resellers(r:Request):
+    require_admin(r); owner=owner_id_for(r)
+    with db() as c:
+        rows=[dict(x) for x in c.execute("SELECT id,username,quota_bytes,enabled,created_at,parent_id FROM resellers ORDER BY created_at DESC")] if owner is None else [dict(x) for x in c.execute("SELECT id,username,quota_bytes,enabled,created_at,parent_id FROM resellers WHERE parent_id=? ORDER BY created_at DESC",(owner,))]
+        for row in rows: row["allocated_bytes"]=reseller_allocated(c,row["id"]); row["remaining_bytes"]=row["quota_bytes"]-row["allocated_bytes"]
+    return {"resellers":rows}
+@app.post("/api/resellers")
+async def create_reseller(r:Request):
+    require_admin(r); require_csrf(r); body=await r.json(); owner=owner_id_for(r)
+    username=str(body.get("username","")).strip(); password=str(body.get("password","")); quota=body.get("quota_gb")
+    if not username or len(username)>48 or not username.replace("_","").replace("-","").isalnum() or username=="admin": raise HTTPException(422,"Invalid username")
+    if len(password)<14 or len(password)>256 or not any(x.isalpha() for x in password) or not any(x.isdigit() for x in password): raise HTTPException(422,"Password must be at least 14 characters and include letters and numbers")
+    if not isinstance(quota,(int,float)) or isinstance(quota,bool) or not 0.1<=quota<=100000: raise HTTPException(422,"Invalid quota allocation")
+    quota_bytes=int(float(quota)*1024**3)
+    if owner is not None and quota_bytes>reseller_remaining(owner): raise HTTPException(422,"Allocation exceeds your remaining quota")
+    rid=str(uuid.uuid4())
+    try:
+        with db() as c: c.execute("INSERT INTO resellers(id,username,password_hash,quota_bytes,enabled,parent_id,created_at) VALUES(?,?,?,?,1,?,?)",(rid,username,password_hash(password),quota_bytes,owner,utc_now()))
+    except sqlite3.IntegrityError: raise HTTPException(409,"Username already exists")
+    event("INFO",f"Created reseller {username!r} with quota allocation.")
+    return {"id":rid,"username":username,"quota_bytes":quota_bytes}
+@app.patch("/api/resellers/{rid}")
+async def update_reseller(rid:str,r:Request):
+    require_admin(r); require_csrf(r); body=await r.json(); owner=owner_id_for(r)
+    with db() as c:
+        row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
+        if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
+        updates={}
+        if "enabled" in body:
+            if not isinstance(body["enabled"],bool): raise HTTPException(422,"enabled must be boolean")
+            updates["enabled"]=int(body["enabled"])
+        if "quota_gb" in body:
+            q=body["quota_gb"]
+            if not isinstance(q,(int,float)) or isinstance(q,bool) or not 0.1<=q<=100000: raise HTTPException(422,"Invalid quota")
+            amount=int(float(q)*1024**3)
+            if amount<reseller_allocated(c,rid): raise HTTPException(422,"Cannot lower allocation below already delegated volume")
+            if owner is not None:
+                siblings=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=? AND id<>?",(owner,rid)).fetchone()["n"] or 0)
+                clients=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM clients WHERE owner_id=?",(owner,)).fetchone()["n"] or 0)
+                parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
+                if siblings+clients+amount>int(parent["quota_bytes"]): raise HTTPException(422,"Allocation exceeds parent quota")
+            updates["quota_bytes"]=amount
+        if not updates: raise HTTPException(422,"No supported changes")
+        c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))
+    return {"ok":True}
+@app.delete("/api/resellers/{rid}")
+async def delete_reseller(rid:str,r:Request):
+    require_admin(r); require_csrf(r); owner=owner_id_for(r)
+    with db() as c:
+        row=c.execute("SELECT * FROM resellers WHERE id=?",(rid,)).fetchone()
+        if not row or (owner is not None and row["parent_id"]!=owner): raise HTTPException(404,"Reseller not found")
+        if reseller_allocated(c,rid): raise HTTPException(409,"Remove allocated client/reseller quotas before deleting")
+        c.execute("DELETE FROM resellers WHERE id=?",(rid,))
+    return {"ok":True}
 
 @app.get("/health")
 async def health():
