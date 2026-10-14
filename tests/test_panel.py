@@ -412,3 +412,57 @@ def test_health_endpoint(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"ok": True}
+
+
+def test_reseller_login_is_scoped_and_cannot_overallocate(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post(
+        "/api/resellers",
+        json={"username": "reseller_one", "password": "StrongPassword123", "quota_gb": 2},
+        headers=headers,
+    )
+    assert created.status_code == 200, created.text
+    assert created.json()["quota_bytes"] == 2 * 1024**3
+
+    client.get("/logout")
+    page = client.get("/login")
+    token = re.search(r'name="csrf_token" value="([^"]+)"', page.text).group(1)
+    login = client.post(
+        "/login",
+        data={"username": "reseller_one", "password": "StrongPassword123", "csrf_token": html.unescape(token)},
+        follow_redirects=False,
+    )
+    assert login.status_code == 303
+    csrf = client.get("/api/overview").json()["csrf"]
+    headers = {"X-CSRF-Token": csrf}
+
+    own = client.post("/api/clients", json={"name": "Owned", "quota_gb": 1}, headers=headers)
+    assert own.status_code == 200, own.text
+    assert client.get("/api/overview").json()["total"] == 1
+    too_large = client.post("/api/clients", json={"name": "Too large", "quota_gb": 2}, headers=headers)
+    assert too_large.status_code == 422
+
+    # A reseller cannot operate on another account's client by guessing its ID.
+    assert client.patch("/api/clients/not-owned", json={"enabled": False}, headers=headers).status_code == 404
+    # Resellers cannot alter global Xray profiles or download/restore the whole database.
+    assert client.patch("/api/settings/profiles", json={"profiles": {"ws": False}}, headers=headers).status_code == 403
+    assert client.get("/api/backup").status_code == 403
+
+
+def test_backup_and_restore_round_trip(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    created = client.post("/api/clients", json={"name": "Backup me", "quota_gb": 2}, headers=headers)
+    assert created.status_code == 200
+    backup = client.get("/api/backup")
+    assert backup.status_code == 200
+    assert backup.content[:16] == b"SQLite format 3\\x00"
+
+    deleted = client.delete(f"/api/clients/{created.json()['id']}", headers=headers)
+    assert deleted.status_code == 200
+    assert client.get("/api/overview").json()["total"] == 0
+
+    restored = client.post("/api/restore", content=backup.content, headers={**headers, "Content-Type": "application/octet-stream"})
+    assert restored.status_code == 200, restored.text
+    assert client.get("/api/overview").json()["total"] == 1
