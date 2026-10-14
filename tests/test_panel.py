@@ -60,6 +60,7 @@ def test_fresh_install_uses_requested_admin_default(client, tmp_path):
 def test_dashboard_is_not_cached_and_has_section_navigation(client):
     login_page = client.get("/login")
     assert 'id="abyss-theme-system"' in login_page.text
+    assert 'id="abyss-theme-polish"' in login_page.text
     assert 'id="abyss-theme-controller"' in login_page.text
     assert 'data-abyss-theme="angel"' in login_page.text
     admin_client(client)
@@ -68,6 +69,7 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert "no-store" in response.headers.get("cache-control", "")
     assert '/dashboard.js?v=20261014-ui3' in response.text
     assert 'id="abyss-theme-system"' in response.text
+    assert 'id="abyss-theme-polish"' in response.text
     assert 'id="abyss-theme-controller"' in response.text
     assert 'سلطنتی · مشکی و طلایی' in response.text
     assert 'سپید · فرشته‌گون' in response.text
@@ -146,6 +148,7 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert "text/html" in browser.headers["content-type"]
     assert "Unified URL" in browser.text
     assert 'id="abyss-theme-system"' in browser.text
+    assert 'id="abyss-theme-polish"' in browser.text
     assert 'id="abyss-theme-controller"' in browser.text
     assert "no-store" in browser.headers["cache-control"]
     subscription_client = client.get(path, headers={"Accept": "*/*", "User-Agent": "v2rayNG"})
@@ -225,6 +228,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert page.status_code == 200
     assert "viewport-fit=cover" in page.text
     assert "Abyss Tunnel" in page.text
+    assert 'id="abyss-theme-polish"' in page.text
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
     assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
