@@ -418,7 +418,9 @@ def test_assistant_and_subscription_profile_reports(client):
     })
     assert report.status_code == 200
     assert report.json()["ok"] is True
-    report2 = client.post(f"/sub/{token}/report", json={
+    created2 = client.post("/api/clients", json={"name": "Carrier feedback two"}, headers={"X-CSRF-Token": csrf})
+    token2 = _token_from_url(client.get(f"/api/clients/{created2.json()['id']}/subscription").json()["url"])
+    report2 = client.post(f"/sub/{token2}/report", json={
         "profile_key": "xhttp_stream_up", "carrier": "irancell", "result": "ok"
     })
     assert report2.status_code == 200
