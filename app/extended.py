@@ -126,8 +126,11 @@ def _probe_profile(profile):
         connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
         response=connection.getresponse()
         result["http_status"]=response.status
-        response.read(1)
-        result["route_ok"]=result["http_status"] not in {502,503,504}
+        body=response.read(512)
+        content_type=(getattr(response,"getheader",lambda *args:"")("Content-Type","") or "").lower()
+        fell_through=response.status==404 and "application/json" in content_type and b'"detail"' in body
+        result["route_ok"]=result["http_status"] not in {502,503,504} and not fell_through
+        if fell_through: result["error"]="Request fell through to the panel API instead of the expected Xray route."
     except (http.client.HTTPException,TimeoutError,OSError) as exc:
         result["error"]="Gateway/route did not respond: "+str(exc)[:120]
     finally:
