@@ -224,6 +224,21 @@ def test_subscription_feedback_validates_operator_and_result(client):
     assert accepted.status_code == 200
 
 
+def test_operator_diagnostics_calculates_profile_success_rate(client):
+    admin_client(client)
+    with panel.db() as conn:
+        for index, result in enumerate(("ok", "ok", "fail")):
+            conn.execute(
+                "INSERT INTO profile_feedback(sub_token,carrier,profile_key,result,created_at) VALUES(?,?,?,?,?)",
+                ("sample-report-" + str(index), "irancell", "ws", result, panel.utc_now()),
+            )
+    response = client.get("/api/system/diagnostics?carrier=irancell")
+    assert response.status_code == 200, response.text
+    profile = next(item for item in response.json()["profiles"] if item["key"] == "ws")
+    assert profile["feedback_reports"] == 3
+    assert profile["feedback_success_rate"] == 67
+
+
 def test_xhttp_modes_are_real_and_alternate_paths_are_unique(client):
     profiles = {p["key"]: p for p in panel.PROFILES}
     assert profiles["xhttp_stream_up"]["mode"] == "stream-up"
