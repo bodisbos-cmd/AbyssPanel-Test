@@ -18,6 +18,11 @@ PROFILES=[
     {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
     {"key":"xhttp_auto","label":"XHTTP · auto","network":"xhttp","path":"/xhttp","port":10003,"mode":"auto"},
     {"key":"xhttp_packet_up","label":"XHTTP · packet-up","network":"xhttp","path":"/xhttp-packet","port":10004,"mode":"packet-up"},
+    {"key":"xhttp_stream_up","label":"XHTTP · stream-up · آزمایشی","network":"xhttp","path":"/xhttp-stream-up","port":10005,"mode":"stream-up"},
+    {"key":"xhttp_stream_one","label":"XHTTP · stream-one · آزمایشی","protocol":"vless","network":"xhttp","path":"/xhttp-stream-one","port":10006,"mode":"stream-one"},
+    {"key":"trojan_ws","label":"Trojan · WebSocket TLS","protocol":"trojan","network":"ws","path":"/trojan-ws","port":10007,"mode":None},
+    {"key":"vmess_ws","label":"VMess · WebSocket TLS","protocol":"vmess","network":"ws","path":"/vmess-ws","port":10008,"mode":None},
+    {"key":"ss_ws","label":"Shadowsocks · WebSocket TLS","protocol":"shadowsocks","network":"ws","path":"/ss-ws","port":10009,"mode":None},
 ]
 DATA_DIR=Path(os.getenv("DATA_DIR","/data")); DATA_DIR.mkdir(parents=True,exist_ok=True)
 DB_PATH=DATA_DIR/"panel.sqlite3"; XRAY_CONFIG=DATA_DIR/"xray.json"
@@ -58,6 +63,7 @@ def init_db():
     with db() as c:
         c.executescript("""
         CREATE TABLE IF NOT EXISTS admins(id INTEGER PRIMARY KEY CHECK(id=1),password_hash TEXT NOT NULL,password_changed_at TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS panel_admins(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN ('owner','admin','viewer')),enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,password_changed_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS clients(id TEXT PRIMARY KEY,name TEXT NOT NULL,client_uuid TEXT NOT NULL UNIQUE,sub_token TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,note TEXT NOT NULL DEFAULT '',expires_at TEXT,quota_bytes INTEGER,used_bytes INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE IF NOT EXISTS resellers(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,password_hash TEXT NOT NULL,quota_bytes INTEGER NOT NULL CHECK(quota_bytes>0),enabled INTEGER NOT NULL DEFAULT 1,parent_id TEXT,created_at TEXT NOT NULL,FOREIGN KEY(parent_id) REFERENCES resellers(id) ON DELETE CASCADE);
         CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,at TEXT NOT NULL,level TEXT NOT NULL,message TEXT NOT NULL);
@@ -71,6 +77,11 @@ def init_db():
             try: p.chmod(0o600)
             except OSError: pass
             if os.getenv("ABYSS_TEST_MODE")!="1": LOG.warning("INITIAL ADMIN CREDENTIAL username=admin password=%s; change immediately in Settings",pw)
+        # Migrate the existing single-admin credential without changing its password.
+        legacy=c.execute("SELECT password_hash,password_changed_at FROM admins WHERE id=1").fetchone()
+        if legacy and not c.execute("SELECT id FROM panel_admins WHERE username='admin'").fetchone():
+            c.execute("INSERT INTO panel_admins(id,username,password_hash,role,enabled,created_at,password_changed_at) VALUES(?,?,?,?,1,?,?)",
+                ("owner-admin","admin",legacy["password_hash"],"owner",legacy["password_changed_at"],legacy["password_changed_at"]))
         # Safe in-place migration for persistent databases created by older releases.
         cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
         for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0")):
@@ -89,12 +100,20 @@ def event(level,message):
 def get_clients(include_client_uuid=False, owner_id=None, scoped=False):
     cols="id,name,client_uuid,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id" if include_client_uuid else "id,name,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id"
     with db() as c:
-        if scoped: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients WHERE owner_id=? ORDER BY created_at DESC",(owner_id,))]
-        return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]
+        if scoped: return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients WHERE owner_id=? ORDER BY created_at DESC",(owner_id,))]  # nosec B608: cols is a fixed allowlisted projection
+        return [dict(r) for r in c.execute(f"SELECT {cols} FROM clients ORDER BY created_at DESC")]  # nosec B608: cols is a fixed allowlisted projection
 def get_profile_flags():
     with db() as c:
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
     return {p["key"]:saved.get("profile:"+p["key"],"1")=="1" for p in PROFILES}
+
+def get_ss2022_server_password():
+    with db() as c:
+        row=c.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()
+        if row: return row["value"]
+        generated=base64.b64encode(secrets.token_bytes(16)).decode()
+        c.execute("INSERT OR IGNORE INTO settings(key,value) VALUES('ss2022_server_password',?)",(generated,))
+        return c.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()["value"]
 
 def client_is_expired(expires_at):
     if not expires_at:
@@ -130,8 +149,21 @@ def make_xray_config():
         if not flags[profile["key"]]: continue
         port,network,path=profile["port"],profile["network"],profile["path"]
         stream={"network":network,"security":"none"}
-        stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":profile["mode"]} if network=="xhttp" else {})}
-        ins.append({"tag":f"in-{network}-{port}","listen":"127.0.0.1","port":port,"protocol":"vless","settings":{"clients":clients,"decryption":"none"},"streamSettings":stream})
+        stream[{"ws":"wsSettings","httpupgrade":"httpupgradeSettings","xhttp":"xhttpSettings"}[network]]={"path":path,**({"mode":profile["mode"]} if profile["mode"] else {})}
+        protocol=profile.get("protocol","vless")
+        if protocol=="vless":
+            settings={"clients":clients,"decryption":"none"}
+        elif protocol=="trojan":
+            settings={"clients":[{"password":x["id"],"email":x["email"]} for x in clients]}
+        elif protocol=="vmess":
+            settings={"clients":[{"id":x["id"],"alterId":0,"email":x["email"]} for x in clients]}
+        elif protocol=="shadowsocks":
+            ss_clients=[{"password":base64.b64encode(hashlib.sha256(x["id"].encode()).digest()[:16]).decode(),"email":x["email"]} for x in clients]
+            settings={"method":"2022-blake3-aes-128-gcm","password":get_ss2022_server_password(),"network":"tcp","clients":ss_clients}
+        else:
+            raise ValueError("Unsupported profile protocol: "+protocol)
+        inbound={"tag":f"in-{profile['key']}","listen":"127.0.0.1","port":port,"protocol":protocol,"settings":settings,"streamSettings":stream}
+        ins.append(inbound)
     return {"log":{"loglevel":"debug" if os.getenv("ABYSS_TEST_MODE")=="1" else "warning"},"api":{"tag":"api","services":["StatsService"]},"stats":{},"policy":{"levels":{"0":{"statsUserUplink":True,"statsUserDownlink":True}}},"inbounds":ins,"outbounds":[{"protocol":"freedom","tag":"direct"},{"protocol":"blackhole","tag":"block"},{"protocol":"freedom","tag":"api"}],"routing":{"domainStrategy":"AsIs","rules":[{"type":"field","inboundTag":["api"],"outboundTag":"api"}]}}
 def validate_and_write_xray():
     tmp=XRAY_CONFIG.with_suffix(".tmp"); tmp.write_text(json.dumps(make_xray_config(),indent=2),encoding="utf-8"); tmp.replace(XRAY_CONFIG)
@@ -237,7 +269,18 @@ app.add_middleware(SessionMiddleware,secret_key=sf.read_text().strip(),session_c
 async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
 def require_admin(r):
-    if r.session.get("admin") is True: return
+    if r.session.get("admin") is True:
+        admin_id=r.session.get("admin_id","owner-admin")
+        with db() as c:
+            account=c.execute("SELECT role,enabled,password_changed_at FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
+        if not account or not account["enabled"]:
+            r.session.clear()
+            raise HTTPException(401,"Administrator account is disabled or no longer exists")
+        if r.session.get("admin_password_changed_at") != account["password_changed_at"]:
+            r.session.clear()
+            raise HTTPException(401,"Administrator password changed; please sign in again")
+        r.session["admin_role"]=account["role"]
+        return
     rid=r.session.get("reseller_id")
     if not rid: raise HTTPException(401,"Authentication required")
     with db() as c:
@@ -252,11 +295,16 @@ def require_admin(r):
                 r.session.clear()
                 raise HTTPException(401,"Parent reseller account is disabled")
             parent_id=parent["parent_id"]
-def is_root(r): return r.session.get("admin") is True
-def owner_id_for(r): return None if is_root(r) else str(r.session.get("reseller_id",""))
-def require_root(r):
+def require_role(r,*roles):
     require_admin(r)
-    if not is_root(r): raise HTTPException(403,"Root administrator permission required")
+    role=r.session.get("admin_role","owner") if r.session.get("admin") is True else "reseller"
+    if role not in roles: raise HTTPException(403,"Insufficient permissions")
+def is_root(r): return r.session.get("admin") is True and r.session.get("admin_role","owner")=="owner"
+def owner_id_for(r):
+    if r.session.get("admin") is True: return None
+    return str(r.session.get("reseller_id",""))
+def require_root(r):
+    require_role(r,"owner")
 def require_client_access(r,cid):
     if is_root(r): return
     with db() as c: row=c.execute("SELECT owner_id FROM clients WHERE id=?",(cid,)).fetchone()
@@ -284,7 +332,10 @@ def assert_reseller_chain_enabled(c,rid):
         if not row or not row["enabled"]:
             raise HTTPException(403,"Reseller account or parent is disabled")
         current_id=row["parent_id"]
-def require_csrf(r):
+def require_csrf(r,allow_viewer=False):
+    require_admin(r)
+    if not allow_viewer and r.session.get("admin") is True and r.session.get("admin_role")=="viewer":
+        raise HTTPException(403,"Read-only viewer account")
     a=r.session.get("csrf",""); b=r.headers.get("x-csrf-token","")
     if not a or not b or not hmac.compare_digest(str(a),b): raise HTTPException(403,"Invalid CSRF token")
 def rate_check(r,key,limit=8,window=300):
@@ -299,9 +350,27 @@ def rate_check(r,key,limit=8,window=300):
         if count>=limit: return False
         c.execute("UPDATE settings SET value=? WHERE key=?",(f"{start}:{count+1}",k)); return True
 
-LOGIN='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><title>AbyssPanel · ورود</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:18px;background:radial-gradient(ellipse at 50% 0,#163a43 0,transparent 52%),#080b12;color:#edf2ff;font:15px system-ui,-apple-system,sans-serif}.card{width:min(420px,100%);padding:clamp(22px,6vw,34px);border:1px solid #263b49;border-radius:22px;background:rgba(16,22,34,.96);box-shadow:0 24px 90px #0006}h1{margin:12px 0 8px;font-size:clamp(26px,7vw,34px)}p{line-height:1.9}.mint{color:#8de8d6;letter-spacing:.13em;font-size:11px;font-weight:800}.muted{color:#91a3b4}label{display:block;margin:16px 0 7px;font-size:13px}input{width:100%;min-width:0;padding:13px;border-radius:10px;border:1px solid #2a3548;background:#090e17;color:white;font:inherit}input:focus{outline:2px solid #76e4d1;outline-offset:1px}button{width:100%;padding:13px;margin-top:16px;background:#8de8d6;color:#061412;border:0;border-radius:10px;font:inherit;font-weight:800;cursor:pointer}.err{color:#ff9f9f;font-size:12px;overflow-wrap:anywhere}.symbol{display:grid;place-items:center;width:44px;height:44px;border:1px solid #2c5958;border-radius:13px;background:#102b30;color:#8de8d6;font-size:23px;margin-top:24px}</style></head><body><main class="card"><div class="mint">◈ ABYSSPANEL · PRIVATE CONTROL</div><div class="symbol">A</div><h1>خوش برگشتی.</h1><p class="muted">برای مدیریت سرویس‌ها وارد پنل شو.</p><form method="post"><input type="hidden" name="csrf_token" value="{{CSRF}}"><label for="username">نام کاربری</label><input id="username" name="username" value="admin" autocomplete="username" required><label for="password">رمز عبور</label><input id="password" type="password" name="password" autocomplete="current-password" required><p class="err">{{ERROR}}</p><button>ورود به پنل ↗</button></form></main></body></html>'''
+LOGIN='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><title>AbyssPanel · ورود</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:18px;background:radial-gradient(ellipse at 50% 0,#163a43 0,transparent 52%),#080b12;color:#edf2ff;font:15px system-ui,-apple-system,sans-serif}.card{width:min(420px,100%);padding:clamp(22px,6vw,34px);border:1px solid #263b49;border-radius:22px;background:rgba(16,22,34,.96);box-shadow:0 24px 90px #0006}h1{margin:12px 0 8px;font-size:clamp(26px,7vw,34px)}p{line-height:1.9}.mint{color:#8de8d6;letter-spacing:.13em;font-size:11px;font-weight:800}.muted{color:#91a3b4}label{display:block;margin:16px 0 7px;font-size:13px}input{width:100%;min-width:0;padding:13px;border-radius:10px;border:1px solid #2a3548;background:#090e17;color:white;font:inherit}input:focus{outline:2px solid #76e4d1;outline-offset:1px}button{width:100%;padding:13px;margin-top:16px;background:#8de8d6;color:#061412;border:0;border-radius:10px;font:inherit;font-weight:800;cursor:pointer}.err{color:#ff9f9f;font-size:12px;overflow-wrap:anywhere}.symbol{display:grid;place-items:center;width:44px;height:44px;border:1px solid #2c5958;border-radius:13px;background:#102b30;color:#8de8d6;font-size:23px;margin-top:24px}</style><style id="abyss-premium-upgrade">
+:root{color-scheme:dark;--abyss-bg:#070a10;--abyss-panel:#101722;--abyss-line:#263748;--abyss-mint:#8de8d6;--abyss-text:#edf3fb;--abyss-muted:#9aabbd}
+html{scroll-behavior:smooth}body{background-color:var(--abyss-bg)}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 80% -10%,rgba(43,130,125,.16),transparent 42%),radial-gradient(ellipse at 0% 40%,rgba(37,66,107,.13),transparent 42%)}
+.card,.panel,.box,.section,.stat,.metric,.client-card{border-color:var(--abyss-line)!important;box-shadow:0 12px 36px rgba(0,0,0,.14);transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+button,.btn,a.button{transition:filter .15s ease,transform .15s ease,box-shadow .15s ease}button:hover,.btn:hover,a.button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--abyss-mint);outline-offset:3px}
+input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}main,.container,.wrap{min-width:0}
+@media(max-width:600px){body{font-size:14px}main,.container,.wrap{padding-left:12px!important;padding-right:12px!important}.card,.panel,.box{border-radius:15px!important}.row{flex-wrap:wrap}.row>*{max-width:100%}button,.btn{min-height:42px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style></head><body><main class="card"><div class="mint">◈ ABYSSPANEL · PRIVATE CONTROL</div><div class="symbol">A</div><h1>خوش برگشتی.</h1><p class="muted">برای مدیریت سرویس‌ها وارد پنل شو.</p><form method="post"><input type="hidden" name="csrf_token" value="{{CSRF}}"><label for="username">نام کاربری</label><input id="username" name="username" value="admin" autocomplete="username" required><label for="password">رمز عبور</label><input id="password" type="password" name="password" autocomplete="current-password" required><p class="err">{{ERROR}}</p><button>ورود به پنل ↗</button></form></main></body></html>'''
 DASH='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel</title><style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080b12;color:#edf2ff;font:14px system-ui,-apple-system,sans-serif}.wrap{max-width:1100px;margin:auto;padding:22px 14px}.card{background:#101622;border:1px solid #222d40;border-radius:14px;padding:17px;margin:14px 0}.top,.row,.client{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.mint{color:#76e4d1;font-size:11px;letter-spacing:.12em}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.num{font-size:26px;font-weight:750}.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}input,button{font:inherit;border-radius:8px;padding:10px}input{min-width:0;width:100%;background:#090e17;color:white;border:1px solid #2a3548}button{cursor:pointer;background:#14202b;color:white;border:1px solid #2d3b50}button.primary{background:#76e4d1;color:#07120f;font-weight:700}.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.client{padding:14px 0;border-top:1px solid #222d40}.client-info{min-width:180px;flex:1}.actions{display:flex;gap:6px;flex-wrap:wrap}.small{font-size:11px;color:#8794ac;line-height:1.8}.section-title{font-weight:700}.hidden{display:none!important}#status{color:#76e4d1}.client-name{overflow-wrap:anywhere}dialog{width:min(720px,calc(100% - 20px));max-height:90dvh;overflow:auto;padding:20px;border:1px solid #304254;border-radius:18px;background:#101722;color:#edf2ff;box-shadow:0 25px 90px #0009}dialog::backdrop{background:#02050bd9;backdrop-filter:blur(5px)}.modal-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.modal-top h2{font-size:18px;margin:0}.sub-layout{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:16px;align-items:start}.sub-field{margin:12px 0}.sub-field label{display:block;font-size:12px;color:#9babc0;margin-bottom:6px}.sub-field input{direction:ltr;text-align:left;font-size:12px}.sub-buttons{display:flex;flex-wrap:wrap;gap:8px}.qr-preview{width:170px;max-width:100%;background:white;border-radius:12px;padding:8px;aspect-ratio:1}.danger{border-color:#70404a;color:#ffb5bd}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}.profile-setting{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #27384a;border-radius:10px;background:#0b111b;min-width:0}.profile-setting input{width:18px;height:18px;accent-color:#76e4d1;flex-shrink:0}.profile-setting span{overflow-wrap:anywhere}.button-link{display:inline-flex;align-items:center;padding:10px;border-radius:8px;border:1px solid #2d3b50;background:#14202b;color:white;text-decoration:none;font:inherit}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.fields{grid-template-columns:1fr 1fr}.wrap{padding:14px 10px}.actions button{padding:8px;font-size:12px}}@media(max-width:560px){.sub-layout{grid-template-columns:1fr}.profile-grid{grid-template-columns:1fr}.qr-preview{width:145px;display:block;margin:8px auto 0}}@media(max-width:420px){.stats,.fields{grid-template-columns:1fr}}
+</style><style id="abyss-premium-upgrade">
+:root{color-scheme:dark;--abyss-bg:#070a10;--abyss-panel:#101722;--abyss-line:#263748;--abyss-mint:#8de8d6;--abyss-text:#edf3fb;--abyss-muted:#9aabbd}
+html{scroll-behavior:smooth}body{background-color:var(--abyss-bg)}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 80% -10%,rgba(43,130,125,.16),transparent 42%),radial-gradient(ellipse at 0% 40%,rgba(37,66,107,.13),transparent 42%)}
+.card,.panel,.box,.section,.stat,.metric,.client-card{border-color:var(--abyss-line)!important;box-shadow:0 12px 36px rgba(0,0,0,.14);transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+button,.btn,a.button{transition:filter .15s ease,transform .15s ease,box-shadow .15s ease}button:hover,.btn:hover,a.button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--abyss-mint);outline-offset:3px}
+input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}main,.container,.wrap{min-width:0}
+@media(max-width:600px){body{font-size:14px}main,.container,.wrap{padding-left:12px!important;padding-right:12px!important}.card,.panel,.box{border-radius:15px!important}.row{flex-wrap:wrap}.row>*{max-width:100%}button,.btn{min-height:42px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 </style></head><body><main class="wrap">
 <header class="top"><div><b>A / ABYSSPANEL</b><div class="mint" data-i18n="tagline">پنل مدیریت خصوصی</div></div><div class="tools"><button id="langBtn" onclick="toggleLanguage()">English</button><button onclick="changePassword()" data-i18n="changePassword">تغییر رمز عبور</button><button onclick="load()" data-i18n="refresh">به‌روزرسانی</button><button onclick="location.href='/logout'" data-i18n="logout">خروج</button></div></header>
 <section class="stats"><div class="card"><span data-i18n="total">کل کاربران</span><div class="num" id="total">—</div></div><div class="card"><span data-i18n="active">کاربران فعال</span><div class="num" id="active">—</div></div><div class="card"><span data-i18n="xray">وضعیت Xray</span><div class="num" id="xray">—</div></div></section>
@@ -360,15 +429,25 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
     if not rate_check(r,"login:"+ip):
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","تلاش‌های زیادی انجام شده؛ پنج دقیقه صبر کن.").replace("{{CSRF}}",token),status_code=429)
-    with db() as c:
-        row=c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone() if username=="admin" else c.execute("SELECT id,password_hash,enabled FROM resellers WHERE username=?",(username,)).fetchone()
-    if not row or (username=="admin" and not verify_password(password,row["password_hash"])) or (username!="admin" and (not row["enabled"] or not verify_password(password,row["password_hash"]))):
+    if len(username)>64 or len(password)>256:
+        row=None; account_type="admin"
+    else:
+        with db() as c:
+            row=c.execute("SELECT id,username,password_hash,role,enabled,password_changed_at FROM panel_admins WHERE username=?",(username.strip(),)).fetchone()
+            account_type="admin"
+            if not row:
+                row=c.execute("SELECT id,password_hash,enabled FROM resellers WHERE username=?",(username.strip(),)).fetchone()
+                account_type="reseller"
+    if not row or not row["enabled"] or not verify_password(password,row["password_hash"]):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","نام کاربری یا رمز عبور اشتباه است.").replace("{{CSRF}}",token),status_code=401)
     r.session.clear(); r.session["csrf"]=secrets.token_urlsafe(32)
-    if username=="admin": r.session["admin"]=True; event("INFO","Administrator signed in.")
-    else: r.session["reseller_id"]=row["id"]; event("INFO",f"Reseller {username!r} signed in.")
+    if account_type=="admin":
+        r.session["admin"]=True; r.session["admin_id"]=row["id"]; r.session["admin_username"]=row["username"]; r.session["admin_role"]=row["role"]; r.session["admin_password_changed_at"]=row["password_changed_at"]
+        event("INFO",f"Administrator signed in as {row['username']} ({row['role']}).")
+    else:
+        r.session["reseller_id"]=row["id"]; event("INFO",f"Reseller {username!r} signed in.")
     return RedirectResponse("/",303)
 @app.get("/logout")
 async def logout(r:Request): r.session.clear(); return RedirectResponse("/login",303)
@@ -387,7 +466,7 @@ async def overview(r:Request):
         child["allocated_bytes"]=reseller_allocated_for(child["id"])
         child["remaining_bytes"]=child["quota_bytes"]-child["allocated_bytes"]
     remaining=None if owner is None else reseller_remaining(owner)
-    return {"csrf":r.session.get("csrf",""),"role":"root" if owner is None else "reseller","remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
+    return {"csrf":r.session.get("csrf",""),"role":"root" if is_root(r) else ("reseller" if not r.session.get("admin") else r.session.get("admin_role","admin")),"user":{"username":r.session.get("admin_username", "reseller" if not r.session.get("admin") else "admin"),"role":r.session.get("admin_role","owner") if r.session.get("admin") else "reseller"},"remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
 @app.get("/api/settings")
 async def read_settings(r:Request):
     require_admin(r)
@@ -396,7 +475,7 @@ async def read_settings(r:Request):
 
 @app.patch("/api/settings/profiles")
 async def update_profile_settings(r:Request):
-    require_root(r); require_csrf(r); body=await r.json()
+    require_role(r,"owner","admin"); require_csrf(r); body=await r.json()
     profiles=body.get("profiles") if isinstance(body,dict) else None
     keys={p["key"] for p in PROFILES}
     if not isinstance(profiles,dict) or not profiles or set(profiles)-keys or any(not isinstance(v,bool) for v in profiles.values()):
@@ -489,7 +568,7 @@ async def update_client(cid:str,r:Request):
             children=int(c.execute("SELECT COALESCE(SUM(quota_bytes),0) n FROM resellers WHERE parent_id=?",(owner,)).fetchone()["n"] or 0)
             parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
             if allocated+children+new_quota>int(parent["quota_bytes"]): raise HTTPException(422,"Updated quota exceeds your remaining allocation")
-        c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))
+        c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))  # nosec B608: keys originate only from the explicit allowed-field mapping above
     if "enabled" in updates and updates["enabled"] != previous["enabled"]:
         try:
             await start_xray()
@@ -553,10 +632,28 @@ def make_subscription_links(client, r):
     for profile in PROFILES:
         if not flags[profile["key"]]: continue
         network,path,mode=profile["network"],profile["path"],profile["mode"]
-        q=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}&encryption=none"
-        if mode: q+=f"&mode={quote(mode)}"
-        label={"xhttp_auto":"xhttp-auto","xhttp_packet_up":"xhttp-packet-up"}.get(profile["key"],profile["key"])
-        links.append({"label":label,"url":f"vless://{client['client_uuid']}@{host}:443?{q}#{quote(client['name'])}-{label}"})
+        proto=profile.get("protocol","vless")
+        label=profile["key"].replace("_","-")
+        common=f"type={network}&security=tls&sni={host}&fp=chrome&host={host}&path={quote(path,safe='')}"
+        if mode: common+=f"&mode={quote(mode,safe='')}"
+        uid=client["client_uuid"]
+        title=quote("abysstunnel-"+client["name"]+"-"+label)
+        if proto=="vless":
+            url=f"vless://{uid}@{host}:443?{common}&encryption=none#{title}"
+        elif proto=="trojan":
+            url=f"trojan://{uid}@{host}:443?{common}#{title}"
+        elif proto=="vmess":
+            vmess={"v":"2","ps":"abysstunnel-"+client["name"]+"-"+label,"add":host,"port":"443","id":uid,"aid":"0","scy":"auto","net":"ws","type":"none","host":host,"path":path,"tls":"tls","sni":host,"alpn":""}
+            url="vmess://"+base64.b64encode(json.dumps(vmess,separators=(",",":")).encode()).decode()
+        elif proto=="shadowsocks":
+            ss_password=base64.b64encode(hashlib.sha256(uid.encode()).digest()[:16]).decode()
+            combined_password=get_ss2022_server_password()+":"+ss_password
+            userinfo=base64.urlsafe_b64encode(("2022-blake3-aes-128-gcm:"+combined_password).encode()).decode().rstrip("=")
+            plugin=quote("v2ray-plugin;tls;host="+host+";path="+path,safe=";=")
+            url=f"ss://{userinfo}@{host}:443?plugin={plugin}#{title}"
+        else:
+            continue
+        links.append({"key":profile["key"],"label":profile["label"],"url":url})
     return links
 
 def subscription_text(links):
@@ -568,12 +665,21 @@ def render_subscription_page(client, links, sub_url, qr_url):
     quota_text="نامحدود" if quota is None else f"{quota/1024**3:.2f} GB"
     expiry=client["expires_at"] or "بدون انقضا"
     cards="".join(
-        '<a class="profile" href="'+html_escape(item["url"],quote=True)+'"><span class="profile-icon">↗</span><span><b>'+html_escape(item["label"])+'</b><small>VLESS · TLS · '+html_escape(item["label"])+'</small></span><span class="profile-open">باز کردن</span></a>'
+        '<div class="profile-choice" data-profile-choice="'+html_escape(item["key"],quote=True)+'"><a class="profile" href="'+html_escape(item["url"],quote=True)+'"><span class="profile-icon">↗</span><span><b>'+html_escape(item["label"])+'</b><small>TLS · '+html_escape(item["label"])+'</small></span><span class="profile-open">باز کردن</span></a><div class="profile-marks"><button type="button" data-mark="ok" data-profile="'+html_escape(item["key"],quote=True)+'">✓ کار کرد</button><button type="button" data-mark="fail" data-profile="'+html_escape(item["key"],quote=True)+'">× کار نکرد</button><small data-result="'+html_escape(item["key"],quote=True)+'"></small></div></div>'
         for item in links
     )
     template="""<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#080b12"><title>Abyss Tunnel · اشتراک خصوصی</title><style>
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#163a43 0,transparent 48%),#080b12;color:#edf5f7;font:15px system-ui,-apple-system,sans-serif}.shell{width:min(820px,100%);margin:auto;padding:28px 16px 44px}.top,.row,.profile{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{font-size:12px;letter-spacing:.18em;color:#8de8d6;font-weight:800}.badge{font-size:11px;color:#8de8d6;border:1px solid #275c58;padding:7px 10px;border-radius:99px}.hero{margin:25px 0 16px;padding:25px;border:1px solid #25434b;border-radius:24px;background:linear-gradient(135deg,rgba(18,39,49,.96),rgba(13,20,32,.97));box-shadow:0 22px 70px #0005}.eyebrow{font-size:11px;color:#8de8d6;letter-spacing:.12em}.hero h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:12px 0 8px;overflow-wrap:anywhere}.muted,small{color:#91a3b4;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.metric,.panel{background:#101722;border:1px solid #222f3f;border-radius:16px;padding:16px;min-width:0}.metric small{display:block;font-size:11px}.metric b{display:block;font-size:16px;margin-top:7px;overflow-wrap:anywhere}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}.section-head h2{font-size:16px;margin:0}.profiles{display:grid;gap:9px}.profile{padding:13px;text-decoration:none;color:#edf5f7;border:1px solid #263447;border-radius:13px;background:#0b111b;min-width:0}.profile:hover{border-color:#76e4d1;background:#101e27}.profile-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#173b3c;color:#8de8d6;flex-shrink:0}.profile>span:nth-child(2){flex:1;min-width:0}.profile b,.profile small{display:block;overflow-wrap:anywhere}.profile-open{font-size:12px;color:#8de8d6;white-space:nowrap}.share{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:16px;align-items:center}.linkbox{direction:ltr;text-align:left;width:100%;background:#080d15;color:#c6d6df;border:1px solid #2a3b4d;border-radius:10px;padding:12px;font:12px ui-monospace,monospace;overflow-wrap:anywhere}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:9px;padding:11px 14px;border-radius:10px;border:1px solid #2b4651;background:#152630;color:#eaf8f6;font:inherit;cursor:pointer;text-decoration:none}.btn.primary{background:#8de8d6;color:#061412;border-color:#8de8d6;font-weight:800}.qr{display:block;width:160px;max-width:100%;padding:9px;border-radius:13px;background:#fff;aspect-ratio:1}.footer{text-align:center;font-size:11px;color:#65778a;margin-top:24px;line-height:1.9}.warning{color:#d8c58a;font-size:12px;margin-top:12px;line-height:1.8}@media(max-width:560px){.shell{padding:18px 11px 30px}.hero{padding:19px;border-radius:19px}.grid{grid-template-columns:1fr 1fr}.share{grid-template-columns:1fr}.qr{width:145px;margin:8px auto 0}.profile{gap:9px;padding:11px}.profile-open{font-size:11px}.metric,.panel{padding:13px}}@media(max-width:360px){.grid{grid-template-columns:1fr}.profile-open{display:none}}
-</style></head><body data-sub-url="__SUB_URL__"><main class="shell"><header class="top"><div class="brand">◈ ABYSS TUNNEL</div><span class="badge">PRIVATE SUBSCRIPTION</span></header><section class="hero"><div class="eyebrow">YOUR CONNECTION · YOUR CONTROL</div><h1>اشتراک خصوصی شما</h1><p class="muted">پروفایل موردنظرت را انتخاب کن یا لینک اشتراک را در کلاینت VPN وارد کن.</p><div class="row"><div><small>نام سرویس</small><div style="font-size:19px;font-weight:800;overflow-wrap:anywhere">__CLIENT_NAME__</div></div><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button></div></section><section class="grid"><div class="metric"><small>مصرف‌شده</small><b>__USED__ GB</b></div><div class="metric"><small>حجم کل</small><b>__QUOTA__</b></div><div class="metric"><small>اعتبار تا</small><b>__EXPIRY__</b></div></section><section class="panel"><div class="section-head"><h2>پروفایل‌های اتصال</h2><span class="badge">__COUNT__ PROFILES</span></div><div class="profiles">__PROFILES__</div><p class="warning">اگر کلاینت شما از لینک اشتراک پشتیبانی می‌کند، لینک اصلی را وارد کنید تا همه پروفایل‌ها یکجا اضافه شوند.</p></section><section class="panel" style="margin-top:14px"><div class="section-head"><h2>لینک اشتراک</h2><span class="badge">BASE64</span></div><div class="share"><div><input class="linkbox" readonly value="__SUB_URL__" aria-label="Subscription URL"><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button><button class="btn" onclick="window.location.href=__SUB_JSON__">دریافت اشتراک</button></div><img class="qr" src="__QR_URL__" alt="QR code for subscription link" width="160" height="160"></div></section><footer class="footer">ABYSS TUNNEL · PRIVATE BY DESIGN<br>این صفحه را فقط با صاحب سرویس به اشتراک بگذار؛ لینک اشتراک مانند رمز دسترسی عمل می‌کند.</footer></main><script>async function copySub(){const u=document.body.dataset.subUrl;try{await navigator.clipboard.writeText(u);alert('لینک اشتراک کپی شد')}catch(e){const x=document.querySelector('.linkbox');x.focus();x.select();alert('لینک را به‌صورت دستی کپی کن')}}</script></body></html>"""
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#163a43 0,transparent 48%),#080b12;color:#edf5f7;font:15px system-ui,-apple-system,sans-serif}.shell{width:min(820px,100%);margin:auto;padding:28px 16px 44px}.top,.row,.profile{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{font-size:12px;letter-spacing:.18em;color:#8de8d6;font-weight:800}.badge{font-size:11px;color:#8de8d6;border:1px solid #275c58;padding:7px 10px;border-radius:99px}.hero{margin:25px 0 16px;padding:25px;border:1px solid #25434b;border-radius:24px;background:linear-gradient(135deg,rgba(18,39,49,.96),rgba(13,20,32,.97));box-shadow:0 22px 70px #0005}.eyebrow{font-size:11px;color:#8de8d6;letter-spacing:.12em}.hero h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:12px 0 8px;overflow-wrap:anywhere}.muted,small{color:#91a3b4;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.metric,.panel{background:#101722;border:1px solid #222f3f;border-radius:16px;padding:16px;min-width:0}.metric small{display:block;font-size:11px}.metric b{display:block;font-size:16px;margin-top:7px;overflow-wrap:anywhere}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}.section-head h2{font-size:16px;margin:0}.profiles{display:grid;gap:9px}.profile{padding:13px;text-decoration:none;color:#edf5f7;border:1px solid #263447;border-radius:13px;background:#0b111b;min-width:0}.profile:hover{border-color:#76e4d1;background:#101e27}.profile-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#173b3c;color:#8de8d6;flex-shrink:0}.profile>span:nth-child(2){flex:1;min-width:0}.profile b,.profile small{display:block;overflow-wrap:anywhere}.profile-open{font-size:12px;color:#8de8d6;white-space:nowrap}.profile-marks{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 2px 2px}.profile-marks button{border:1px solid #2a3a4c;background:#101923;color:#b9c9d7;border-radius:8px;padding:6px 9px;font:inherit;font-size:11px;cursor:pointer}.profile-marks button[data-selected="true"][data-mark="ok"]{border-color:#4f9e87;color:#8de8d6;background:#102b26}.profile-marks button[data-selected="true"][data-mark="fail"]{border-color:#9c5a60;color:#ffb4b4;background:#2b151a}.profile-marks small{font-size:10px}.carrier-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:12px;align-items:center;margin-bottom:13px;padding:13px;border:1px solid #263748;border-radius:12px;background:#0b111b}.carrier-tools label{font-size:12px;color:#9aabbd}.carrier-tools select{width:100%;margin-top:6px;padding:10px;border:1px solid #2a3b4d;border-radius:9px;background:#080d15;color:#edf5f7}.share{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:16px;align-items:center}.linkbox{direction:ltr;text-align:left;width:100%;background:#080d15;color:#c6d6df;border:1px solid #2a3b4d;border-radius:10px;padding:12px;font:12px ui-monospace,monospace;overflow-wrap:anywhere}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:9px;padding:11px 14px;border-radius:10px;border:1px solid #2b4651;background:#152630;color:#eaf8f6;font:inherit;cursor:pointer;text-decoration:none}.btn.primary{background:#8de8d6;color:#061412;border-color:#8de8d6;font-weight:800}.qr{display:block;width:160px;max-width:100%;padding:9px;border-radius:13px;background:#fff;aspect-ratio:1}.footer{text-align:center;font-size:11px;color:#65778a;margin-top:24px;line-height:1.9}.warning{color:#d8c58a;font-size:12px;margin-top:12px;line-height:1.8}@media(max-width:560px){.shell{padding:18px 11px 30px}.hero{padding:19px;border-radius:19px}.grid{grid-template-columns:1fr 1fr}.share{grid-template-columns:1fr}.qr{width:145px;margin:8px auto 0}.profile{gap:9px;padding:11px}.profile-open{font-size:11px}.metric,.panel{padding:13px}}@media(max-width:360px){.grid{grid-template-columns:1fr}.profile-open{display:none}}
+</style><style id="abyss-premium-upgrade">
+:root{color-scheme:dark;--abyss-bg:#070a10;--abyss-panel:#101722;--abyss-line:#263748;--abyss-mint:#8de8d6;--abyss-text:#edf3fb;--abyss-muted:#9aabbd}
+html{scroll-behavior:smooth}body{background-color:var(--abyss-bg)}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 80% -10%,rgba(43,130,125,.16),transparent 42%),radial-gradient(ellipse at 0% 40%,rgba(37,66,107,.13),transparent 42%)}
+.card,.panel,.box,.section,.stat,.metric,.client-card{border-color:var(--abyss-line)!important;box-shadow:0 12px 36px rgba(0,0,0,.14);transition:border-color .18s ease,transform .18s ease,box-shadow .18s ease}
+button,.btn,a.button{transition:filter .15s ease,transform .15s ease,box-shadow .15s ease}button:hover,.btn:hover,a.button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--abyss-mint);outline-offset:3px}
+input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}main,.container,.wrap{min-width:0}
+@media(max-width:600px){body{font-size:14px}main,.container,.wrap{padding-left:12px!important;padding-right:12px!important}.card,.panel,.box{border-radius:15px!important}.row{flex-wrap:wrap}.row>*{max-width:100%}button,.btn{min-height:42px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style></head><body data-sub-url="__SUB_URL__"><main class="shell"><header class="top"><div class="brand">◈ ABYSS TUNNEL</div><span class="badge">PRIVATE SUBSCRIPTION</span></header><section class="hero"><div class="eyebrow">YOUR CONNECTION · YOUR CONTROL</div><h1>اشتراک خصوصی شما</h1><p class="muted">پروفایل موردنظرت را انتخاب کن یا لینک اشتراک را در کلاینت VPN وارد کن.</p><div class="row"><div><small>نام سرویس</small><div style="font-size:19px;font-weight:800;overflow-wrap:anywhere">__CLIENT_NAME__</div></div><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button></div></section><section class="grid"><div class="metric"><small>مصرف‌شده</small><b>__USED__ GB</b></div><div class="metric"><small>حجم کل</small><b>__QUOTA__</b></div><div class="metric"><small>اعتبار تا</small><b>__EXPIRY__</b></div></section><section class="panel"><div class="section-head"><h2>پروفایل‌های اتصال</h2><span class="badge">__COUNT__ PROFILES</span></div><div class="carrier-tools"><div><label for="carrierSelect">شبکه‌ای که الان با آن تست می‌کنی</label><select id="carrierSelect"><option value="auto">انتخاب خودکار</option><option value="mci">همراه اول</option><option value="irancell">ایرانسل</option><option value="rightel">رایتل</option><option value="wifi">وای‌فای / سایر</option></select></div><div><small>نتیجهٔ هر پروفایل را روی همین دستگاه ثبت کن تا پروفایل‌های موفق برای همین شبکه بالاتر نمایش داده شوند.</small><br><small>نتیجه فقط روی همین دستگاه ذخیره می‌شود.</small></div></div><div class="profiles" id="profileChoices">__PROFILES__</div><p class="warning">اگر کلاینت شما از لینک اشتراک پشتیبانی می‌کند، لینک اصلی را وارد کنید تا همه پروفایل‌ها یکجا اضافه شوند.</p></section><section class="panel" style="margin-top:14px"><div class="section-head"><h2>لینک اشتراک</h2><span class="badge">BASE64</span></div><div class="share"><div><input class="linkbox" readonly value="__SUB_URL__" aria-label="Subscription URL"><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button><button class="btn" onclick="window.location.href=__SUB_JSON__">دریافت اشتراک</button></div><img class="qr" src="__QR_URL__" alt="QR code for subscription link" width="160" height="160"></div></section><footer class="footer">ABYSS TUNNEL · PRIVATE BY DESIGN<br>این صفحه را فقط با صاحب سرویس به اشتراک بگذار؛ لینک اشتراک مانند رمز دسترسی عمل می‌کند.</footer></main><script>async function copySub(){const u=document.body.dataset.subUrl;try{await navigator.clipboard.writeText(u);alert('لینک اشتراک کپی شد')}catch(e){const x=document.querySelector('.linkbox');x.focus();x.select();alert('لینک را به‌صورت دستی کپی کن')}}</script><script id="abyss-profile-results">(()=>{const select=document.getElementById('carrierSelect'),list=document.getElementById('profileChoices');if(!select||!list)return;const prefix='abyss-profile-results:';const storageKey=()=>prefix+select.value;const read=()=>{try{return JSON.parse(localStorage.getItem(storageKey())||'{}')}catch(e){return {}}};function paint(){const data=read();list.querySelectorAll('[data-profile-choice]').forEach(card=>{const key=card.dataset.profileChoice,value=data[key]||'';card.querySelectorAll('[data-mark]').forEach(b=>b.dataset.selected=String(b.dataset.mark===value));const out=card.querySelector('[data-result]');if(out)out.textContent=value==='ok'?'برای این شبکه موفق بود':value==='fail'?'برای این شبکه ناموفق بود':''});const cards=[...list.querySelectorAll('[data-profile-choice]')];cards.sort((a,b)=>{const rank=x=>({ok:0,'':1,fail:2})[data[x.dataset.profileChoice]||''];return rank(a)-rank(b)});cards.forEach(x=>list.appendChild(x))}select.value=localStorage.getItem(prefix+'carrier')||'auto';select.addEventListener('change',()=>{localStorage.setItem(prefix+'carrier',select.value);paint()});list.querySelectorAll('[data-mark]').forEach(b=>b.addEventListener('click',()=>{const d=read();d[b.dataset.profile]=b.dataset.mark;localStorage.setItem(storageKey(),JSON.stringify(d));paint()}));paint()})();</script></body></html>"""
     return (template.replace("__SUB_URL__",html_escape(sub_url,quote=True))
         .replace("__CLIENT_NAME__",html_escape(client["name"]))
         .replace("__USED__",f"{usage:.3f}")
@@ -592,11 +698,20 @@ async def subscription_link(cid:str,r:Request):
     base=get_base_url(r); token=row["sub_token"]
     return JSONResponse({"url":f"{base}/sub/{token}","page_url":f"{base}/s/{token}","qr_url":f"{base}/sub/{token}/qr"},headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
-@app.get("/sub/{token}",response_class=PlainTextResponse)
+@app.get("/sub/{token}")
 async def subscription(token:str,r:Request):
+    """One shareable URL: browsers get the branded page; subscription clients get Base64."""
     client=active_subscription_client(token)
     links=make_subscription_links(client,r)
-    return PlainTextResponse(subscription_text(links),headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+    accept=r.headers.get("accept","").lower()
+    agent=r.headers.get("user-agent","").lower()
+    browser_request=("text/html" in accept and any(x in agent for x in ("mozilla","chrome","safari","firefox","edg/","opr/")))
+    headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow","Vary":"Accept, User-Agent"}
+    if browser_request:
+        base=get_base_url(r)
+        page=render_subscription_page(client,links,f"{base}/sub/{token}",f"{base}/sub/{token}/qr")
+        return HTMLResponse(page,headers=headers)
+    return PlainTextResponse(subscription_text(links),headers=headers)
 
 @app.get("/sub/{token}/qr")
 async def subscription_qr(token:str,r:Request):
@@ -614,7 +729,7 @@ async def subscription_page(token:str,r:Request):
     page=render_subscription_page(client,links,sub_url,f"{base}/sub/{token}/qr")
     return HTMLResponse(page,headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
-@app.get("/api/backup")
+@app.get("/api/backup/sqlite")
 async def backup_database(r:Request):
     require_root(r)
     target=DATA_DIR/("abyss-backup-"+datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")+".sqlite3")
@@ -763,7 +878,7 @@ async def update_reseller(rid:str,r:Request):
             updates["quota_bytes"]=amount
         if not updates: raise HTTPException(422,"No supported changes")
         try:
-            c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))
+            c.execute("UPDATE resellers SET "+", ".join(k+"=?" for k in updates)+" WHERE id=?",(*updates.values(),rid))  # nosec B608: keys are added only by fixed-field validation branches above
         except sqlite3.IntegrityError as exc:
             raise HTTPException(409,"Username already exists") from exc
     return {"ok":True}
@@ -801,25 +916,56 @@ async def unhandled(r:Request,e:Exception):
 @app.post("/api/password")
 async def change_password(r: Request):
     require_admin(r)
-    require_csrf(r)
+    require_csrf(r,allow_viewer=True)
     body = await r.json()
     current = str(body.get("current_password", ""))
     new = str(body.get("new_password", ""))
-    with db() as c:
+    if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
+        raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
+    if r.session.get("admin") is True:
+        admin_id=r.session.get("admin_id","owner-admin")
+        with db() as c:
+            row=c.execute("SELECT password_hash FROM panel_admins WHERE id=?",(admin_id,)).fetchone()
+            if not row or not verify_password(current,row["password_hash"]):
+                raise HTTPException(403,"Current password is incorrect")
+            changed=utc_now(); hashed=password_hash(new)
+            c.execute("UPDATE panel_admins SET password_hash=?,password_changed_at=? WHERE id=?",(hashed,changed,admin_id))
+            if is_root(r):
+                c.execute("UPDATE admins SET password_hash=?,password_changed_at=? WHERE id=1",(hashed,changed))
+        r.session["admin_password_changed_at"]=changed
         if is_root(r):
-            row = c.execute("SELECT password_hash FROM admins WHERE id=1").fetchone()
-        else:
-            row = c.execute("SELECT id,password_hash FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
-        if not row or not verify_password(current, row["password_hash"]):
-            raise HTTPException(403, "Current password is incorrect")
-        if len(new) < 14 or len(new) > 256 or not any(ch.isalpha() for ch in new) or not any(ch.isdigit() for ch in new):
-            raise HTTPException(400, "New password must be 14–256 characters and include letters and numbers")
-        if is_root(r):
-            c.execute("UPDATE admins SET password_hash=?, password_changed_at=? WHERE id=1", (password_hash(new), utc_now()))
-        else:
-            c.execute("UPDATE resellers SET password_hash=? WHERE id=?", (password_hash(new),owner_id_for(r)))
-    if is_root(r):
-        try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
-        except OSError: event("WARNING","Could not remove the initial administrator password file.")
-    event("INFO", "Account password changed.")
-    return {"ok": True}
+            try: (DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt").unlink(missing_ok=True)
+            except OSError: event("WARNING","Could not remove the initial administrator password file.")
+    else:
+        with db() as c:
+            row=c.execute("SELECT id,password_hash FROM resellers WHERE id=?",(owner_id_for(r),)).fetchone()
+            if not row or not verify_password(current,row["password_hash"]):
+                raise HTTPException(403,"Current password is incorrect")
+            c.execute("UPDATE resellers SET password_hash=? WHERE id=?",(password_hash(new),owner_id_for(r)))
+    event("INFO","Account password changed.")
+    return {"ok":True}
+# Register the optional platform extension after the core app and helpers are defined.
+try:
+    from app.extended import install_extended
+except ModuleNotFoundError:
+    import importlib.util
+    _extension_spec = importlib.util.spec_from_file_location("abyss_extended", Path(__file__).with_name("extended.py"))
+    _extension_module = importlib.util.module_from_spec(_extension_spec)
+    _extension_spec.loader.exec_module(_extension_module)
+    install_extended = _extension_module.install_extended
+install_extended(app, globals())
+@app.get("/api-docs",response_class=HTMLResponse)
+async def protected_api_docs(r:Request):
+    require_admin(r)
+    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel API Docs</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"></head><body style="margin:0;background:#080b12"><div id="swagger-ui"></div><script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api-docs/openapi.json',dom_id:'#swagger-ui',deepLinking:true,persistAuthorization:false})</script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/api-docs/redoc",response_class=HTMLResponse)
+async def protected_redoc_docs(r:Request):
+    require_admin(r)
+    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AbyssPanel API Reference</title></head><body style="margin:0;background:#080b12"><redoc spec-url="/api-docs/openapi.json"></redoc><script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+
+@app.get("/api-docs/openapi.json")
+async def protected_openapi_schema(r:Request):
+    require_admin(r)
+    return app.openapi()
+

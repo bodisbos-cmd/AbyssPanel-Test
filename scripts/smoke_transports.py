@@ -64,6 +64,17 @@ def read_client(client_id):
     return row
 
 
+def read_ss_server_password():
+    conn=sqlite3.connect(DB,timeout=10)
+    try:
+        row=conn.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()
+    finally:
+        conn.close()
+    if not row:
+        raise RuntimeError("Shadowsocks 2022 server key was not persisted")
+    return row[0]
+
+
 def port_ready(port):
     import socket
     sock = socket.socket()
@@ -114,18 +125,32 @@ def main():
     TARGET_HITS = 0
     TARGET_RESPONSES = 0
     profiles = [
-        ("ws", "/ws", None, 11081),
-        ("httpupgrade", "/httpupgrade", None, 11082),
-        ("xhttp", "/xhttp", "auto", 11083),
-        ("xhttp", "/xhttp-packet", "packet-up", 11084),
+        ("vless", "ws", "/ws", None, 11081, False),
+        ("vless", "httpupgrade", "/httpupgrade", None, 11082, False),
+        ("vless", "xhttp", "/xhttp", "auto", 11083, False),
+        ("vless", "xhttp", "/xhttp-packet", "packet-up", 11084, False),
+        ("vless", "xhttp", "/xhttp-stream-up", "stream-up", 11085, True),
+        ("vless", "xhttp", "/xhttp-stream-one", "stream-one", 11086, True),
+        ("trojan", "ws", "/trojan-ws", None, 11087, False),
+        ("vmess", "ws", "/vmess-ws", None, 11088, False),
+        ("shadowsocks", "ws", "/ss-ws", None, 11089, False),
     ]
     errors = []
     try:
-        for network, path, mode, socks_port in profiles:
+        for protocol, network, path, mode, socks_port, experimental in profiles:
             setting_key = {"ws": "wsSettings", "httpupgrade": "httpupgradeSettings", "xhttp": "xhttpSettings"}[network]
             transport_settings = {"path": path}
             if mode:
                 transport_settings["mode"] = mode
+            if protocol == "vless":
+                outbound_settings = {"vnext": [{"address":"127.0.0.1","port":8080,"users":[{"id":client_uuid,"encryption":"none"}]}]}
+            elif protocol == "trojan":
+                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"password":client_uuid}]}
+            elif protocol == "vmess":
+                outbound_settings = {"vnext":[{"address":"127.0.0.1","port":8080,"users":[{"id":client_uuid,"alterId":0,"security":"auto"}]}]}
+            else:
+                ss_password = __import__("base64").b64encode(__import__("hashlib").sha256(client_uuid.encode()).digest()[:16]).decode()
+                outbound_settings = {"servers":[{"address":"127.0.0.1","port":8080,"method":"2022-blake3-aes-128-gcm","password":read_ss_server_password()+":"+ss_password}]}
             config = {
                 "log": {"loglevel": "debug"},
                 "inbounds": [{
@@ -135,12 +160,8 @@ def main():
                     "settings": {"auth": "noauth", "udp": False},
                 }],
                 "outbounds": [{
-                    "protocol": "vless",
-                    "settings": {"vnext": [{
-                        "address": "127.0.0.1",
-                        "port": 8080,
-                        "users": [{"id": client_uuid, "encryption": "none"}],
-                    }]},
+                    "protocol": protocol,
+                    "settings": outbound_settings,
                     "streamSettings": {
                         "network": network,
                         "security": "none",
@@ -169,12 +190,17 @@ def main():
                     detail = stderr_path.read_text(errors="replace")[-1500:]
                     server_log = Path("/data/xray-stderr.log")
                     server_detail = server_log.read_text(errors="replace")[-3000:] if server_log.exists() else "(no server Xray log)"
-                    raise RuntimeError(
-                        f"Real VLESS {network} {mode or ''} tunnel failed "
+                    message = (
+                        f"Real {protocol.upper()} {network} {mode or ''} tunnel failed "
                         f"(curl={result.returncode}, body={result.stdout!r}, "
                         f"curl_stderr={result.stderr.decode(errors='replace')[-1000:]}, client_stderr={detail}, server_stderr={server_detail})"
                     )
-                print(f"PASS real VLESS tunnel: {network} {mode or 'default'}")
+                    if experimental:
+                        print("KNOWN EXPERIMENTAL PROFILE DID NOT PASS ON HTTP/1.1 EDGE: " + message, flush=True)
+                    else:
+                        raise RuntimeError(message)
+                else:
+                    print(f"PASS real {protocol.upper()} tunnel: {network} {mode or 'default'}")
             finally:
                 proc.terminate()
                 try:

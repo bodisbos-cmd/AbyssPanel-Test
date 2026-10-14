@@ -1,6 +1,6 @@
 # AbyssPanel-Test
 
-A responsive Xray/VLESS control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
+A responsive Xray control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
 
 > **Status:** test-stage build, not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
 
@@ -14,10 +14,12 @@ A responsive Xray/VLESS control panel designed to run on Railway. It includes a 
 - Hierarchical reseller accounts: the root admin allocates a finite GB pool to a reseller; resellers can delegate part of their remaining pool to sub-resellers and create finite-quota clients. Each account sees and manages only its own clients; over-allocation is rejected.
 - Optional expiry and traffic quota, with automatic disabling after expiry or quota exhaustion.
 - Settings page to enable/disable each connection profile; updates are rolled back if Xray cannot apply the configuration.
-- A private token per client. `/s/<token>` is a branded responsive subscription page with profile links and a QR code; `/sub/<token>` remains a Base64 subscription endpoint for compatible client apps.
+- A private token per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible VPN clients; QR and help pages remain available.
 - Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
-- Admin-only SQLite backup download and validated restore endpoint; restore retains a pre-restore database copy. Backups contain credentials and client records, so keep them private.
-- Xray configuration validation, basic process recovery, and a health endpoint.
+- Owner-only ZIP backup/restore with integrity/schema checks and rollback attempt; backup includes credential hashes and client data, so keep it private.
+- Nine selectable profiles: six VLESS transports (WS, HTTPUpgrade and four XHTTP modes), plus Trojan/VMess/Shadowsocks over WebSocket. XHTTP stream-up/stream-one are marked experimental because they did not complete the local HTTP/1.1-edge smoke test; verify them on Railway before relying on them.
+- Separate owner/admin/viewer accounts, scoped bot API keys, protected Swagger/ReDoc, resource diagnostics, official client download links, and a hamburger navigation drawer.
+- Xray configuration validation, basic process recovery, route diagnostics and a health endpoint.
 
 ## Railway deployment
 

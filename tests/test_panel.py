@@ -79,13 +79,18 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 4
-    assert all(line.startswith("vless://") for line in configs)
+    assert len(configs) == 9
+    assert sum(line.startswith("vless://") for line in configs) == 6
+    assert sum(line.startswith("trojan://") for line in configs) == 1
+    assert sum(line.startswith("vmess://") for line in configs) == 1
+    assert sum(line.startswith("ss://") for line in configs) == 1
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
-    assert sum("type=xhttp" in line for line in configs) == 2
+    assert sum("type=xhttp" in line for line in configs) == 4
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
+    assert any("mode=stream-up" in line for line in configs)
+    assert any("mode=stream-one" in line for line in configs)
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
     assert paused.status_code == 200
@@ -97,6 +102,26 @@ def test_create_pause_subscription_and_revoke(client):
     revoked = client.delete(f"/api/clients/{client_id}", headers=headers)
     assert revoked.status_code == 200
     assert client.get("/api/overview").json()["total"] == 0
+
+
+def test_same_subscription_url_serves_branded_page_to_browsers(client):
+    csrf = admin_client(client)
+    created = client.post("/api/clients", json={"name": "Unified URL", "duration_days": 30, "quota_gb": 4},
+                          headers={"X-CSRF-Token": csrf})
+    assert created.status_code == 200
+    url = client.get(f"/api/clients/{created.json()['id']}/subscription").json()["url"]
+    path = url.replace("https://testserver", "")
+    browser = client.get(path, headers={"Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 Chrome/130"})
+    assert browser.status_code == 200
+    assert "text/html" in browser.headers["content-type"]
+    assert "Unified URL" in browser.text
+    assert "no-store" in browser.headers["cache-control"]
+    subscription_client = client.get(path, headers={"Accept": "*/*", "User-Agent": "v2rayNG"})
+    assert subscription_client.status_code == 200
+    assert "text/plain" in subscription_client.headers["content-type"]
+    configs = base64.b64decode(subscription_client.text).decode().splitlines()
+    assert len(configs) == 9
+    assert "Accept, User-Agent" in subscription_client.headers["vary"]
 
 
 def _token_from_url(url):
@@ -137,14 +162,14 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 5  # Stats API + WS + HTTPUpgrade + XHTTP auto + XHTTP packet-up
+    assert len(inbounds) == 10  # Stats API plus nine selectable profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
 
 
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
@@ -167,6 +192,7 @@ def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
     assert "Abyss Tunnel" in page.text
     assert "Portal user" in page.text
     assert "xhttp-auto" in page.text and "xhttp-packet-up" in page.text
+    assert "xhttp-stream-up" in page.text and "xhttp-stream-one" in page.text
     assert page.headers["cache-control"] == "no-store"
     assert "noindex, nofollow" in page.headers["x-robots-tag"]
 
@@ -289,7 +315,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 4
+    assert len(settings.json()["profiles"]) == 9
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -298,7 +324,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -306,13 +332,13 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 2
-    assert all("type=ws" not in line for line in links)
+    assert len(links) == 7
+    assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert all("packet-up" not in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ss_ws": False}},
         headers=headers,
     )
     assert rejected.status_code == 422
@@ -458,13 +484,13 @@ def test_backup_and_restore_round_trip(client):
     assert created.status_code == 200
     backup = client.get("/api/backup")
     assert backup.status_code == 200
-    assert backup.content.startswith(b"SQLite format 3")
+    assert "application/zip" in backup.headers["content-type"]
 
     deleted = client.delete(f"/api/clients/{created.json()['id']}", headers=headers)
     assert deleted.status_code == 200
     assert client.get("/api/overview").json()["total"] == 0
 
-    restored = client.post("/api/restore", content=backup.content, headers={**headers, "Content-Type": "application/octet-stream"})
+    restored = client.post("/api/backup/restore", files={"backup": ("backup.zip", backup.content, "application/zip")}, headers=headers)
     assert restored.status_code == 200, restored.text
     assert client.get("/api/overview").json()["total"] == 1
 
