@@ -1,0 +1,30 @@
+services:
+  abyss-tunnel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: abyss-tunnel-panel:latest
+    container_name: abyss-tunnel-panel
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      DATA_DIR: /data
+      COOKIE_SECURE: "${COOKIE_SECURE:-1}"
+      BASE_URL: "${BASE_URL:-}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      ABYSS_CHANNEL_URL: "${ABYSS_CHANNEL_URL:-}"
+      ABYSS_CHANNEL_TEXT: "${ABYSS_CHANNEL_TEXT:-}"
+    volumes:
+      - abyss_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+    stop_grace_period: 15s
+
+volumes:
+  abyss_data:
