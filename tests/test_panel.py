@@ -109,19 +109,23 @@ def test_create_pause_subscription_and_revoke(client):
     subscription = client.get(link.json()["url"].replace("https://testserver", "http://testserver"))
     assert subscription.status_code == 200
     configs = base64.b64decode(subscription.text).decode().splitlines()
-    assert len(configs) == 11
-    assert sum(line.startswith("vless://") for line in configs) == 8
-    assert sum(line.startswith("trojan://") for line in configs) == 1
-    assert sum(line.startswith("vmess://") for line in configs) == 1
+    assert len(configs) == 14
+    assert sum(line.startswith("vless://") for line in configs) == 9
+    assert sum(line.startswith("trojan://") for line in configs) == 2
+    assert sum(line.startswith("vmess://") for line in configs) == 2
     assert sum(line.startswith("ss://") for line in configs) == 1
     assert any("type=ws" in line for line in configs)
     assert any("type=httpupgrade" in line for line in configs)
     assert sum("type=xhttp" in line for line in configs) == 4
     assert any("mode=auto" in line for line in configs)
     assert any("mode=packet-up" in line for line in configs)
-    assert sum("mode=packet-up" in line for line in configs) == 3
+    assert sum("mode=packet-up" in line for line in configs) == 1
+    assert sum("mode=stream-up" in line for line in configs) == 1
+    assert sum("mode=stream-one" in line for line in configs) == 1
     ss_uri = next(line for line in configs if line.startswith("ss://"))
-    assert ss_uri.startswith("ss://2022-blake3-aes-128-gcm:")
+    userinfo = ss_uri[5:].split("@", 1)[0]
+    decoded_ss = base64.urlsafe_b64decode(userinfo + "=" * (-len(userinfo) % 4)).decode()
+    assert decoded_ss.startswith("aes-128-gcm:")
     assert "@testserver:443/?plugin=" in ss_uri
 
     paused = client.patch(f"/api/clients/{client_id}", json={"enabled": False}, headers=headers)
@@ -155,7 +159,7 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert subscription_client.status_code == 200
     assert "text/plain" in subscription_client.headers["content-type"]
     configs = base64.b64decode(subscription_client.text).decode().splitlines()
-    assert len(configs) == 11
+    assert len(configs) == 14
     assert "Accept, User-Agent" in subscription_client.headers["vary"]
     assert "Subscription-Userinfo" in subscription_client.headers
     assert "total=4294967296" in subscription_client.headers["Subscription-Userinfo"]
@@ -200,14 +204,14 @@ def test_xray_config_has_unique_inbounds_and_stats_api(client):
     assert created.status_code == 200
     config = panel.make_xray_config()
     inbounds = config["inbounds"]
-    assert len(inbounds) == 12  # Stats API plus eleven selectable profiles
+    assert len(inbounds) == 15  # Stats API plus fourteen selectable profiles
     assert len({item["tag"] for item in inbounds}) == len(inbounds)
     assert len({item["port"] for item in inbounds}) == len(inbounds)
     assert config["api"]["services"] == ["StatsService"]
     assert config["policy"]["levels"]["0"]["statsUserUplink"] is True
     assert config["policy"]["levels"]["0"]["statsUserDownlink"] is True
     xhttp = [item for item in inbounds if item.get("streamSettings", {}).get("network") == "xhttp"]
-    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up"}
+    assert {item["streamSettings"]["xhttpSettings"]["mode"] for item in xhttp} == {"auto", "packet-up", "stream-up", "stream-one"}
 
 
 def test_subscription_landing_page_and_qr_are_responsive_and_private(client):
@@ -354,7 +358,7 @@ def test_profile_settings_update_xray_and_subscription(client):
 
     settings = client.get("/api/settings")
     assert settings.status_code == 200
-    assert len(settings.json()["profiles"]) == 11
+    assert len(settings.json()["profiles"]) == 14
     assert all(p["enabled"] for p in settings.json()["profiles"])
 
     changed = client.patch(
@@ -363,7 +367,7 @@ def test_profile_settings_update_xray_and_subscription(client):
         headers=headers,
     )
     assert changed.status_code == 200
-    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws", "ws_alt", "httpupgrade_alt"}
+    assert {p["key"] for p in changed.json()["profiles"] if p["enabled"]} == {"httpupgrade", "xhttp_auto", "xhttp_stream_up", "xhttp_stream_one", "trojan_ws", "vmess_ws", "ss_ws", "ws_alt", "httpupgrade_alt", "ws_early", "trojan_httpupgrade", "vmess_httpupgrade"}
     config = panel.make_xray_config()
     assert 10001 not in {i["port"] for i in config["inbounds"]}
     assert 10004 not in {i["port"] for i in config["inbounds"]}
@@ -371,16 +375,57 @@ def test_profile_settings_update_xray_and_subscription(client):
     info = client.get(f"/api/clients/{cid}/subscription").json()
     raw = client.get(info["url"].replace("https://testserver", "http://testserver"))
     links = base64.b64decode(raw.text).decode().splitlines()
-    assert len(links) == 9
+    assert len(links) == 12
     assert not any("#abysstunnel-Profile%20test-ws" in line for line in links)
     assert any("mode=packet-up" in line for line in links)
 
     rejected = client.patch(
         "/api/settings/profiles",
-        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ss_ws": False, "ws_alt": False, "httpupgrade_alt": False}},
+        json={"profiles": {"httpupgrade": False, "xhttp_auto": False, "xhttp_stream_up": False, "xhttp_stream_one": False, "trojan_ws": False, "vmess_ws": False, "ss_ws": False, "ws_alt": False, "httpupgrade_alt": False, "ws_early": False, "trojan_httpupgrade": False, "vmess_httpupgrade": False}},
         headers=headers,
     )
     assert rejected.status_code == 422
+
+
+def test_fixed_profiles_use_real_xhttp_modes_and_classic_shadowsocks(client):
+    admin_client(client)
+    config = panel.make_xray_config()
+    inbounds = {item["tag"]: item for item in config["inbounds"]}
+    assert inbounds["in-xhttp_stream_up"]["streamSettings"]["xhttpSettings"]["mode"] == "stream-up"
+    assert inbounds["in-xhttp_stream_one"]["streamSettings"]["xhttpSettings"]["mode"] == "stream-one"
+    ss = inbounds["in-ss_ws"]["settings"]
+    assert ss["method"] == "aes-128-gcm"
+    assert all(user["method"] == "aes-128-gcm" for user in ss["clients"])
+    assert inbounds["in-trojan_httpupgrade"]["streamSettings"]["network"] == "httpupgrade"
+    assert inbounds["in-vmess_httpupgrade"]["streamSettings"]["network"] == "httpupgrade"
+
+
+def test_assistant_and_subscription_profile_reports(client):
+    csrf = admin_client(client)
+    created = client.post("/api/clients", json={"name": "Carrier feedback"}, headers={"X-CSRF-Token": csrf})
+    assert created.status_code == 200
+    cid = created.json()["id"]
+    info = client.get(f"/api/clients/{cid}/subscription").json()
+    token = _token_from_url(info["url"])
+
+    page = client.get(info["url"].replace("https://testserver", "http://testserver"),
+                      headers={"Accept": "text/html", "User-Agent": "Mozilla/5.0 Chrome/130"})
+    assert page.status_code == 200
+    assert "دستیار سریع اتصال" in page.text
+
+    report = client.post(f"/sub/{token}/report", json={
+        "profile_key": "xhttp_stream_up", "carrier": "irancell", "result": "ok"
+    })
+    assert report.status_code == 200
+    assert report.json()["ok"] is True
+    report2 = client.post(f"/sub/{token}/report", json={
+        "profile_key": "xhttp_stream_up", "carrier": "irancell", "result": "ok"
+    })
+    assert report2.status_code == 200
+    assistant = client.get("/api/system/assistant")
+    assert assistant.status_code == 200
+    assert any(x["profile_key"] == "xhttp_stream_up" and x["carrier"] == "irancell"
+               for x in assistant.json()["recommendations"])
 
 
 def test_profile_settings_roll_back_if_xray_fails(client, monkeypatch):
