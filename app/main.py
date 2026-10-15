@@ -120,7 +120,7 @@ def get_clients(include_client_uuid=False, owner_id=None, scoped=False):
 def get_profile_flags():
     with db() as c:
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
-    return {p["key"]:saved.get("profile:"+p["key"],"1")=="1" for p in PROFILES}
+    return {p["key"]:saved.get("profile:"+p["key"],"0" if p.get("experimental") else "1")=="1" for p in PROFILES}
 
 def get_ss2022_server_password():
     with db() as c:
