@@ -751,15 +751,17 @@ async def update_client(cid:str,r:Request):
             parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
             if allocated+children+new_quota>int(parent["quota_bytes"]): raise HTTPException(422,"Updated quota exceeds your remaining allocation")
         c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))  # nosec B608: keys originate only from the explicit allowed-field mapping above
-    if "enabled" in updates and updates["enabled"] != previous["enabled"]:
+    if ("enabled" in updates and updates["enabled"] != previous["enabled"]) or "profile_keys" in updates:
         try:
             await start_xray()
         except Exception as e:
-            with db() as c: c.execute("UPDATE clients SET enabled=? WHERE id=?",(previous["enabled"],cid))
+            rollback={key:previous[key] for key in ("enabled","profile_keys") if key in updates}
+            if rollback:
+                with db() as c: c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in rollback)+" WHERE id=?",(*rollback.values(),cid))
             try: await start_xray()
             except Exception as restore_error: event("ERROR",f"Xray recovery after failed client update also failed: {restore_error}")
             event("ERROR",f"Client update rolled back because Xray update failed: {e}")
-            raise HTTPException(503,"Client status was not changed because Xray could not apply the configuration")
+            raise HTTPException(503,"Client settings were not changed because Xray could not apply the configuration")
     event("INFO",f"Updated client {cid[:8]}."); return {"ok":True}
 
 @app.post("/api/clients/{cid}/reset-usage")
