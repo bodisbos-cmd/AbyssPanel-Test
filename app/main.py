@@ -862,7 +862,21 @@ def active_subscription_client(token):
     with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=? AND enabled=1",(token,)).fetchone()
     if not client or not client_is_active(dict(client)):
         raise HTTPException(404,"Subscription not found, expired, or disabled")
-    return dict(client)
+    client=dict(client)
+    if MARZBAN_BACKEND_ENABLED:
+        try:
+            remote=marzban_backend().get_user(username_for_client(client["id"]))
+        except Exception as exc:
+            raise HTTPException(503,"Marzban subscription service is temporarily unavailable") from exc
+        if not remote.get("enabled"):
+            raise HTTPException(404,"Subscription not found, expired, or disabled")
+        client["used_bytes"]=remote["used_bytes"]
+        client["quota_bytes"]=remote["quota_bytes"]
+        client["expires_at"]=remote["expires_at"]
+        with db() as c:
+            c.execute("UPDATE clients SET used_bytes=?,quota_bytes=?,expires_at=? WHERE id=?",
+                (client["used_bytes"],client["quota_bytes"],client["expires_at"],client["id"]))
+    return client
 
 def make_subscription_links(client, r):
     if MARZBAN_BACKEND_ENABLED:
@@ -1202,6 +1216,12 @@ async def delete_reseller(rid:str,r:Request):
 async def health():
     with db() as c:
         c.execute("SELECT 1").fetchone()
+    if MARZBAN_BACKEND_ENABLED:
+        try:
+            info=marzban_backend().health()
+            return JSONResponse({"ok":True,"backend":"marzban","connected":True,"system":info.get("system",{})})
+        except Exception:
+            return JSONResponse({"ok":False,"backend":"marzban","connected":False},status_code=503)
     # If Xray is part of this image, a healthy HTTP process alone is not
     # sufficient: report unhealthy until the actual tunnel engine is running.
     xray_required=Path(XRAY_BIN).exists()
