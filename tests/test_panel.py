@@ -71,8 +71,12 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="abyss-theme-system"' in response.text
     assert 'id="abyss-theme-polish"' in response.text
     assert 'id="abyss-theme-controller"' in response.text
-    assert 'سلطنتی · مشکی و طلایی' in response.text
-    assert 'سپید · فرشته‌گون' in response.text
+    assert 'Abyss · مشکی و خاکستری' in response.text
+    assert 'Angel · سفید و طلایی کمرنگ' in response.text
+    assert 'Graphite · خاکستری ساده' in response.text
+    assert 'id="abyssParticleCanvas"' in response.text
+    assert 'ستاره دادن' in response.text
+    assert 'سازنده · Abyss Tunnel' in response.text
     assert 'id="sidebar"' in response.text
     assert 'data-section-page="clients"' in response.text
     assert 'id="metricsCard"' in response.text
