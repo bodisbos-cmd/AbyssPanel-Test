@@ -272,12 +272,13 @@ def test_experimental_xhttp_profiles_are_opt_in(client):
     csrf = admin_client(client)
     headers = {"X-CSRF-Token": csrf}
     settings = client.get("/api/settings").json()["profiles"]
-    experimental = {p["key"] for p in settings if p.get("experimental")}
+    experimental = {p["key"] for p in panel.PROFILES if p.get("experimental")}
     assert experimental == {
         "xhttp_stream_up", "xhttp_stream_one",
         "xhttp_stream_up_alt", "xhttp_stream_one_alt",
     }
-    assert all(not p["enabled"] for p in settings if p["key"] in experimental)
+    settings_by_key = {p["key"]: p for p in settings}
+    assert all(not settings_by_key[key]["enabled"] for key in experimental)
 
     response = client.patch(
         "/api/settings/profiles",
