@@ -162,8 +162,8 @@ class MarzbanBackend:
                 raise ValueError("duration_days must be an integer from 1 to 3650")
             payload["expire"] = int(datetime.now(timezone.utc).timestamp()) + duration_days * 86400
         if quota_gb is not None:
-            if isinstance(quota_gb, bool) or not isinstance(quota_gb, (int, float)) or not 1 <= quota_gb <= 100000:
-                raise ValueError("quota_gb must be between 1 and 100000")
+            if isinstance(quota_gb, bool) or not isinstance(quota_gb, (int, float)) or not 0 <= quota_gb <= 100000 or (0 < quota_gb < 1):
+                raise ValueError("quota_gb must be 0 (unlimited) or between 1 and 100000")
             payload["data_limit"] = int(float(quota_gb) * _GB)
         if note is not None:
             payload["note"] = note
