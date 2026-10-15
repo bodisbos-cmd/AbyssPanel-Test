@@ -777,3 +777,30 @@ def test_invalid_expiry_metadata_fails_closed():
     assert panel.client_is_expired("not-a-timestamp")
     assert not panel.client_is_expired(None)
 
+
+
+def test_client_can_select_multiple_profiles_and_xray_respects_selection(client):
+    csrf = admin_client(client)
+    response = client.post(
+        "/api/clients",
+        json={"name": "Profile selection", "profiles": ["ws", "httpupgrade"]},
+        headers={"X-CSRF-Token": csrf},
+    )
+    assert response.status_code == 200, response.text
+    client_id = response.json()["id"]
+    rows = {item["tag"]: item for item in panel.make_xray_config()["inbounds"]}
+    ws_clients = rows["in-ws"]["settings"]["clients"]
+    upgrade_clients = rows["in-httpupgrade"]["settings"]["clients"]
+    xhttp_clients = rows["in-xhttp_auto"]["settings"]["clients"]
+    assert any(item["email"] == f"client-{client_id}" for item in ws_clients)
+    assert any(item["email"] == f"client-{client_id}" for item in upgrade_clients)
+    assert not any(item["email"] == f"client-{client_id}" for item in xhttp_clients)
+
+
+def test_client_profile_selection_rejects_empty_or_unknown_profiles(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    empty = client.post("/api/clients", json={"name": "No profiles", "profiles": []}, headers=headers)
+    unknown = client.post("/api/clients", json={"name": "Bad profile", "profiles": ["not-a-profile"]}, headers=headers)
+    assert empty.status_code == 422
+    assert unknown.status_code == 422
