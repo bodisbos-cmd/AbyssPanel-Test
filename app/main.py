@@ -137,6 +137,26 @@ def get_profile_flags():
         saved={row["key"]:row["value"] for row in c.execute("SELECT key,value FROM settings WHERE key LIKE 'profile:%'")}
     return {p["key"]:saved.get("profile:"+p["key"],"1")=="1" for p in PROFILES}
 
+def sync_marzban_shadow():
+    """Refresh local display metadata only for users explicitly owned by AbyssPanel."""
+    if not MARZBAN_BACKEND_ENABLED:
+        return
+    try:
+        users=marzban_backend().list_users()
+        with db() as c:
+            for user in users:
+                cid=user.get("id")
+                if not isinstance(cid,str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}",cid):
+                    continue
+                row=c.execute("SELECT id FROM clients WHERE id=?",(cid,)).fetchone()
+                if not row:
+                    continue
+                c.execute("UPDATE clients SET enabled=?,used_bytes=?,quota_bytes=?,expires_at=?,name=?,note=? WHERE id=?",
+                    (int(bool(user.get("enabled"))),int(user.get("used_bytes") or 0),user.get("quota_bytes"),
+                     user.get("expires_at"),str(user.get("name") or cid)[:100],str(user.get("note") or "")[:300],cid))
+    except Exception as exc:
+        event("WARNING",f"Marzban display sync failed: {type(exc).__name__}")
+
 def get_ss2022_server_password():
     with db() as c:
         row=c.execute("SELECT value FROM settings WHERE key='ss2022_server_password'").fetchone()
@@ -645,7 +665,9 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
 async def logout(r:Request): r.session.clear(); return RedirectResponse("/login",303)
 @app.get("/api/overview")
 async def overview(r:Request):
-    require_admin(r); owner=owner_id_for(r)
+    require_admin(r)
+    if MARZBAN_BACKEND_ENABLED: sync_marzban_shadow()
+    owner=owner_id_for(r)
     with db() as c:
         if owner is None:
             total=c.execute("SELECT COUNT(*) n FROM clients").fetchone()["n"]; active=c.execute("SELECT COUNT(*) n FROM clients WHERE enabled=1").fetchone()["n"]
