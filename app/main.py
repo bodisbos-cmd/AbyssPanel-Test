@@ -328,6 +328,9 @@ async def lifespan(app):
         try: await start_xray()
         except Exception as e: event("ERROR",f"Xray startup failed: {e}")
     task=asyncio.create_task(monitor()); yield; task.cancel()
+    if _MARZBAN_BACKEND_INSTANCE is not None:
+        try: _MARZBAN_BACKEND_INSTANCE.close()
+        except Exception: pass
     if xray_proc and xray_proc.poll() is None: xray_proc.terminate()
 app=FastAPI(title=APP_NAME,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
 sf=DATA_DIR/".session_secret"
