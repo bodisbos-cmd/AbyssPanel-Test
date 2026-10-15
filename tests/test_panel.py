@@ -61,13 +61,15 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     login_page = client.get("/login")
     assert 'id="abyss-theme-system"' in login_page.text
     assert 'id="abyss-theme-polish"' in login_page.text
+    assert 'id="abyss-layout-repair"' in login_page.text
+    assert 'class="login-layout"' in login_page.text
     assert 'id="abyss-theme-controller"' in login_page.text
     assert 'data-abyss-theme="angel"' in login_page.text
     admin_client(client)
     response = client.get("/")
     assert response.status_code == 200
     assert "no-store" in response.headers.get("cache-control", "")
-    assert '/dashboard.js?v=20261014-ui3' in response.text
+    assert '/dashboard.js?v=20261016-layoutfix1' in response.text
     assert 'id="abyss-theme-system"' in response.text
     assert 'id="abyss-theme-polish"' in response.text
     assert 'id="abyss-theme-controller"' in response.text
@@ -78,6 +80,9 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'ستاره دادن' in response.text
     assert 'سازنده · Abyss Tunnel' in response.text
     assert 'id="sidebar"' in response.text
+    assert 'id="menuToggle"' in response.text
+    assert 'id="abyss-layout-repair"' in response.text
+    assert 'id="abyss-layout-repair-js"' in response.text
     assert 'data-section-page="clients"' in response.text
     assert 'id="metricsCard"' in response.text
     assert 'id="adminUsersCard"' in response.text
