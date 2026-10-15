@@ -818,6 +818,14 @@ async def reset_client_usage(cid:str,r:Request):
     with db() as c:
         row=c.execute("SELECT name FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
+    if MARZBAN_BACKEND_ENABLED:
+        try:
+            marzban_backend().reset_user_traffic(username_for_client(cid))
+        except Exception as e:
+            raise HTTPException(503,"Marzban could not reset this client's traffic") from e
+        with db() as c: c.execute("UPDATE clients SET used_bytes=0 WHERE id=?",(cid,))
+        event("INFO",f"Reset Marzban usage for client {row['name']!r} ({cid[:8]}).")
+        return {"ok":True}
     if Path(XRAY_BIN).exists() and xray_proc and xray_proc.poll() is None:
         try: apply_xray_stats(read_xray_stats())
         except Exception as e: raise HTTPException(503,"Could not synchronize live usage before resetting it") from e
