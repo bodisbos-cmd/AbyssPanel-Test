@@ -11,8 +11,23 @@ from qrcode.image.svg import SvgPathImage
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
+from .marzban_client import MarzbanError
+from .marzban_backend import MarzbanBackend, username_for_client
 
 APP_NAME="AbyssPanel-Test"
+MARZBAN_BACKEND_ENABLED=os.getenv("MARZBAN_BACKEND","0").strip().lower() in {"1","true","yes"}
+_MARZBAN_BACKEND_INSTANCE=None
+
+def marzban_backend():
+    global _MARZBAN_BACKEND_INSTANCE
+    if not MARZBAN_BACKEND_ENABLED:
+        raise RuntimeError("Marzban backend mode is disabled")
+    if _MARZBAN_BACKEND_INSTANCE is None:
+        try:
+            _MARZBAN_BACKEND_INSTANCE=MarzbanBackend.from_env()
+        except (ValueError,TypeError) as exc:
+            raise MarzbanError("Marzban backend configuration is incomplete") from exc
+    return _MARZBAN_BACKEND_INSTANCE
 PROFILES=[
     {"key":"ws","label":"WebSocket","network":"ws","path":"/ws","port":10001,"mode":None},
     {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
@@ -268,16 +283,24 @@ async def enforce_client_limits():
 async def monitor():
     while True:
         await asyncio.sleep(10)
-        if Path(XRAY_BIN).exists() and (xray_proc is None or xray_proc.poll() is not None):
+        if not MARZBAN_BACKEND_ENABLED and Path(XRAY_BIN).exists() and (xray_proc is None or xray_proc.poll() is not None):
             try: event("WARNING","Restarting stopped Xray process."); await start_xray()
             except Exception as e: event("ERROR",f"Xray recovery failed: {e}")
-        try: await enforce_client_limits()
-        except Exception as e: event("ERROR",f"Client usage/expiry monitor failed: {e}")
+        if not MARZBAN_BACKEND_ENABLED:
+            try: await enforce_client_limits()
+            except Exception as e: event("ERROR",f"Client usage/expiry monitor failed: {e}")
 @asynccontextmanager
 async def lifespan(app):
     init_db()
-    try: await start_xray()
-    except Exception as e: event("ERROR",f"Xray startup failed: {e}")
+    if MARZBAN_BACKEND_ENABLED:
+        try:
+            marzban_backend().health()
+            event("INFO","Marzban backend connection verified.")
+        except Exception as e:
+            event("ERROR",f"Marzban backend connection failed: {e}")
+    else:
+        try: await start_xray()
+        except Exception as e: event("ERROR",f"Xray startup failed: {e}")
     task=asyncio.create_task(monitor()); yield; task.cancel()
     if xray_proc and xray_proc.poll() is None: xray_proc.terminate()
 app=FastAPI(title=APP_NAME,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
