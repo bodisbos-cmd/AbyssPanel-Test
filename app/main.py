@@ -77,34 +77,26 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at DESC);
         """)
         if not c.execute("SELECT id FROM admins WHERE id=1").fetchone():
-            # Generate a unique first-login credential; never ship admin/admin defaults.
-            pw=os.getenv("ABYSS_INITIAL_ADMIN_PASSWORD","admin").strip() or "admin"
+            # Production installs get a unique random credential; deterministic admin/admin is test-only.
+            configured=os.getenv("ABYSS_INITIAL_ADMIN_PASSWORD","").strip()
+            pw=configured or ("admin" if os.getenv("ABYSS_TEST_MODE")=="1" else secrets.token_urlsafe(24))
             changed=utc_now()
             c.execute("INSERT INTO admins VALUES(1,?,?)",(password_hash(pw),changed))
             p=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"; p.write_text(f"Username: admin\nPassword: {pw}\n",encoding="utf-8")
             try: p.chmod(0o600)
             except OSError: pass
-            LOG.warning("INITIAL ADMIN CREDENTIAL username=admin password=%s; change immediately in Settings",pw)
+            LOG.warning("Initial administrator credential saved to %s; change it after signing in",p)
         # Migrate the existing single-admin credential without changing its password.
         legacy=c.execute("SELECT password_hash,password_changed_at FROM admins WHERE id=1").fetchone()
         if legacy and not c.execute("SELECT id FROM panel_admins WHERE username='admin'").fetchone():
             c.execute("INSERT INTO panel_admins(id,username,password_hash,role,enabled,created_at,password_changed_at) VALUES(?,?,?,?,1,?,?)",
                 ("owner-admin","admin",legacy["password_hash"],"owner",legacy["password_changed_at"],legacy["password_changed_at"]))
-        # If the initial credential file still exists, the owner has not changed
-        # the first-login password through the panel yet. Normalize old random
-        # bootstrap passwords to the requested default exactly once.
+        # The bootstrap file is a one-time recovery record only. Never reset a
+        # password on restart: that silently undoes legitimate password changes.
         initial_file=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"
         if initial_file.exists():
-            initial_password=os.getenv("ABYSS_INITIAL_ADMIN_PASSWORD","admin").strip() or "admin"
-            owner=c.execute("SELECT id,password_hash FROM panel_admins WHERE username='admin'").fetchone()
-            if owner and not verify_password(initial_password,owner["password_hash"]):
-                changed=utc_now()
-                hashed=password_hash(initial_password)
-                c.execute("UPDATE admins SET password_hash=?,password_changed_at=? WHERE id=1",(hashed,changed))
-                c.execute("UPDATE panel_admins SET password_hash=?,password_changed_at=? WHERE id=?",(hashed,changed,owner["id"]))
-                initial_file.write_text(f"Username: admin\nPassword: {initial_password}\n",encoding="utf-8")
-                try: initial_file.chmod(0o600)
-                except OSError: pass
+            try: initial_file.chmod(0o600)
+            except OSError: pass
         # Safe in-place migration for persistent databases created by older releases.
         cols={row["name"] for row in c.execute("PRAGMA table_info(clients)")}
         for name, declaration in (("expires_at","TEXT"),("quota_bytes","INTEGER"),("used_bytes","INTEGER NOT NULL DEFAULT 0"),("profile_keys","TEXT")):
