@@ -804,3 +804,27 @@ def test_client_profile_selection_rejects_empty_or_unknown_profiles(client):
     unknown = client.post("/api/clients", json={"name": "Bad profile", "profiles": ["not-a-profile"]}, headers=headers)
     assert empty.status_code == 422
     assert unknown.status_code == 422
+
+
+
+def test_bootstrap_file_never_resets_a_changed_admin_password(client, tmp_path):
+    # A bootstrap file may remain on the persistent volume after the owner changes
+    # the password. A process restart must not restore the original credential.
+    with panel.db() as conn:
+        changed_at = panel.utc_now()
+        changed_hash = panel.password_hash("changed-password")
+        conn.execute(
+            "UPDATE panel_admins SET password_hash=?,password_changed_at=? WHERE username='admin'",
+            (changed_hash, changed_at),
+        )
+        conn.execute(
+            "UPDATE admins SET password_hash=?,password_changed_at=? WHERE id=1",
+            (changed_hash, changed_at),
+        )
+    panel.init_db()
+    with panel.db() as conn:
+        owner = conn.execute(
+            "SELECT password_hash FROM panel_admins WHERE username='admin'"
+        ).fetchone()
+    assert panel.verify_password("changed-password", owner["password_hash"])
+    assert not panel.verify_password("admin", owner["password_hash"])
