@@ -750,6 +750,8 @@ async def update_client(cid:str,r:Request):
     if "note" in b and (not isinstance(b["note"],str) or len(b["note"])>300): raise HTTPException(422,"Note must be at most 300 characters")
     if "duration_days" in b and b["duration_days"] is not None and (not isinstance(b["duration_days"],(int,float)) or isinstance(b["duration_days"],bool) or not float(b["duration_days"]).is_integer() or not 1<=b["duration_days"]<=3650): raise HTTPException(422,"duration_days must be a whole number from 1 to 3650, or null")
     if "quota_gb" in b and b["quota_gb"] is not None and (not isinstance(b["quota_gb"],(int,float)) or isinstance(b["quota_gb"],bool) or not 1<=b["quota_gb"]<=100000): raise HTTPException(422,"quota_gb must be 1–100000, or null")
+    if MARZBAN_BACKEND_ENABLED and "profiles" in b:
+        raise HTTPException(422,"Per-profile selection is managed by the configured Marzban inbounds")
     if "profiles" in b:
         known_profiles={p["key"] for p in PROFILES}; selected=b["profiles"]
         if not isinstance(selected,list) or not selected or any(not isinstance(k,str) or k not in known_profiles for k in selected) or len(set(selected))!=len(selected):
@@ -779,7 +781,25 @@ async def update_client(cid:str,r:Request):
             parent=c.execute("SELECT quota_bytes FROM resellers WHERE id=?",(owner,)).fetchone()
             if allocated+children+new_quota>int(parent["quota_bytes"]): raise HTTPException(422,"Updated quota exceeds your remaining allocation")
         c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in updates)+" WHERE id=?",(*updates.values(),cid))  # nosec B608: keys originate only from the explicit allowed-field mapping above
-    if ("enabled" in updates and updates["enabled"] != previous["enabled"]) or "profile_keys" in updates:
+    if MARZBAN_BACKEND_ENABLED:
+        remote_changes={}
+        if "enabled" in updates: remote_changes["enabled"]=bool(updates["enabled"])
+        if "expires_at" in updates: remote_changes["duration_days"]=int(b["duration_days"]) if b["duration_days"] is not None else 0
+        if "quota_bytes" in updates: remote_changes["quota_gb"]=float(b["quota_gb"]) if b["quota_gb"] is not None else 0
+        if "name" in updates or "note" in updates:
+            remote_name=updates.get("name",previous["name"])
+            remote_note=updates.get("note",previous["note"])
+            remote_changes["note"]=f"[AbyssPanel:{cid}] {remote_name}"+(f" | {remote_note}" if remote_note else "")
+        try:
+            if remote_changes:
+                marzban_backend().update_user(username_for_client(cid),**remote_changes)
+        except Exception as e:
+            with db() as c:
+                c.execute("UPDATE clients SET name=?,note=?,enabled=?,expires_at=?,quota_bytes=?,used_bytes=?,profile_keys=? WHERE id=?",
+                    (previous["name"],previous["note"],previous["enabled"],previous["expires_at"],previous["quota_bytes"],previous["used_bytes"],previous["profile_keys"],cid))
+            if isinstance(e,MarzbanError): raise HTTPException(503,"Marzban could not update this client") from e
+            raise HTTPException(503,"Client update failed; local changes were rolled back") from e
+    elif ("enabled" in updates and updates["enabled"] != previous["enabled"]) or "profile_keys" in updates:
         try:
             await start_xray()
         except Exception as e:
