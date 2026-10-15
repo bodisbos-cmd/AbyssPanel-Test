@@ -139,3 +139,6 @@ class MarzbanClient:
         if not isinstance(value, str) or not value:
             raise MarzbanError("Marzban user has no subscription URL")
         return value
+
+    def reset_user_traffic(self, username: str) -> Any:
+        return self.request("POST", f"/api/user/{username}/reset")
