@@ -1265,8 +1265,8 @@ async def health():
         c.execute("SELECT 1").fetchone()
     if MARZBAN_BACKEND_ENABLED:
         try:
-            info=marzban_backend().health()
-            return JSONResponse({"ok":True,"backend":"marzban","connected":True,"system":info.get("system",{})})
+            marzban_backend().health()
+            return JSONResponse({"ok":True,"backend":"marzban","connected":True})
         except Exception:
             return JSONResponse({"ok":False,"backend":"marzban","connected":False},status_code=503)
     # If Xray is part of this image, a healthy HTTP process alone is not
