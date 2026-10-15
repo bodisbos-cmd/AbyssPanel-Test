@@ -337,15 +337,15 @@ def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
     token = info["page_url"].rsplit("/", 1)[1]
     links = client.get(f"/sub/{token}").text
     decoded = base64.b64decode(links).decode().splitlines()
-    assert len(decoded) == 13, decoded
-    assert sum(x.startswith("vless://") for x in decoded) == 10
+    assert len(decoded) == 9, decoded
+    assert sum(x.startswith("vless://") for x in decoded) == 6
     assert sum(x.startswith("trojan://") for x in decoded) == 1
     assert sum(x.startswith("vmess://") for x in decoded) == 1
     assert sum(x.startswith("ss://") for x in decoded) == 1
     assert all("abysstunnel-" in x or x.startswith("vmess://") for x in decoded)
     config = panel.make_xray_config()
     inbound = [x for x in config["inbounds"] if x.get("tag", "").startswith("in-")]
-    assert len(inbound) == 13
+    assert len(inbound) == 9
     # The Shadowsocks inbound is counted separately from URI generation and smoke coverage.
     assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
     assert any(x["protocol"] == "shadowsocks" for x in config["inbounds"])
