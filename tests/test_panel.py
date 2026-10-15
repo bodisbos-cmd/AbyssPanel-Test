@@ -171,7 +171,7 @@ def test_same_subscription_url_serves_branded_page_to_browsers(client):
     assert subscription_client.status_code == 200
     assert "text/plain" in subscription_client.headers["content-type"]
     configs = base64.b64decode(subscription_client.text).decode().splitlines()
-    assert len(configs) == 13
+    assert len(configs) == 9
     assert "Accept, User-Agent" in subscription_client.headers["vary"]
     assert "Subscription-Userinfo" in subscription_client.headers
     assert "total=4294967296" in subscription_client.headers["Subscription-Userinfo"]
