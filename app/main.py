@@ -778,6 +778,10 @@ html[data-abyss-theme="angel"] .login-visual p,html[data-abyss-theme="paper"] .l
  .login-layout>.card{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
  .workspace .card:hover,.workspace button:hover{transform:none!important}
 }
+/* Low-contrast marble atmosphere: soft smoke veins, never a blue/navy wash. */
+body:after{opacity:.105!important;mix-blend-mode:screen;background-image:radial-gradient(ellipse at 13% 21%,rgba(195,197,204,.075),transparent 27%),radial-gradient(ellipse at 78% 18%,rgba(145,148,155,.055),transparent 24%),radial-gradient(ellipse at 63% 77%,rgba(168,170,177,.05),transparent 31%),radial-gradient(ellipse at 26% 83%,rgba(130,132,139,.038),transparent 25%),repeating-linear-gradient(137deg,transparent 0 96px,rgba(214,216,221,.015) 97px,transparent 100px 181px);background-size:100% 100%}
+.login-visual:before{content:""!important;position:absolute!important;inset:-8%!important;z-index:0!important;pointer-events:none!important;opacity:.88!important;background:radial-gradient(ellipse at 14% 30%,rgba(186,189,196,.09),transparent 34%),radial-gradient(ellipse at 83% 63%,rgba(126,128,136,.065),transparent 32%),radial-gradient(ellipse at 52% 46%,rgba(130,132,139,.035),transparent 42%),linear-gradient(127deg,transparent 0 21%,rgba(220,222,227,.055) 21.1%,transparent 21.45% 48%,rgba(190,192,199,.035) 48.1%,transparent 48.45% 72%,rgba(225,226,230,.035) 72.1%,transparent 72.35%),linear-gradient(163deg,transparent 0 37%,rgba(200,202,208,.035) 37.1%,transparent 37.4% 69%,rgba(170,172,180,.035) 69.1%,transparent 69.4%);background-size:100% 100%;animation:abyssStreakDrift 34s ease-in-out infinite alternate!important}
+.login-visual .visual-orbit{z-index:1!important}
 @media(prefers-reduced-motion:reduce){body:before{animation:none!important}#abyssParticleCanvas{display:none!important}*,*:before,*:after{transition:none!important;animation:none!important}}
 </style>"""
 ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
