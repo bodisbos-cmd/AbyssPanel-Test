@@ -7,7 +7,7 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 ## Features
 
 - Responsive dark dashboard with Persian (RTL) and English language support.
-- Unique random initial administrator password on production fresh installs. It is written to `/data/INITIAL_ADMIN_PASSWORD.txt` with restrictive permissions; startup logs reveal only the file path, never the password. Existing database credentials and later password changes are preserved across restarts.
+- First login on a fresh install uses username `admin` and password `admin`, as requested. Change the password immediately after signing in. The bootstrap record is stored in `/data/INITIAL_ADMIN_PASSWORD.txt` with restrictive permissions; logs never print the password, and restarts preserve any password change.
 - Signed HTTP-only session cookie, CSRF protection on mutations, login throttling, security headers, and scrypt password hashing.
 - SQLite database in `/data` for persistent Railway Volume storage.
 - Create, edit, pause/enable, revoke, and reset recorded usage for clients.
