@@ -67,3 +67,27 @@ def test_map_user_normalizes_usage_expiry_and_status():
 def test_map_user_rejects_malformed_response():
     with pytest.raises(Exception, match="invalid username"):
         map_user({"username": "../admin"})
+
+
+def test_selected_profiles_resolve_only_explicit_mapped_inbounds(monkeypatch):
+    monkeypatch.setenv("MARZBAN_INBOUNDS_JSON", json.dumps({
+        "vless": ["VLESS WS", "VLESS XHTTP"],
+        "vmess": ["VMess WS"],
+    }))
+    monkeypatch.setenv("MARZBAN_PROFILE_INBOUNDS_JSON", json.dumps({
+        "ws": {"vless": ["VLESS WS"]},
+        "xhttp_auto": {"vless": ["VLESS XHTTP"]},
+    }))
+    payload = create_payload(
+        client_id="b7f31a2a-82f9-4fca-93a2-2b7e47a61f2b",
+        name="test", selected_profiles=["ws", "xhttp_auto"],
+    )
+    assert payload["inbounds"] == {"vless": ["VLESS WS", "VLESS XHTTP"]}
+    assert payload["proxies"] == {"vless": {}}
+
+
+def test_selected_profile_without_mapping_fails_closed(monkeypatch):
+    monkeypatch.setenv("MARZBAN_INBOUNDS_JSON", json.dumps({"vless": ["VLESS WS"]}))
+    monkeypatch.delenv("MARZBAN_PROFILE_INBOUNDS_JSON", raising=False)
+    with pytest.raises(Exception, match="MARZBAN_PROFILE_INBOUNDS_JSON"):
+        create_payload(client_id="abc", name="test", selected_profiles=["ws"])
