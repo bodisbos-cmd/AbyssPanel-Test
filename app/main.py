@@ -11,8 +11,8 @@ from qrcode.image.svg import SvgPathImage
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
-from .marzban_client import MarzbanError
-from .marzban_backend import MarzbanBackend, username_for_client
+from app.marzban_client import MarzbanError
+from app.marzban_backend import MarzbanBackend, username_for_client
 
 APP_NAME="AbyssPanel-Test"
 MARZBAN_BACKEND_ENABLED=os.getenv("MARZBAN_BACKEND","0").strip().lower() in {"1","true","yes"}
