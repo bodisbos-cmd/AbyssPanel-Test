@@ -77,7 +77,7 @@ def map_user(user: dict[str, Any], *, local_id: str | None = None) -> dict[str, 
     if not isinstance(username, str) or not _USERNAME_RE.fullmatch(username):
         raise MarzbanError("Marzban returned an invalid username")
     note = user.get("note") or ""
-    match = re.search(r"\[AbyssPanel:([0-9a-fA-F-]{8,64})\]", note)
+    match = re.search(r"\[AbyssPanel:([A-Za-z0-9_-]{1,64})\]", note)
     client_id = local_id or (match.group(1) if match else username)
     expiry = user.get("expire")
     expires_at = None
