@@ -831,14 +831,22 @@ async def delete_client(cid:str,r:Request):
         row=c.execute("SELECT * FROM clients WHERE id=?",(cid,)).fetchone()
         if not row: raise HTTPException(404,"Client not found")
         previous=dict(row)
-        c.execute("DELETE FROM clients WHERE id=?",(cid,))
+    if MARZBAN_BACKEND_ENABLED:
+        try:
+            marzban_backend().delete_user(username_for_client(cid))
+        except Exception as e:
+            if isinstance(e,MarzbanError): raise HTTPException(503,"Marzban could not revoke this client") from e
+            raise HTTPException(503,"Client was not revoked because Marzban is unavailable") from e
+    with db() as c: c.execute("DELETE FROM clients WHERE id=?",(cid,))
     try:
-        await start_xray()
+        if not MARZBAN_BACKEND_ENABLED:
+            await start_xray()
     except Exception as e:
         with db() as c:
             c.execute("INSERT OR REPLACE INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
                       (previous["id"],previous["name"],previous["client_uuid"],previous["sub_token"],previous["enabled"],previous["created_at"],previous["note"],previous["expires_at"],previous["quota_bytes"],previous["used_bytes"],previous.get("owner_id")))
-        try: await start_xray()
+        try:
+            if not MARZBAN_BACKEND_ENABLED: await start_xray()
         except Exception as restore_error: event("ERROR",f"Xray recovery after failed client revocation also failed: {restore_error}")
         event("ERROR",f"Client revocation rolled back because Xray update failed: {e}")
         raise HTTPException(503,"Client was not revoked because Xray could not apply the configuration")
