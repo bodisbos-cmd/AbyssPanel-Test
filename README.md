@@ -4,6 +4,32 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 
 > **Status:** test-stage build, not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
 
+## Marzban backend mode (migration branch)
+
+The `migration/marzban-backend` branch contains an optional Marzban API backend. The default remains the existing local Xray backend unless `MARZBAN_BACKEND=1` is explicitly set.
+
+Configure these Railway variables before enabling it:
+
+- `MARZBAN_BASE_URL`: HTTPS base URL of a Marzban instance whose API is reachable from Railway.
+- `MARZBAN_ADMIN_USERNAME` and `MARZBAN_ADMIN_PASSWORD`: a dedicated Marzban admin account with permission to manage users. Do not use credentials from an account that does not expose the API.
+- `MARZBAN_INBOUNDS_JSON`: JSON mapping of protocol names to the exact existing Marzban inbound tags, for example `{"vless":["VLESS WS"],"vmess":["VMess WS"]}`. Use real tags from the target instance; the panel does not invent or create inbounds.
+- `MARZBAN_TIMEOUT_SECONDS` (optional): API request timeout, default 12 seconds.
+
+Example:
+
+```env
+MARZBAN_BACKEND=1
+MARZBAN_BASE_URL=https://marzban.example.com
+MARZBAN_ADMIN_USERNAME=abyss-api
+MARZBAN_ADMIN_PASSWORD=replace-with-a-unique-secret
+MARZBAN_TIMEOUT_SECONDS=12
+MARZBAN_INBOUNDS_JSON={"vless":["VLESS WS"]}
+```
+
+When enabled, Abyss routes user creation, updates, deletion, usage reset, and subscription link delivery through Marzban. Local SQLite retains Abyss-specific display metadata and reseller allocation records; Marzban remains authoritative for live traffic, expiry, and connection links. The existing branded subscription page wraps the links returned by Marzban. The per-profile toggles for the local Xray generator are not used in this mode; configure supported protocols and inbound tags in Marzban instead.
+
+Do not enable this mode against a production panel until the target Marzban API credentials, inbound tags, subscription URL reachability, and create/update/disable/delete/traffic-reset flows have been smoke-tested. The repository CI can test the adapter with mocked API responses, but cannot validate a private Marzban instance or real client connectivity.
+
 ## Features
 
 - Responsive dark dashboard with Persian (RTL) and English language support.
