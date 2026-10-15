@@ -1,11 +1,22 @@
 #!/bin/sh
 set -eu
 
+# Allow more simultaneous sockets where the Railway container limit permits it.
+# Never fail startup solely because the platform caps the hard descriptor limit.
+ulimit -n 65535 2>/dev/null || ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
+
 # Railway mounts persistent volumes at runtime, so image-build ownership
 # alone is not sufficient. Fix the mount ownership before dropping privileges.
 mkdir -p /data /tmp/nginx-client-body /tmp/nginx-proxy /tmp/nginx-fastcgi /tmp/nginx-uwsgi /tmp/nginx-scgi
 chown -R abyss:abyss /data
 chown -R abyss:abyss /tmp/nginx-client-body /tmp/nginx-proxy /tmp/nginx-fastcgi /tmp/nginx-uwsgi /tmp/nginx-scgi
+
+# Fail early with a clear log if the persistent database volume is not writable.
+if ! touch /data/.abyss-write-test 2>/dev/null; then
+  echo "[startup] ERROR: /data is not writable; attach a Railway Volume at /data." >&2
+  exit 1
+fi
+rm -f /data/.abyss-write-test
 
 nginx -t
 nginx -g 'daemon off;' &
