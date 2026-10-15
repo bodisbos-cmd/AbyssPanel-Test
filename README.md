@@ -32,6 +32,8 @@ When enabled, Abyss routes user creation, updates, deletion, usage reset, and su
 
 Do not enable this mode against a production panel until the target Marzban API credentials, inbound tags, subscription URL reachability, and create/update/disable/delete/traffic-reset flows have been smoke-tested. The repository CI can test the adapter with mocked API responses, but cannot validate a private Marzban instance or real client connectivity.
 
+**Existing-client caution:** switching an existing Abyss SQLite volume from local Xray mode to Marzban does not automatically recreate legacy local clients in Marzban or transfer their historical traffic counters. Test first with an empty test volume, or migrate existing users deliberately before enabling the flag on a volume containing real clients.
+
 ## Features
 
 - Responsive dark dashboard with Persian (RTL) and English language support.
