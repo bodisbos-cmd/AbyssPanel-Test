@@ -570,8 +570,101 @@ html[data-abyss-theme="angel"] button.primary,html[data-abyss-theme="angel"] .bt
 @media(max-width:700px){:root{--ab-radius-xl:22px;--ab-radius-lg:18px}.card,.panel,.box,.hero,.extra-box,.metric,.profile,.app,.client,.client-card{padding:clamp(12px,3.5vw,18px)}button,.btn,a.button,.button-link{min-height:42px}.stats>.card:first-child,.stats>.card:nth-child(3){box-shadow:0 12px 30px rgba(0,0,0,.10),0 0 18px color-mix(in srgb,var(--ab-glow) 50%,transparent)!important}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}body{animation:none!important}*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 .diag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:12px}.diag-item{padding:13px;border:1px solid var(--ab-line);border-radius:15px;background:var(--ab-panel);min-width:0}.diag-item b{display:block;margin-bottom:7px;overflow-wrap:anywhere}.diag-ok{color:#8de8b0}.diag-bad{color:#ffb2b2}
+/* Reference-led finish: Abyss is true black/graphite; Angel is ivory with aged gold and silver. */
+html[data-abyss-theme="abyss"] body{
+ background-image:
+  linear-gradient(118deg,transparent 0 18%,rgba(190,194,202,.022) 18.1%,transparent 18.35% 56%,rgba(190,194,202,.028) 56.1%,transparent 56.4%),
+  linear-gradient(164deg,transparent 0 38%,rgba(255,255,255,.018) 38.1%,transparent 38.32% 76%,rgba(180,184,192,.02) 76.1%,transparent 76.35%),
+  radial-gradient(ellipse at 12% 10%,rgba(185,189,198,.055),transparent 34%),
+  radial-gradient(ellipse at 88% 78%,rgba(110,113,120,.045),transparent 38%),
+  linear-gradient(145deg,#030303,#09090a 58%,#040404)!important;
+ background-size:180% 180%;animation:abyssGlowDrift 42s ease-in-out infinite alternate!important
+}
+html[data-abyss-theme="abyss"] body:before{
+ opacity:.34!important;
+ background-image:linear-gradient(128deg,transparent 0 24%,rgba(190,194,202,.055) 24.08%,transparent 24.22% 68%,rgba(190,194,202,.04) 68.08%,transparent 68.24%),radial-gradient(ellipse at 82% 12%,rgba(210,213,220,.07),transparent 42%)!important
+}
+html[data-abyss-theme="abyss"] .card,
+html[data-abyss-theme="abyss"] .panel,
+html[data-abyss-theme="abyss"] .hero,
+html[data-abyss-theme="abyss"] .metric,
+html[data-abyss-theme="abyss"] .profile,
+html[data-abyss-theme="abyss"] .client,
+html[data-abyss-theme="abyss"] .sidebar{
+ border-color:rgba(174,178,187,.19)!important;
+ background:linear-gradient(145deg,rgba(20,20,22,.96),rgba(8,8,9,.97))!important;
+ box-shadow:0 20px 55px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.035)!important
+}
+html[data-abyss-theme="abyss"] .mint,
+html[data-abyss-theme="abyss"] .brand,
+html[data-abyss-theme="abyss"] .side-brand,
+html[data-abyss-theme="abyss"] .nav-item.active,
+html[data-abyss-theme="abyss"] .section-title,
+html[data-abyss-theme="abyss"] .profile-open{color:#d0d2d7!important}
+html[data-abyss-theme="abyss"] button.primary,
+html[data-abyss-theme="abyss"] .btn.primary,
+html[data-abyss-theme="abyss"] .button-link.primary{
+ color:#f0f0f2!important;border-color:rgba(196,199,205,.42)!important;
+ background:linear-gradient(145deg,rgba(225,227,232,.13),rgba(95,97,103,.08))!important
+}
+html[data-abyss-theme="abyss"] .nav-item.active{box-shadow:inset -3px 0 #c4c7cd,0 8px 24px rgba(0,0,0,.15)!important}
+html[data-abyss-theme="abyss"] .abyss-logo-mark:before{background:repeating-conic-gradient(from 0deg,rgba(213,216,222,.7) 0deg .55deg,transparent .7deg 3.2deg)}
+html[data-abyss-theme="angel"] body{
+ background-image:linear-gradient(122deg,transparent 0 20%,rgba(174,151,104,.045) 20.1%,transparent 20.3% 62%,rgba(172,179,193,.055) 62.1%,transparent 62.35%),radial-gradient(ellipse at 78% 5%,rgba(255,255,255,.98),transparent 44%),radial-gradient(ellipse at 12% 86%,rgba(209,214,225,.46),transparent 42%),linear-gradient(145deg,#faf9f5,#efede6 68%,#f8f7f2)!important
+}
+html[data-abyss-theme="angel"] body:before{
+ opacity:.4!important;background-image:linear-gradient(128deg,transparent 0 25%,rgba(170,146,99,.10) 25.08%,transparent 25.22% 70%,rgba(164,174,190,.12) 70.08%,transparent 70.24%),radial-gradient(ellipse at 76% 20%,rgba(255,255,255,.95),transparent 52%)!important
+}
+html[data-abyss-theme="angel"] .card,
+html[data-abyss-theme="angel"] .panel,
+html[data-abyss-theme="angel"] .hero,
+html[data-abyss-theme="angel"] .metric,
+html[data-abyss-theme="angel"] .profile,
+html[data-abyss-theme="angel"] .client,
+html[data-abyss-theme="angel"] .sidebar{
+ border-color:rgba(160,139,97,.24)!important;
+ background:linear-gradient(145deg,rgba(255,255,253,.98),rgba(247,245,238,.97))!important;
+ box-shadow:0 18px 48px rgba(91,83,65,.09),inset 0 1px 0 rgba(255,255,255,.94)!important
+}
+html[data-abyss-theme="angel"] .mint,
+html[data-abyss-theme="angel"] .brand,
+html[data-abyss-theme="angel"] .side-brand,
+html[data-abyss-theme="angel"] .nav-item.active,
+html[data-abyss-theme="angel"] .section-title,
+html[data-abyss-theme="angel"] .profile-open{color:#9d875d!important}
+html[data-abyss-theme="angel"] button.primary,
+html[data-abyss-theme="angel"] .btn.primary,
+html[data-abyss-theme="angel"] .button-link.primary{
+ color:#887249!important;border-color:rgba(164,141,95,.4)!important;
+ background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(228,218,193,.35))!important
+}
+html[data-abyss-theme="angel"] .nav-item.active{box-shadow:inset -3px 0 #b5a071,0 8px 24px rgba(100,90,67,.06)!important}
+html[data-abyss-theme="angel"] input,
+html[data-abyss-theme="angel"] select,
+html[data-abyss-theme="angel"] textarea,
+html[data-abyss-theme="angel"] .linkbox{background:rgba(255,255,252,.98)!important;border-color:rgba(160,139,97,.25)!important}
+html[data-abyss-theme="angel"] .abyss-logo-mark{background:radial-gradient(circle at center,#f6f4ed 0 27%,transparent 29%)}
+html[data-abyss-theme="angel"] .abyss-logo-mark:before{background:repeating-conic-gradient(from 0deg,rgba(166,144,100,.72) 0deg .55deg,transparent .7deg 3.2deg)}
+/* Login and subscription pages use the same theme tokens as the dashboard. */
+html[data-abyss-theme="abyss"] body:has(.login-brand) .card{
+ background:linear-gradient(150deg,rgba(19,19,21,.98),rgba(5,5,6,.98))!important;border-color:rgba(174,178,187,.22)!important
+}
+html[data-abyss-theme="abyss"] body:has(.login-brand) button{
+ color:#f0f0f2!important;background:linear-gradient(145deg,rgba(225,227,232,.14),rgba(95,97,103,.08))!important;border:1px solid rgba(196,199,205,.38)!important
+}
+html[data-abyss-theme="angel"] body:has(.login-brand) .card{
+ background:linear-gradient(150deg,rgba(255,255,253,.99),rgba(245,242,233,.98))!important;border-color:rgba(160,139,97,.25)!important
+}
+html[data-abyss-theme="angel"] body:has(.login-brand) button{
+ color:#887249!important;background:linear-gradient(145deg,#fff,#e8dfca)!important;border:1px solid rgba(164,141,95,.4)!important
+}
+@media(max-width:700px){
+ body{animation:none!important;background-size:100% 100%!important}
+ #abyssParticleCanvas{opacity:.2!important}
+ .card,.panel,.hero,.metric,.profile,.client{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
 </style>"""
-ABYSS_THEME_JS = r"""<script id="abyss-theme-controller">(()=>{const presets={abyss:'Abyss · مشکی و خاکستری',angel:'Angel · سفید و طلایی کمرنگ',graphite:'Graphite · خاکستری ساده',slate:'Slate · ذغالی ساده',ocean:'Ocean · آبی ساده',emerald:'Emerald · سبز ساده',paper:'Paper · روشن ساده'};let saved='abyss';try{saved=localStorage.getItem('abyss-visual-theme')||'abyss'}catch(e){}if(!presets[saved])saved='abyss';const apply=t=>{if(!presets[t])t='abyss';document.documentElement.dataset.abyssTheme=t;try{localStorage.setItem('abyss-visual-theme',t)}catch(e){}const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=(t==='angel'||t==='paper')?(t==='angel'?'#f4f3ef':'#f3f4f5'):t==='slate'?'#121820':t==='graphite'?'#111214':t==='ocean'?'#071216':t==='emerald'?'#0c130e':'#050505'};apply(saved);const init=()=>{if(document.getElementById('abyssThemeDock'))return;const dock=document.createElement('label');dock.id='abyssThemeDock';dock.innerHTML='<span class="theme-mark" aria-hidden="true">◉</span><span>تم</span><select id="abyssThemeSelect" aria-label="انتخاب تم">'+Object.entries(presets).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>';const target=document.querySelector('.top .tools')||document.querySelector('.top');if(target)target.appendChild(dock);else{dock.classList.add('floating');document.body.appendChild(dock)}const select=dock.querySelector('select');select.value=document.documentElement.dataset.abyssTheme;select.addEventListener('change',()=>apply(select.value));if(!document.getElementById('abyssParticleCanvas')&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const canvas=document.createElement('canvas');canvas.id='abyssParticleCanvas';canvas.setAttribute('aria-hidden','true');document.body.prepend(canvas);const ctx=canvas.getContext('2d',{alpha:true});if(ctx){let w=0,h=0,points=[],raf=0,dirty=true;const resize=()=>{const dpr=Math.min(devicePixelRatio||1,1.5);w=innerWidth;h=innerHeight;canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);const count=Math.min(34,Math.max(12,Math.round(w*h/42000)));points=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,r:.45+Math.random()*.7,a:.12+Math.random()*.22,dx:(Math.random()-.5)*.08,dy:(Math.random()-.5)*.08}));dirty=true};let ripple=null;const paint=()=>{raf=0;ctx.clearRect(0,0,w,h);const theme=document.documentElement.dataset.abyssTheme;const light=theme==='angel'||theme==='paper';for(const p of points){p.x+=p.dx;p.y+=p.dy;if(p.x<0||p.x>w)p.dx*=-1;if(p.y<0||p.y>h)p.dy*=-1;ctx.beginPath();ctx.fillStyle=light?'rgba(145,130,99,'+p.a*.38+')':'rgba(195,199,207,'+p.a+')';ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}if(ripple){ripple.r+=2.2;ripple.a*=.965;ctx.beginPath();ctx.strokeStyle=light?'rgba(166,148,108,'+ripple.a+')':'rgba(195,199,207,'+ripple.a+')';ctx.lineWidth=1;ctx.arc(ripple.x,ripple.y,ripple.r,0,Math.PI*2);ctx.stroke();if(ripple.a<.025)ripple=null}if(document.visibilityState==='visible')raf=requestAnimationFrame(paint)};resize();addEventListener('resize',()=>{cancelAnimationFrame(raf);resize()},{passive:true});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!raf)raf=requestAnimationFrame(paint);else if(document.visibilityState!=='visible'&&raf){cancelAnimationFrame(raf);raf=0}},{passive:true});document.addEventListener('click',e=>{if(e.target.closest('button,a,select,input,label')){ripple={x:e.clientX,y:e.clientY,r:2,a:.24}}},{passive:true});raf=requestAnimationFrame(paint)}}};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();</script>"""
+ABYSS_THEME_JS = r"""<script id="abyss-theme-controller">(()=>{const presets={abyss:'Abyss · مشکی و خاکستری',angel:'Angel · سفید و طلایی کمرنگ',graphite:'Graphite · خاکستری ساده',slate:'Slate · ذغالی ساده',ocean:'Ocean · آبی ساده',emerald:'Emerald · سبز ساده',paper:'Paper · روشن ساده'};let saved='abyss';try{saved=localStorage.getItem('abyss-visual-theme')||'abyss'}catch(e){}if(!presets[saved])saved='abyss';const apply=t=>{if(!presets[t])t='abyss';document.documentElement.dataset.abyssTheme=t;try{localStorage.setItem('abyss-visual-theme',t)}catch(e){}const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=(t==='angel'||t==='paper')?(t==='angel'?'#f4f3ef':'#f3f4f5'):t==='slate'?'#121820':t==='graphite'?'#111214':t==='ocean'?'#071216':t==='emerald'?'#0c130e':'#050505'};apply(saved);const init=()=>{if(document.getElementById('abyssThemeDock'))return;const dock=document.createElement('label');dock.id='abyssThemeDock';dock.innerHTML='<span class="theme-mark" aria-hidden="true">◉</span><span>تم</span><select id="abyssThemeSelect" aria-label="انتخاب تم">'+Object.entries(presets).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>';const target=document.querySelector('.top .tools')||document.querySelector('.top');if(target)target.appendChild(dock);else{dock.classList.add('floating');document.body.appendChild(dock)}const select=dock.querySelector('select');select.value=document.documentElement.dataset.abyssTheme;select.addEventListener('change',()=>apply(select.value));if(!document.getElementById('abyssParticleCanvas')&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!matchMedia('(max-width:700px), (pointer:coarse)').matches){const canvas=document.createElement('canvas');canvas.id='abyssParticleCanvas';canvas.setAttribute('aria-hidden','true');document.body.prepend(canvas);const ctx=canvas.getContext('2d',{alpha:true});if(ctx){let w=0,h=0,points=[],raf=0,dirty=true;const resize=()=>{const dpr=Math.min(devicePixelRatio||1,1.5);w=innerWidth;h=innerHeight;canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);const count=Math.min(34,Math.max(12,Math.round(w*h/42000)));points=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,r:.45+Math.random()*.7,a:.12+Math.random()*.22,dx:(Math.random()-.5)*.08,dy:(Math.random()-.5)*.08}));dirty=true};let ripple=null;const paint=()=>{raf=0;ctx.clearRect(0,0,w,h);const theme=document.documentElement.dataset.abyssTheme;const light=theme==='angel'||theme==='paper';for(const p of points){p.x+=p.dx;p.y+=p.dy;if(p.x<0||p.x>w)p.dx*=-1;if(p.y<0||p.y>h)p.dy*=-1;ctx.beginPath();ctx.fillStyle=light?'rgba(145,130,99,'+p.a*.38+')':'rgba(195,199,207,'+p.a+')';ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}if(ripple){ripple.r+=2.2;ripple.a*=.965;ctx.beginPath();ctx.strokeStyle=light?'rgba(166,148,108,'+ripple.a+')':'rgba(195,199,207,'+ripple.a+')';ctx.lineWidth=1;ctx.arc(ripple.x,ripple.y,ripple.r,0,Math.PI*2);ctx.stroke();if(ripple.a<.025)ripple=null}if(document.visibilityState==='visible')raf=requestAnimationFrame(paint)};resize();addEventListener('resize',()=>{cancelAnimationFrame(raf);resize()},{passive:true});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!raf)raf=requestAnimationFrame(paint);else if(document.visibilityState!=='visible'&&raf){cancelAnimationFrame(raf);raf=0}},{passive:true});document.addEventListener('click',e=>{if(e.target.closest('button,a,select,input,label')){ripple={x:e.clientX,y:e.clientY,r:2,a:.24}}},{passive:true});raf=requestAnimationFrame(paint)}}};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();</script>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + "</body>")
 
