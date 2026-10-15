@@ -751,8 +751,6 @@ async def create_client(r:Request):
         c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id,profile_keys) VALUES(?,?,?,?,1,?,?,?,?,0,?,?)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes,owner,profile_keys))
     try:
         if MARZBAN_BACKEND_ENABLED:
-            if owner is not None:
-                raise HTTPException(503,"Reseller client management is not yet supported in Marzban backend mode")
             marzban_backend().create_user(client_id=cid,name=name,note=note.strip(),
                 duration_days=int(days) if days is not None else None,
                 quota_gb=float(quota) if quota is not None else None,enabled=True)
