@@ -41,9 +41,16 @@ jobs:
             status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' -H 'Connection: Upgrade' -H 'Upgrade: websocket' "http://127.0.0.1:18080$path" || true)
             test "$status" != "502"
           done
-          for path in /xhttp /xhttp-packet /xhttp-stream-up /xhttp-stream-one /xhttp-stream-up-alt /xhttp-stream-one-alt; do
+          for path in /xhttp /xhttp-packet; do
             status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080$path" || true)
             test "$status" != "502"
+          done
+          # These four XHTTP stream-up/stream-one variants timed out in real tunnel
+          # smoke tests over the HTTP/1.1 edge, so keep them off by default.
+          # Their absent listeners should not be mistaken for a gateway regression.
+          for path in /xhttp-stream-up /xhttp-stream-one /xhttp-stream-up-alt /xhttp-stream-one-alt; do
+            status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080$path" || true)
+            test "$status" = "502"
           done
           if docker logs abysspanel-smoke 2>&1 | grep -q 'Xray startup failed'; then
             echo "Xray failed to start; see container logs above."
