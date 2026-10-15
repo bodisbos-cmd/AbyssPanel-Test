@@ -176,3 +176,6 @@ class MarzbanBackend:
 
     def subscription_url(self, username: str) -> str:
         return self.client.subscription_url(username)
+
+    def reset_user_traffic(self, username: str) -> None:
+        self.client.reset_user_traffic(username)
