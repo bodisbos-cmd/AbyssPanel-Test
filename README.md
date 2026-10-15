@@ -2,7 +2,7 @@
 
 A responsive Xray control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
 
-> **Status:** test-stage build, not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
+> **Status:** standalone AbyssPanel/Xray test-stage build; it does not require or connect to Marzban. It is not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
 
 ## Features
 
