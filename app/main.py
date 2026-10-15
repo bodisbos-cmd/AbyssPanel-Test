@@ -899,8 +899,8 @@ def get_base_url(r=None):
 
 def active_subscription_client(token):
     if len(token)>100: raise HTTPException(404,"Not found")
-    with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=? AND enabled=1",(token,)).fetchone()
-    if not client or not client_is_active(dict(client)):
+    with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=?"+("" if MARZBAN_BACKEND_ENABLED else " AND enabled=1"),(token,)).fetchone()
+    if not client or (not MARZBAN_BACKEND_ENABLED and not client_is_active(dict(client))):
         raise HTTPException(404,"Subscription not found, expired, or disabled")
     client=dict(client)
     if MARZBAN_BACKEND_ENABLED:
@@ -909,12 +909,15 @@ def active_subscription_client(token):
         except Exception as exc:
             raise HTTPException(503,"Marzban subscription service is temporarily unavailable") from exc
         if not remote.get("enabled"):
+            with db() as c: c.execute("UPDATE clients SET enabled=0,used_bytes=?,quota_bytes=?,expires_at=? WHERE id=?",
+                (remote["used_bytes"],remote["quota_bytes"],remote["expires_at"],client["id"]))
             raise HTTPException(404,"Subscription not found, expired, or disabled")
+        client["enabled"]=True
         client["used_bytes"]=remote["used_bytes"]
         client["quota_bytes"]=remote["quota_bytes"]
         client["expires_at"]=remote["expires_at"]
         with db() as c:
-            c.execute("UPDATE clients SET used_bytes=?,quota_bytes=?,expires_at=? WHERE id=?",
+            c.execute("UPDATE clients SET enabled=1,used_bytes=?,quota_bytes=?,expires_at=? WHERE id=?",
                 (client["used_bytes"],client["quota_bytes"],client["expires_at"],client["id"]))
     return client
 
