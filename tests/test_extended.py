@@ -165,7 +165,7 @@ def test_subscription_diagnostics_help_and_official_downloads(client):
     token = info["page_url"].rsplit("/", 1)[1]
     diag = client.get(f"/s/{token}/diagnostics")
     assert diag.status_code == 200, diag.text
-    assert diag.json()["profile_count"] == 13
+    assert diag.json()["profile_count"] == 9
     help_page = client.get(f"/s/{token}/help")
     assert help_page.status_code == 200
     assert "v2rayNG" in help_page.text
@@ -279,7 +279,8 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     assert response.status_code == 200, response.text
     data = response.json()
     assert len(data["checks"]) == 13
-    assert all(item["route_ok"] for item in data["checks"])
+    assert all(item["route_ok"] for item in data["checks"] if item["enabled"])
+    assert all(item["status"] == "disabled" for item in data["checks"] if not item["enabled"])
     assert "پینگ یا تونل واقعی" in data["note"]
 
     made = client.post("/api/clients", json={"name": "route diagnostic"},
@@ -287,7 +288,7 @@ def test_profile_route_diagnostics_is_not_misrepresented_as_vpn_ping(client, mon
     token = client.get(f"/api/clients/{made.json()['id']}/subscription").json()["page_url"].rsplit("/", 1)[1]
     customer_diag = client.get(f"/s/{token}/diagnostics")
     assert customer_diag.status_code == 200, customer_diag.text
-    assert len(customer_diag.json()["route_checks"]) == 13
+    assert len(customer_diag.json()["route_checks"]) == 9
     assert all(item["http_status"] != 502 for item in customer_diag.json()["route_checks"])
     assert "cannot prove" in customer_diag.json()["note"]
 
@@ -349,6 +350,6 @@ def test_all_protocol_profiles_generate_distinct_valid_uri_schemes(client):
     # The Shadowsocks inbound is counted separately from URI generation and smoke coverage.
     assert {x["protocol"] for x in inbound} == {"vless", "trojan", "vmess", "shadowsocks"}
     assert any(x["protocol"] == "shadowsocks" for x in config["inbounds"])
-    assert len({x["port"] for x in inbound}) == 13
+    assert len({x["port"] for x in inbound}) == 9
     for item in inbound:
         assert item["streamSettings"]["network"] in {"ws", "httpupgrade", "xhttp"}
