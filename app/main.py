@@ -759,7 +759,8 @@ async def create_client(r:Request):
         if MARZBAN_BACKEND_ENABLED:
             marzban_backend().create_user(client_id=cid,name=name,note=note.strip(),
                 duration_days=int(days) if days is not None else None,
-                quota_gb=float(quota) if quota is not None else None,enabled=True)
+                quota_gb=float(quota) if quota is not None else None,enabled=True,
+                selected_profiles=selected_profiles)
         else:
             await start_xray()
     except Exception as e:
