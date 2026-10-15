@@ -94,6 +94,9 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="metricsCard"' in response.text
     assert 'id="adminUsersCard"' in response.text
     assert 'id="apiKeysCard"' in response.text
+    assert '#menuToggle{display:inline-flex!important;position:fixed!important;top:14px!important;left:14px!important;right:auto!important;' in response.text
+    assert '.sidebar{position:fixed!important;top:0!important;left:0!important;right:auto!important;' in response.text
+    assert "پیش‌فرض خاموش‌اند" in response.text
 
 
 def test_dashboard_requires_login(client):
@@ -263,6 +266,31 @@ def test_xhttp_modes_are_real_and_alternate_paths_are_unique(client):
     assert profiles["xhttp_stream_up"]["path"] != profiles["xhttp_stream_up_alt"]["path"]
     assert profiles["xhttp_stream_one"]["path"] != profiles["xhttp_stream_one_alt"]["path"]
     assert len({p["port"] for p in panel.PROFILES}) == len(panel.PROFILES)
+
+
+def test_experimental_xhttp_profiles_are_opt_in(client):
+    csrf = admin_client(client)
+    headers = {"X-CSRF-Token": csrf}
+    settings = client.get("/api/settings").json()["profiles"]
+    experimental = {p["key"] for p in settings if p.get("experimental")}
+    assert experimental == {
+        "xhttp_stream_up", "xhttp_stream_one",
+        "xhttp_stream_up_alt", "xhttp_stream_one_alt",
+    }
+    assert all(not p["enabled"] for p in settings if p["key"] in experimental)
+
+    response = client.patch(
+        "/api/settings/profiles",
+        json={"profiles": {"xhttp_stream_up": True}},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    updated = {p["key"]: p["enabled"] for p in response.json()["profiles"]}
+    assert updated["xhttp_stream_up"] is True
+    assert updated["xhttp_stream_one"] is False
+    ports = {item["port"] for item in panel.make_xray_config()["inbounds"]}
+    assert 10005 in ports
+    assert 10006 not in ports
 
 
 def test_diagnostics_distinguish_local_route_from_real_tunnel(client):
