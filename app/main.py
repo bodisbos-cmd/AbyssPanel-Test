@@ -865,6 +865,19 @@ def active_subscription_client(token):
     return dict(client)
 
 def make_subscription_links(client, r):
+    if MARZBAN_BACKEND_ENABLED:
+        try:
+            remote=marzban_backend().get_user(username_for_client(client["id"]))
+        except Exception as exc:
+            raise HTTPException(503,"Could not load this client's Marzban subscription") from exc
+        links=[]
+        for index,value in enumerate(remote.get("links",[]),start=1):
+            if not isinstance(value,str) or not value.strip(): continue
+            scheme=urlsplit(value).scheme.lower() or "proxy"
+            links.append({"key":f"marzban_{index}","label":f"Marzban · {scheme.upper()} · {index}","url":value})
+        if not links:
+            raise HTTPException(503,"Marzban has no active connection links for this client")
+        return links
     try: selected_profiles=json.loads(client.get("profile_keys") or "null")
     except (TypeError,ValueError): selected_profiles=None
     base=get_base_url(r)
@@ -991,7 +1004,10 @@ async def submit_profile_feedback(token:str,r:Request):
     result=body.get("result")
     if carrier not in {"auto","mci","irancell","rightel","wifi"}:
         raise HTTPException(422,"Unsupported carrier")
-    if profile_key not in {p["key"] for p in PROFILES}:
+    if MARZBAN_BACKEND_ENABLED:
+        if not isinstance(profile_key,str) or not re.fullmatch(r"marzban_[1-9][0-9]{0,2}",profile_key):
+            raise HTTPException(422,"Unsupported Marzban profile")
+    elif profile_key not in {p["key"] for p in PROFILES}:
         raise HTTPException(422,"Unsupported profile")
     if result not in {"ok","fail"}:
         raise HTTPException(422,"Result must be ok or fail")
