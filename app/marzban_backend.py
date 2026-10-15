@@ -12,7 +12,10 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from .marzban_client import MarzbanClient, MarzbanError
+try:
+    from .marzban_client import MarzbanClient, MarzbanError
+except ImportError:
+    from marzban_client import MarzbanClient, MarzbanError
 
 _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,32}$")
 _GB = 1024 ** 3
