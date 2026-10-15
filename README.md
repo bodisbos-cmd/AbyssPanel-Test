@@ -13,6 +13,7 @@ Configure these Railway variables before enabling it:
 - `MARZBAN_BASE_URL`: HTTPS base URL of a Marzban instance whose API is reachable from Railway.
 - `MARZBAN_ADMIN_USERNAME` and `MARZBAN_ADMIN_PASSWORD`: a dedicated Marzban admin account with permission to manage users. Do not use credentials from an account that does not expose the API.
 - `MARZBAN_INBOUNDS_JSON`: JSON mapping of protocol names to the exact existing Marzban inbound tags, for example `{"vless":["VLESS WS"],"vmess":["VMess WS"]}`. Use real tags from the target instance; the panel does not invent or create inbounds.
+- `MARZBAN_PROFILE_INBOUNDS_JSON`: required for client creation because the UI supports per-client profile selection. Map each selected Abyss profile key to the exact protocol/tag combinations it should enable, e.g. `{"ws":{"vless":["VLESS WS"]},"xhttp_auto":{"vless":["VLESS XHTTP"]}}`. The tag must also exist under `MARZBAN_INBOUNDS_JSON`. A missing mapping fails closed instead of silently enabling the wrong inbounds.
 - `MARZBAN_TIMEOUT_SECONDS` (optional): API request timeout, default 12 seconds.
 
 Example:
@@ -23,7 +24,8 @@ MARZBAN_BASE_URL=https://marzban.example.com
 MARZBAN_ADMIN_USERNAME=abyss-api
 MARZBAN_ADMIN_PASSWORD=replace-with-a-unique-secret
 MARZBAN_TIMEOUT_SECONDS=12
-MARZBAN_INBOUNDS_JSON={"vless":["VLESS WS"]}
+MARZBAN_INBOUNDS_JSON={"vless":["VLESS WS","VLESS XHTTP"]}
+MARZBAN_PROFILE_INBOUNDS_JSON={"ws":{"vless":["VLESS WS"]},"xhttp_auto":{"vless":["VLESS XHTTP"]}}
 ```
 
 When enabled, Abyss routes user creation, updates, deletion, usage reset, and subscription link delivery through Marzban. Local SQLite retains Abyss-specific display metadata and reseller allocation records; Marzban remains authoritative for live traffic, expiry, and connection links. The existing branded subscription page wraps the links returned by Marzban. The per-profile toggles for the local Xray generator are not used in this mode; configure supported protocols and inbound tags in Marzban instead.
