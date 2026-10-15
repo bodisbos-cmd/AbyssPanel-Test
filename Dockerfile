@@ -1,6 +1,6 @@
 FROM ghcr.io/xtls/xray-core:26.9.8 AS xray
 
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
