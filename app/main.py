@@ -77,9 +77,9 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_clients_created ON clients(created_at DESC);
         """)
         if not c.execute("SELECT id FROM admins WHERE id=1").fetchone():
-            # Production installs get a unique random credential; deterministic admin/admin is test-only.
-            configured=os.getenv("ABYSS_INITIAL_ADMIN_PASSWORD","").strip()
-            pw=configured or ("admin" if os.getenv("ABYSS_TEST_MODE")=="1" else secrets.token_urlsafe(24))
+            # First login intentionally uses admin/admin as requested. Change it immediately after setup.
+            # Never print credentials to logs; the bootstrap file is restricted to the owner.
+            pw=os.getenv("ABYSS_INITIAL_ADMIN_PASSWORD","admin").strip() or "admin"
             changed=utc_now()
             c.execute("INSERT INTO admins VALUES(1,?,?)",(password_hash(pw),changed))
             p=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"; p.write_text(f"Username: admin\nPassword: {pw}\n",encoding="utf-8")
@@ -91,8 +91,8 @@ def init_db():
         if legacy and not c.execute("SELECT id FROM panel_admins WHERE username='admin'").fetchone():
             c.execute("INSERT INTO panel_admins(id,username,password_hash,role,enabled,created_at,password_changed_at) VALUES(?,?,?,?,1,?,?)",
                 ("owner-admin","admin",legacy["password_hash"],"owner",legacy["password_changed_at"],legacy["password_changed_at"]))
-        # The bootstrap file is a one-time recovery record only. Never reset a
-        # password on restart: that silently undoes legitimate password changes.
+        # The bootstrap file is only a first-login record. Do not reset the password
+        # from it on restart: the administrator may already have changed credentials.
         initial_file=DATA_DIR/"INITIAL_ADMIN_PASSWORD.txt"
         if initial_file.exists():
             try: initial_file.chmod(0o600)
