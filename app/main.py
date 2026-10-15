@@ -680,7 +680,13 @@ async def overview(r:Request):
         child["allocated_bytes"]=reseller_allocated_for(child["id"])
         child["remaining_bytes"]=child["quota_bytes"]-child["allocated_bytes"]
     remaining=None if owner is None else reseller_remaining(owner)
-    return {"csrf":r.session.get("csrf",""),"role":"root" if is_root(r) else ("reseller" if not r.session.get("admin") else r.session.get("admin_role","admin")),"user":{"username":r.session.get("admin_username", "reseller" if not r.session.get("admin") else "admin"),"role":r.session.get("admin_role","owner") if r.session.get("admin") else "reseller"},"remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":{"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None)}}
+    if MARZBAN_BACKEND_ENABLED:
+        try: backend_connected=bool(marzban_backend().health().get("connected"))
+        except Exception: backend_connected=False
+        engine={"installed":backend_connected,"running":backend_connected,"backend":"marzban"}
+    else:
+        engine={"installed":Path(XRAY_BIN).exists(),"running":bool(xray_proc and xray_proc.poll() is None),"backend":"xray"}
+    return {"csrf":r.session.get("csrf",""),"role":"root" if is_root(r) else ("reseller" if not r.session.get("admin") else r.session.get("admin_role","admin")),"user":{"username":r.session.get("admin_username", "reseller" if not r.session.get("admin") else "admin"),"role":r.session.get("admin_role","owner") if r.session.get("admin") else "reseller"},"remaining_bytes":remaining,"total":total,"active":active,"clients":get_clients(owner_id=owner,scoped=owner is not None),"resellers":children,"events":events,"xray":engine,"backend":{"type":"marzban" if MARZBAN_BACKEND_ENABLED else "xray","connected":engine["running"]}}
 @app.get("/api/settings")
 async def read_settings(r:Request):
     require_admin(r)
