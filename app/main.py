@@ -722,14 +722,23 @@ async def create_client(r:Request):
                 raise HTTPException(422,"Client quota exceeds your remaining allocation")
         c.execute("INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,owner_id,profile_keys) VALUES(?,?,?,?,1,?,?,?,?,0,?,?)",(cid,name,uid,token,utc_now(),note.strip(),expires,quota_bytes,owner,profile_keys))
     try:
-        await start_xray()
+        if MARZBAN_BACKEND_ENABLED:
+            if owner is not None:
+                raise HTTPException(503,"Reseller client management is not yet supported in Marzban backend mode")
+            marzban_backend().create_user(client_id=cid,name=name,note=note.strip(),
+                duration_days=int(days) if days is not None else None,
+                quota_gb=float(quota) if quota is not None else None,enabled=True)
+        else:
+            await start_xray()
     except Exception as e:
-        # Do not leave a client marked active when Xray rejected its config.
         with db() as c: c.execute("DELETE FROM clients WHERE id=?",(cid,))
-        try: await start_xray()
-        except Exception as restore_error: event("ERROR",f"Xray recovery after failed client creation also failed: {restore_error}")
-        event("ERROR",f"Client creation rolled back because Xray update failed: {e}")
-        raise HTTPException(503,"Client was not created because Xray could not apply the configuration")
+        if not MARZBAN_BACKEND_ENABLED:
+            try: await start_xray()
+            except Exception as restore_error: event("ERROR",f"Xray recovery after failed client creation also failed: {restore_error}")
+        event("ERROR",f"Client creation rolled back because backend rejected its configuration: {e}")
+        if isinstance(e,HTTPException): raise
+        if isinstance(e,MarzbanError): raise HTTPException(503,"Marzban could not create this client") from e
+        raise HTTPException(503,"Client was not created because the backend could not apply the configuration") from e
     event("INFO",f"Created client {name!r} ({cid[:8]})."); return {"id":cid,"name":name,"enabled":True}
 @app.patch("/api/clients/{cid}")
 async def update_client(cid:str,r:Request):
