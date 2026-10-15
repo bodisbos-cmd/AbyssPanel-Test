@@ -21,7 +21,7 @@ _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,32}$")
 _GB = 1024 ** 3
 
 
-def configured_inbounds() -> dict[str, list[str]]:
+def configured_inbounds(selected_profiles: list[str] | None = None) -> dict[str, list[str]]:
     raw = os.getenv("MARZBAN_INBOUNDS_JSON", "").strip()
     if not raw:
         raise MarzbanError("MARZBAN_INBOUNDS_JSON must explicitly configure available inbounds")
@@ -38,7 +38,32 @@ def configured_inbounds() -> dict[str, list[str]]:
         if not isinstance(tags, list) or not tags or any(not isinstance(tag, str) or not tag.strip() for tag in tags):
             raise MarzbanError(f"Inbound tags for {protocol} must be a non-empty string list")
         result[protocol] = list(dict.fromkeys(tag.strip() for tag in tags))
-    return result
+    if selected_profiles is None:
+        return result
+    raw_profiles=os.getenv("MARZBAN_PROFILE_INBOUNDS_JSON","").strip()
+    if not raw_profiles:
+        raise MarzbanError("MARZBAN_PROFILE_INBOUNDS_JSON is required for per-client profile selection")
+    try:
+        profile_map=json.loads(raw_profiles)
+    except ValueError as exc:
+        raise MarzbanError("MARZBAN_PROFILE_INBOUNDS_JSON must be valid JSON") from exc
+    if not isinstance(profile_map,dict):
+        raise MarzbanError("Marzban profile mapping must be a JSON object")
+    chosen: dict[str,list[str]]={}
+    for profile_key in selected_profiles:
+        mapping=profile_map.get(profile_key)
+        if not isinstance(mapping,dict) or not mapping:
+            raise MarzbanError(f"No Marzban inbound mapping is configured for profile {profile_key}")
+        for protocol,tags in mapping.items():
+            if protocol not in result or not isinstance(tags,list) or not tags:
+                raise MarzbanError(f"Invalid inbound mapping for profile {profile_key}")
+            if any(tag not in result[protocol] for tag in tags):
+                raise MarzbanError(f"Profile {profile_key} references an inbound not listed in MARZBAN_INBOUNDS_JSON")
+            chosen.setdefault(protocol,[])
+            chosen[protocol].extend(tag for tag in tags if tag not in chosen[protocol])
+    if not chosen:
+        raise MarzbanError("Selected profiles do not map to any Marzban inbounds")
+    return chosen
 
 
 def username_for_client(client_id: str) -> str:
@@ -52,13 +77,13 @@ def username_for_client(client_id: str) -> str:
 
 def create_payload(*, client_id: str, name: str, note: str = "",
                    duration_days: int | None = None, quota_gb: float | None = None,
-                   enabled: bool = True) -> dict[str, Any]:
+                   enabled: bool = True, selected_profiles: list[str] | None = None) -> dict[str, Any]:
     if duration_days is not None and (isinstance(duration_days, bool) or not isinstance(duration_days, int) or not 1 <= duration_days <= 3650):
         raise ValueError("duration_days must be an integer from 1 to 3650")
     if quota_gb is not None and (isinstance(quota_gb, bool) or not isinstance(quota_gb, (int, float)) or not 1 <= quota_gb <= 100000):
         raise ValueError("quota_gb must be between 1 and 100000")
     expiry = 0 if duration_days is None else int(datetime.now(timezone.utc).timestamp()) + duration_days * 86400
-    inbound_map = configured_inbounds()
+    inbound_map = configured_inbounds(selected_profiles)
     proxies = {protocol: {} for protocol in inbound_map}
     return {
         "username": username_for_client(client_id),
@@ -143,10 +168,10 @@ class MarzbanBackend:
 
     def create_user(self, *, client_id: str, name: str, note: str = "",
                     duration_days: int | None = None, quota_gb: float | None = None,
-                    enabled: bool = True) -> dict[str, Any]:
+                    enabled: bool = True, selected_profiles: list[str] | None = None) -> dict[str, Any]:
         payload = create_payload(client_id=client_id, name=name, note=note,
                                  duration_days=duration_days, quota_gb=quota_gb,
-                                 enabled=enabled)
+                                 enabled=enabled, selected_profiles=selected_profiles)
         return map_user(self.client.create_user(payload), local_id=client_id)
 
     def get_user(self, username: str) -> dict[str, Any]:
