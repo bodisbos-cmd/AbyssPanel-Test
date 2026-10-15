@@ -26,7 +26,7 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 1. Deploy this repository to a Railway service using the included Dockerfile.
 2. Add a Railway Volume mounted at `/data`. It is required to preserve clients, admin credentials, session secret, and the database across deploys.
 3. Generate a public domain for port `8080`.
-4. Open the service after its first successful deployment. On a fresh database, retrieve the random initial administrator password from the first-boot logs or `/data/INITIAL_ADMIN_PASSWORD.txt`; sign in as `admin` and change it immediately.
+4. Open the service after its first successful deployment. On a fresh database, sign in with username `admin` and password `admin`, then change the password immediately.
 5. Set `BASE_URL` to the intended public HTTPS URL only if the automatically detected Railway domain is not the one you want to use for subscriptions.
 
 The app is intended to remain on Railway. Its HTTP transports are routed through Railway's HTTPS edge to local Xray inbounds; no separate public Xray TCP port is used in this design. Railway region changes can require volume migration and downtime, so do not change regions casually.
@@ -38,7 +38,7 @@ docker build -t abysspanel-test .
 docker run --rm -p 8080:8080 -e COOKIE_SECURE=0 -v "$PWD/data:/data" abysspanel-test
 ```
 
-Open `http://localhost:8080`. The initial password is written to `data/INITIAL_ADMIN_PASSWORD.txt` and printed to the container logs on a fresh database.
+Open `http://localhost:8080`. On a fresh database, sign in with username `admin` and password `admin`, then change the password immediately. The bootstrap file is stored in `data/INITIAL_ADMIN_PASSWORD.txt`; the password is not printed to logs.
 
 ## Security and operational notes
 
