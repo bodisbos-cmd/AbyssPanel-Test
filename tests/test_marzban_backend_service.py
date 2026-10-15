@@ -13,7 +13,7 @@ class FakeClient:
                 {"username": "ab123", "note": "[AbyssPanel:id-1] First", "status": "active",
                  "expire": 0, "data_limit": 0, "used_traffic": 8, "links": []}
             ], "total": 2},
-            100: {"users": [
+            1: {"users": [
                 {"username": "ab456", "note": "[AbyssPanel:id-2] Second", "status": "disabled",
                  "expire": 0, "data_limit": 1024, "used_traffic": 2, "links": []}
             ], "total": 2},
