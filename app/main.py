@@ -903,7 +903,11 @@ def get_base_url(r=None):
 
 def active_subscription_client(token):
     if len(token)>100: raise HTTPException(404,"Not found")
-    with db() as c: client=c.execute("SELECT * FROM clients WHERE sub_token=?"+("" if MARZBAN_BACKEND_ENABLED else " AND enabled=1"),(token,)).fetchone()
+    with db() as c:
+        if MARZBAN_BACKEND_ENABLED:
+            client=c.execute("SELECT * FROM clients WHERE sub_token=?",(token,)).fetchone()
+        else:
+            client=c.execute("SELECT * FROM clients WHERE sub_token=? AND enabled=1",(token,)).fetchone()
     if not client or (not MARZBAN_BACKEND_ENABLED and not client_is_active(dict(client))):
         raise HTTPException(404,"Subscription not found, expired, or disabled")
     client=dict(client)
