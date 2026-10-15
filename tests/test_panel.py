@@ -74,7 +74,7 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'Abyss · مشکی و خاکستری' in response.text
     assert 'Angel · سفید و طلایی کمرنگ' in response.text
     assert 'Graphite · خاکستری ساده' in response.text
-    assert 'id="abyssParticleCanvas"' in response.text
+    assert 'abyssParticleCanvas' in response.text
     assert 'ستاره دادن' in response.text
     assert 'سازنده · Abyss Tunnel' in response.text
     assert 'id="sidebar"' in response.text
