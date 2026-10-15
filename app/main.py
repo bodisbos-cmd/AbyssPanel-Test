@@ -758,7 +758,7 @@ async def update_client(cid:str,r:Request):
         except Exception as e:
             rollback={key:previous[key] for key in ("enabled","profile_keys") if key in updates}
             if rollback:
-                with db() as c: c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in rollback)+" WHERE id=?",(*rollback.values(),cid))
+                with db() as c: c.execute("UPDATE clients SET "+", ".join(f"{key}=?" for key in rollback)+" WHERE id=?",(*rollback.values(),cid))  # nosec B608: keys are restricted to fixed enabled/profile_keys fields
             try: await start_xray()
             except Exception as restore_error: event("ERROR",f"Xray recovery after failed client update also failed: {restore_error}")
             event("ERROR",f"Client update rolled back because Xray update failed: {e}")
