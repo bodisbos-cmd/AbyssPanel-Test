@@ -63,6 +63,8 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="abyss-theme-polish"' in login_page.text
     assert 'id="abyss-layout-repair"' in login_page.text
     assert 'class="login-layout"' in login_page.text
+    assert "@keyframes abyssStreakDrift" in login_page.text
+    assert ".login-layout>.card{position:relative!important;z-index:2!important" in login_page.text
     assert 'id="abyss-theme-controller"' in login_page.text
     assert 'data-abyss-theme="angel"' in login_page.text
     admin_client(client)
@@ -83,6 +85,11 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="menuToggle"' in response.text
     assert 'id="abyss-layout-repair"' in response.text
     assert 'id="abyss-layout-repair-js"' in response.text
+    assert 'id="overviewStats"' in response.text
+    assert 'id="dashboardUsageCard"' in response.text
+    assert 'id="panelHealthCard"' in response.text
+    assert "grid-template-columns:repeat(4,minmax(0,1fr))!important" in response.text
+    assert 'M31 7 L35 25 L32 39 L29 25 Z' in response.text
     assert 'data-section-page="clients"' in response.text
     assert 'id="metricsCard"' in response.text
     assert 'id="adminUsersCard"' in response.text
