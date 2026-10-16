@@ -1,4 +1,4 @@
-# AbyssPanel-Test
+# Void
 
 A responsive Xray control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
 
@@ -34,8 +34,8 @@ The app is intended to remain on Railway. Its HTTP transports are routed through
 ## Local Docker test
 
 ```sh
-docker build -t abysspanel-test .
-docker run --rm -p 8080:8080 -e COOKIE_SECURE=0 -v "$PWD/data:/data" abysspanel-test
+docker build -t void .
+docker run --rm -p 8080:8080 -e COOKIE_SECURE=0 -v "$PWD/data:/data" void
 ```
 
 Open `http://localhost:8080`. On a fresh database, sign in with username `admin` and password `admin`, then change the password immediately. The bootstrap file is stored in `data/INITIAL_ADMIN_PASSWORD.txt`; the password is not printed to logs.
