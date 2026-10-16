@@ -54,6 +54,9 @@ jobs:
               page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               page.wait_for_timeout(1200)
               print("DASHBOARD_VISIBLE_SECTIONS=" + str(page.locator("[data-section-page]").evaluate_all("(els) => els.filter(e => getComputedStyle(e).display !== 'none').map(e => e.dataset.sectionPage)")))
+              print("LOGIN_MATCHING_CSS=" + str(page.locator(".login-layout").evaluate("(e) => [...document.styleSheets].flatMap(s=>{try{return [...s.cssRules]}catch(x){return []}}).filter(r=>r.selectorText&&r.selectorText.includes('.login-layout')).map(r=>r.cssText).slice(-8)")))
+              html=page.content().splitlines()
+              print("INLINE_ERROR_CONTEXT=" + repr(html[654][11500:12500] if len(html)>654 else "HTML_LINES="+str(len(html))))
               page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
               for nav, filename in [("users","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
                   locator = page.locator('[data-nav="' + nav + '"]').first
