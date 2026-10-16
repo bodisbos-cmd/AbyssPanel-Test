@@ -1,8 +1,8 @@
 # Void
 
-A responsive Xray control panel designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
+A responsive Xray control dashboard designed to run on Railway. It includes a Persian-first administrator dashboard, persistent SQLite state, per-client credentials, a branded subscription portal with QR codes, configurable connection profiles, quota/expiry enforcement, Xray configuration validation, and process recovery.
 
-> **Status:** standalone AbyssPanel/Xray test-stage build; it does not require or connect to Marzban. It is not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
+> **Status:** standalone Xray test-stage build; it does not depend on third-party control systems. It is not production-audited. Automated tests cannot replace real connectivity checks from the target networks and supported client apps.
 
 ## Features
 
@@ -14,7 +14,7 @@ A responsive Xray control panel designed to run on Railway. It includes a Persia
 - Hierarchical reseller accounts: the root admin allocates a finite GB pool to a reseller; resellers can delegate part of their remaining pool to sub-resellers and create finite-quota clients. Each account sees and manages only its own clients; over-allocation is rejected.
 - Optional expiry and traffic quota, with automatic disabling after expiry or quota exhaustion.
 - Settings page to enable/disable each connection profile; updates are rolled back if Xray cannot apply the configuration.
-- A single private subscription URL per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible VPN clients; the standard `Subscription-Userinfo` header carries usage, quota, and expiry metadata to compatible apps. QR and help pages remain available.
+- A single private subscription URL per client. `/sub/<token>` serves the branded responsive page in browsers and Base64 subscription content to compatible clients; the standard `Subscription-Userinfo` header carries usage, quota, and expiry metadata to compatible apps. QR and help pages remain available.
 - Usage counters are flushed before Xray restarts to reduce traffic-accounting loss.
 - Owner-only ZIP backup/restore with integrity/schema checks and rollback attempt; backup includes credential hashes and client data, so keep it private.
 - Thirteen supported profiles: ten VLESS paths across WebSocket, HTTPUpgrade, XHTTP auto/packet-up/stream-up/stream-one and alternate paths, plus Trojan WS, VMess WS, and Shadowsocks 2022 WS. The Shadowsocks plugin URI is fully percent-encoded and included in the real-tunnel smoke test. XHTTP stream-up/stream-one use their actual modes; all four stream-mode paths are attempted by CI and marked experimental because Railway’s HTTP/1.1 edge may limit them.
