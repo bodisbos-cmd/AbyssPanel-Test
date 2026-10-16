@@ -10,6 +10,8 @@ import qrcode
 from qrcode.image.svg import SvgPathImage
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
+from itsdangerous import BadSignature
+from starlette.datastructures import MutableHeaders
 from starlette.middleware.sessions import SessionMiddleware
 
 APP_NAME="Void"
@@ -281,12 +283,55 @@ async def lifespan(app):
     task=asyncio.create_task(monitor()); yield; task.cancel()
     if xray_proc and xray_proc.poll() is None: xray_proc.terminate()
 app=FastAPI(title=APP_NAME,docs_url=None,redoc_url=None,openapi_url=None,lifespan=lifespan)
+
+class RememberMeSessionMiddleware(SessionMiddleware):
+    """Use a session cookie by default; remember-me sessions expire after 30 days."""
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await super().__call__(scope, receive, send)
+            return
+
+        initial_session_was_empty = True
+        raw_cookie = Request(scope).cookies.get(self.session_cookie)
+        if raw_cookie:
+            try:
+                signed = raw_cookie.encode("utf-8")
+                unpacked = self.signer.unsign(signed)
+                candidate = json.loads(base64.b64decode(unpacked))
+                max_age = 30 * 24 * 60 * 60 if isinstance(candidate, dict) and candidate.get("remember_me") is True else 8 * 60 * 60
+                verified = self.signer.unsign(signed, max_age=max_age)
+                decoded = json.loads(base64.b64decode(verified))
+                scope["session"] = decoded if isinstance(decoded, dict) else {}
+                initial_session_was_empty = False
+            except (BadSignature, ValueError, TypeError, UnicodeDecodeError):
+                scope["session"] = {}
+        else:
+            scope["session"] = {}
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                if scope["session"]:
+                    data = base64.b64encode(json.dumps(scope["session"]).encode("utf-8"))
+                    data = self.signer.sign(data)
+                    max_age = "Max-Age=2592000; " if scope["session"].get("remember_me") is True else ""
+                    header_value = f"{self.session_cookie}={data.decode('utf-8')}; path={self.path}; {max_age}{self.security_flags}"
+                    headers = MutableHeaders(scope=message)
+                    headers.append("Set-Cookie", header_value)
+                elif not initial_session_was_empty:
+                    header_value = f"{self.session_cookie}=null; path={self.path}; expires=Thu, 01 Jan 1970 00:00:00 GMT; {self.security_flags}"
+                    headers = MutableHeaders(scope=message)
+                    headers.append("Set-Cookie", header_value)
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
 sf=DATA_DIR/".session_secret"
 if not sf.exists():
     sf.write_text(secrets.token_urlsafe(48),encoding="ascii")
     try: sf.chmod(0o600)
     except OSError: pass
-app.add_middleware(SessionMiddleware,secret_key=sf.read_text().strip(),session_cookie="abyss_session",max_age=28800,same_site="strict",https_only=os.getenv("COOKIE_SECURE","1")!="0")
+app.add_middleware(RememberMeSessionMiddleware,secret_key=sf.read_text().strip(),session_cookie="abyss_session",max_age=28800,same_site="strict",https_only=os.getenv("COOKIE_SECURE","1")
 @app.middleware("http")
 async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
@@ -1042,7 +1087,7 @@ async def login(r:Request,username:str=Form(...),password:str=Form(...)):
         event("WARNING","Rejected administrator sign-in attempt.")
         token=secrets.token_urlsafe(24); r.session["login_csrf"]=token
         return HTMLResponse(LOGIN.replace("{{ERROR}}","نام کاربری یا رمز عبور اشتباه است.").replace("{{CSRF}}",token),status_code=401)
-    r.session.clear(); r.session["csrf"]=secrets.token_urlsafe(32)
+    r.session.clear(); r.session["csrf"]=secrets.token_urlsafe(32); r.session["remember_me"]=str(f.get("remember_me","")).strip().lower() in {"on","true","1","yes"}
     if account_type=="admin":
         r.session["admin"]=True; r.session["admin_id"]=row["id"]; r.session["admin_username"]=row["username"]; r.session["admin_role"]=row["role"]; r.session["admin_password_changed_at"]=row["password_changed_at"]
         event("INFO",f"Administrator signed in as {row['username']} ({row['role']}).")
