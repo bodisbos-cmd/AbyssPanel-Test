@@ -52,22 +52,26 @@ jobs:
               page.locator('button[type="submit"]').click()
               page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               page.wait_for_timeout(1200)
-              page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=True, animations="disabled")
+              page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
               for nav, filename in [("users","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
                   locator = page.locator('[data-nav="' + nav + '"]').first
                   if locator.count():
                       locator.click()
                       page.wait_for_timeout(350)
-                      page.screenshot(path=str(out / filename), full_page=True, animations="disabled")
+                      page.screenshot(path=str(out / filename), full_page=False, animations="disabled")
               mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
-              mobile.goto(base + "/", wait_until="networkidle")
+              mobile.goto(base + "/login", wait_until="domcontentloaded")
+              mobile.locator('input[name="username"]').fill("admin")
+              mobile.locator('input[name="password"]').fill("admin")
+              mobile.locator('button[type="submit"]').click()
+              mobile.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               mobile.wait_for_timeout(500)
-              mobile.screenshot(path=str(out / "09-dashboard-mobile.png"), full_page=True, animations="disabled")
+              mobile.screenshot(path=str(out / "09-dashboard-mobile.png"), full_page=False, animations="disabled")
               toggle = mobile.locator("#menuToggle")
               if toggle.count():
                   toggle.click()
                   mobile.wait_for_timeout(250)
-              mobile.screenshot(path=str(out / "10-mobile-menu.png"), full_page=True, animations="disabled")
+              mobile.screenshot(path=str(out / "10-mobile-menu.png"), full_page=False, animations="disabled")
               print("BROWSER_ERRORS=" + repr(errors))
               if errors:
                   raise SystemExit("Browser JavaScript errors detected: " + repr(errors))
