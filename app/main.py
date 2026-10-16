@@ -1095,6 +1095,21 @@ ABYSS_FINAL_LAYOUT_CSS = r"""<style id="abyss-final-layout">
 #abyssMenuShade{position:fixed;inset:0;z-index:49;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;transition:opacity .2s ease}
 body.abyss-menu-open #abyssMenuShade{opacity:1;pointer-events:auto}
 @media(max-width:850px){.login-layout{padding:20px 14px!important}.login-layout>.card{width:min(100%,420px)!important}.login-visual .visual-orbit{width:90vw!important;left:-20vw!important;top:-8%!important;opacity:.15!important}}
+/* Ensure the section state wins over legacy display:grid!important rules. */
+html body .workspace [data-section-page].nav-hidden,
+html body .workspace .stats[data-section-page].nav-hidden,
+html body .workspace section.card[data-section-page].nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace [data-section-page]:not(.nav-hidden){visibility:visible}
+html body .workspace #overviewStats[data-section-page="dashboard"]{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html body .workspace #dashboardUsageCard[data-section-page="dashboard"]{display:block!important;width:100%;max-width:100%;margin-top:16px}
+html body .workspace #dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html body .workspace #dashboardUsageCard>.stats>.card{min-width:0!important}
+html body .workspace #dashboardUsageCard canvas{display:block;width:100%!important;max-width:100%!important}
+@media(max-width:850px){
+ html body .workspace #overviewStats[data-section-page="dashboard"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace #dashboardUsageCard>.stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(min-width:851px) and (max-width:1150px){html body .workspace #overviewStats[data-section-page="dashboard"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
