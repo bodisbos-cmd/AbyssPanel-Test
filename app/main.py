@@ -331,7 +331,7 @@ if not sf.exists():
     sf.write_text(secrets.token_urlsafe(48),encoding="ascii")
     try: sf.chmod(0o600)
     except OSError: pass
-app.add_middleware(RememberMeSessionMiddleware,secret_key=sf.read_text().strip(),session_cookie="abyss_session",max_age=28800,same_site="strict",https_only=os.getenv("COOKIE_SECURE","1")
+app.add_middleware(RememberMeSessionMiddleware,secret_key=sf.read_text().strip(),session_cookie="abyss_session",max_age=28800,same_site="strict",https_only=os.getenv("COOKIE_SECURE","1")!="0")
 @app.middleware("http")
 async def headers(request,call_next):
     r=await call_next(request); r.headers["X-Content-Type-Options"]="nosniff"; r.headers["X-Frame-Options"]="DENY"; r.headers["Referrer-Policy"]="no-referrer"; return r
