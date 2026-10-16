@@ -1152,7 +1152,7 @@ def subscription_text(links):
     return base64.b64encode("\n".join(item["url"] for item in links).encode()).decode()
 
 def subscription_userinfo(client):
-    """Standard subscription metadata consumed by compatible VPN clients."""
+    """Standard subscription metadata consumed by compatible clients."""
     used=max(0,int(client.get("used_bytes") or 0))
     quota=0 if client.get("quota_bytes") is None else max(0,int(client["quota_bytes"]))
     expire=0
@@ -1300,7 +1300,7 @@ async def restore_database(r:Request):
                     for table,required in required_columns.items():
                         columns={row[1] for row in check.execute("PRAGMA table_info("+table+")")}
                         if not required.issubset(columns):
-                            raise HTTPException(422,"Backup schema is incompatible with AbyssPanel")
+                            raise HTTPException(422,"Backup schema is incompatible with this release")
                 except sqlite3.DatabaseError as exc:
                     raise HTTPException(422,"Backup is not a valid SQLite database") from exc
             finally:
