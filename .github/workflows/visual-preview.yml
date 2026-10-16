@@ -57,7 +57,7 @@ jobs:
               html=page.content().splitlines()
               print("INLINE_ERROR_CONTEXT=" + repr(html[654][11500:12500] if len(html)>654 else "HTML_LINES="+str(len(html))))
               page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
-              for nav, filename in [("users","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
+              for nav, filename in [("clients","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
                   locator = page.locator('[data-nav="' + nav + '"]').first
                   if locator.count():
                       locator.click()
