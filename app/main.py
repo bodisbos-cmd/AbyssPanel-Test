@@ -12,7 +12,7 @@ from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 
-APP_NAME="AbyssPanel-Test"
+APP_NAME="Void"
 PROFILES=[
     {"key":"ws","label":"WebSocket","network":"ws","path":"/ws","port":10001,"mode":None},
     {"key":"httpupgrade","label":"HTTPUpgrade","network":"httpupgrade","path":"/httpupgrade","port":10002,"mode":None},
