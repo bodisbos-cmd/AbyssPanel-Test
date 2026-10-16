@@ -1,0 +1,82 @@
+name: Visual preview
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ui/desktop-reference-layout
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build Void
+        run: docker build --pull -t void-visual:ci .
+      - name: Start isolated preview
+        run: |
+          mkdir -p "$RUNNER_TEMP/void-visual-data"
+          docker run -d --name void-visual -p 18080:8080 -e COOKIE_SECURE=0 -e ABYSS_TEST_MODE=1 -v "$RUNNER_TEMP/void-visual-data:/data" void-visual:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18080/health | grep -q '"xray":"running"'; then exit 0; fi
+            sleep 1
+          done
+          docker logs void-visual
+          exit 1
+      - name: Install browser for real screenshots
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Capture login, dashboard, sections and mobile menu
+        run: |
+          mkdir -p visual-preview
+          python - <<'PY'
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          base = "http://127.0.0.1:18080"
+          out = Path("visual-preview")
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
+              errors = []
+              page.on("pageerror", lambda e: errors.append(str(e)))
+              page.goto(base + "/login", wait_until="networkidle")
+              page.screenshot(path=str(out / "01-login-desktop.png"), full_page=True, animations="disabled")
+              page.locator('input[name="username"]').fill("admin")
+              page.locator('input[name="password"]').fill("admin")
+              page.locator('button[type="submit"]').click()
+              page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
+              page.wait_for_timeout(1200)
+              page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=True, animations="disabled")
+              for nav, filename in [("users","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
+                  locator = page.locator('[data-nav="' + nav + '"]').first
+                  if locator.count():
+                      locator.click()
+                      page.wait_for_timeout(350)
+                      page.screenshot(path=str(out / filename), full_page=True, animations="disabled")
+              mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
+              mobile.goto(base + "/", wait_until="networkidle")
+              mobile.wait_for_timeout(500)
+              mobile.screenshot(path=str(out / "09-dashboard-mobile.png"), full_page=True, animations="disabled")
+              toggle = mobile.locator("#menuToggle")
+              if toggle.count():
+                  toggle.click()
+                  mobile.wait_for_timeout(250)
+              mobile.screenshot(path=str(out / "10-mobile-menu.png"), full_page=True, animations="disabled")
+              print("BROWSER_ERRORS=" + repr(errors))
+              if errors:
+                  raise SystemExit("Browser JavaScript errors detected: " + repr(errors))
+              browser.close()
+          PY
+      - name: Upload visual preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-visual-preview
+          path: visual-preview/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Cleanup
+        if: always()
+        run: docker rm -f void-visual >/dev/null 2>&1 || true
