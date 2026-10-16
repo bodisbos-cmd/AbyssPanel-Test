@@ -137,7 +137,7 @@ def test_backup_download_and_restore_rejects_bad_files(client):
     backup = client.get("/api/backup")
     assert backup.status_code == 200
     assert "application/zip" in backup.headers["content-type"]
-    assert "abysspanel-backup.zip" in backup.headers["content-disposition"]
+    assert "void-backup.zip" in backup.headers["content-disposition"]
 
     deleted = client.delete(f"/api/clients/{created.json()['id']}",
                             headers={"X-CSRF-Token": csrf})
