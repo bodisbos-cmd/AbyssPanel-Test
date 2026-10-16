@@ -1014,6 +1014,14 @@ html[data-abyss-theme="angel"] .top-tools-search,html[data-abyss-theme="angel"] 
 .login-extra-row a{color:var(--ab-muted);text-decoration:none;border-bottom:1px solid var(--ab-line);padding-bottom:2px}
 .login-extra-row a:hover{color:var(--ab-text);border-color:var(--ab-accent)}
 #loginHelpDialog{width:min(440px,calc(100vw - 24px));max-width:440px;padding:20px;border:1px solid var(--ab-line);border-radius:20px;background:var(--ab-bg);color:var(--ab-text)}
+
+/* Reference login eclipse: a dark solar disc with fine monochrome corona rays. */
+.login-visual{background-color:#030303!important;background-image:radial-gradient(ellipse at 50% 50%,rgba(230,231,234,.045),transparent 48%),radial-gradient(1px 1px at 12% 16%,rgba(235,236,239,.8) 98%,transparent),radial-gradient(1px 1px at 81% 23%,rgba(235,236,239,.65) 98%,transparent),radial-gradient(1px 1px at 74% 82%,rgba(235,236,239,.55) 98%,transparent),radial-gradient(1px 1px at 26% 77%,rgba(235,236,239,.5) 98%,transparent),linear-gradient(145deg,#050505,#010101 68%,#070707)!important;background-size:100% 100%,310px 260px,370px 300px,290px 330px,410px 350px,100% 100%!important}
+.login-visual .visual-orbit{border:0!important;box-shadow:none!important;background:repeating-conic-gradient(from -4deg at 50% 50%,rgba(214,216,221,.26) 0deg .22deg,transparent .24deg 3.4deg);filter:drop-shadow(0 0 18px rgba(220,222,226,.07));}
+.login-visual .visual-orbit:before{inset:0!important;border:0!important;border-radius:50%!important;transform:none!important;background:radial-gradient(circle at 50% 50%,#000 0 15.5%,rgba(0,0,0,.97) 16% 18%,transparent 18.7%);box-shadow:inset 0 0 32px rgba(0,0,0,.95),0 0 0 1px rgba(235,236,239,.08);}
+.login-visual .visual-orbit:after{inset:13%!important;border:1px solid rgba(220,222,226,.14)!important;border-radius:50%!important;transform:none!important;box-shadow:0 0 26px rgba(225,226,230,.08),inset 0 0 22px rgba(220,222,226,.035)!important;background:transparent!important;}
+.login-visual .visual-eyebrow{letter-spacing:.25em}
+@media(max-width:700px){.login-visual{display:none!important}}
 </style>"""
 ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
 (()=> {
