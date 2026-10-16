@@ -47,7 +47,7 @@
 ## نمونه cURL
 ~~~sh
 curl -H "Authorization: Bearer $ABYSS_API_TOKEN" \
-  https://YOUR-PANEL-DOMAIN/api/v1/clients
+  https://YOUR-DASHBOARD-DOMAIN/api/v1/clients
 ~~~
 
 ساخت مشتری:
@@ -56,7 +56,7 @@ curl -X POST \
   -H "Authorization: Bearer $ABYSS_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Customer 123","duration_days":30,"quota_gb":20}' \
-  https://YOUR-PANEL-DOMAIN/api/v1/clients
+  https://YOUR-DASHBOARD-DOMAIN/api/v1/clients
 ~~~
 
 ### تمدید و تغییر حجم
