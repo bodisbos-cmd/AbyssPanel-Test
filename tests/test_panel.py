@@ -3,7 +3,9 @@ import base64
 import html
 import os
 import re
+import shutil
 import sqlite3
+import subprocess
 import sys
 from pathlib import Path
 
@@ -127,6 +129,30 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert '#menuToggle{display:inline-flex!important;position:fixed!important;top:14px!important;left:14px!important;right:auto!important;' in response.text
     assert '.sidebar{position:fixed!important;top:0!important;left:0!important;right:auto!important;' in response.text
     assert "پیش‌فرض خاموش‌اند" in response.text
+
+
+def test_embedded_dashboard_scripts_have_valid_javascript_syntax():
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js is not installed; JavaScript syntax validation is run when available.")
+
+    scripts = []
+    for document in (panel.LOGIN, panel.DASH):
+        scripts.extend(re.findall(r"<script\\b[^>]*>(.*?)</script>", document, flags=re.S))
+    scripts.append(panel.DASH_JS)
+
+    for index, script in enumerate(scripts):
+        if not script.strip():
+            continue
+        result = subprocess.run(
+            [node, "--check"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+        assert result.returncode == 0, f"JavaScript chunk {index} has a syntax error:\\n{result.stderr}"
 
 
 def test_dashboard_requires_login(client):
