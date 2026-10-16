@@ -44,14 +44,16 @@ jobs:
               browser = p.chromium.launch()
               page = browser.new_page(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
               errors = []
-              page.on("pageerror", lambda e: errors.append(str(e)))
+              page.on("pageerror", lambda e: errors.append(str(e) + " | " + str(getattr(e, "stack", ""))))
               page.goto(base + "/login", wait_until="domcontentloaded")
+              print("LOGIN_LAYOUT=" + str(page.locator(".login-layout").evaluate("(e) => ({grid:getComputedStyle(e).gridTemplateColumns,display:getComputedStyle(e).display,visual:getComputedStyle(e.querySelector('.login-visual')).display})")))
               page.screenshot(path=str(out / "01-login-desktop.png"), full_page=False, animations="disabled")
               page.locator('input[name="username"]').fill("admin")
               page.locator('input[name="password"]').fill("admin")
               page.locator("form button").last.click()
               page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               page.wait_for_timeout(1200)
+              print("DASHBOARD_VISIBLE_SECTIONS=" + str(page.locator("[data-section-page]").evaluateAll("(els) => els.filter(e => getComputedStyle(e).display !== 'none').map(e => e.dataset.sectionPage)")))
               page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
               for nav, filename in [("users","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
                   locator = page.locator('[data-nav="' + nav + '"]').first
