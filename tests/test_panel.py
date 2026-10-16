@@ -89,7 +89,22 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="dashboardUsageCard"' in response.text
     assert 'id="panelHealthCard"' in response.text
     assert "grid-template-columns:repeat(4,minmax(0,1fr))!important" in response.text
-    assert 'M31 7 L35 25 L32 39 L29 25 Z' in response.text
+    assert '<span class="abyss-logo-mark" aria-hidden="true"></span>' in response.text
+    assert "repeating-conic-gradient" in response.text
+    assert "ABYSS TUNNEL" in login_page.text
+    assert "Secure · Private · Unlimited" in login_page.text
+    assert 'data-nav="create"' in response.text
+    assert 'data-nav="servers"' in response.text
+    assert 'data-nav="protocols"' in response.text
+    assert 'data-nav="reports"' in response.text
+    assert 'data-section-page="create"' in response.text
+    assert 'id="serversPage"' in response.text
+    assert 'id="protocolsPage"' in response.text
+    assert 'id="reportsPage"' in response.text
+    assert 'id="protocolCatalog"' in response.text
+    assert 'id="reportProfiles"' in response.text
+    assert response.text.count('id="name"') == 1
+    assert response.text.count('id="clientProfileChoices"') == 1
     assert 'data-section-page="clients"' in response.text
     assert 'id="metricsCard"' in response.text
     assert 'id="adminUsersCard"' in response.text
