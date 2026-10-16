@@ -43,7 +43,7 @@ jobs:
             exit 1
           fi
           curl -fsS http://127.0.0.1:18080/health | grep -q '"ok":true'
-          curl -fsS http://127.0.0.1:18080/login | grep -q 'خوش برگشتی'
+          curl -fsS http://127.0.0.1:18080/login | grep -q 'name="username"'
           for path in /ws /httpupgrade /trojan-ws /vmess-ws /connect /upgrade; do
             status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' -H 'Connection: Upgrade' -H 'Upgrade: websocket' "http://127.0.0.1:18080$path" || true)
             test "$status" != "502"
