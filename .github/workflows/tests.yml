@@ -18,15 +18,15 @@ jobs:
       - run: python -m compileall -q app tests
       - run: pytest -q
       - name: Build deployment image
-        run: docker build --pull -t abysspanel-test:ci .
+        run: docker build --pull -t void-test:ci .
       - name: Smoke test the real container and Xray routes
         run: |
           set -eu
-          mkdir -p "$RUNNER_TEMP/abyss-smoke-data"
-          docker run -d --name abysspanel-smoke -p 18080:8080 -e COOKIE_SECURE=0 -e ABYSS_TEST_MODE=1 -v "$RUNNER_TEMP/abyss-smoke-data:/data" abysspanel-test:ci
+          mkdir -p "$RUNNER_TEMP/void-smoke-data"
+          docker run -d --name void-smoke -p 18080:8080 -e COOKIE_SECURE=0 -e ABYSS_TEST_MODE=1 -v "$RUNNER_TEMP/void-smoke-data:/data" void-test:ci
           cleanup() {
-            docker logs abysspanel-smoke || true
-            docker rm -f abysspanel-smoke >/dev/null 2>&1 || true
+            docker logs void-smoke || true
+            docker rm -f void-smoke >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
           ready=0
@@ -52,24 +52,24 @@ jobs:
             status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080$path" || true)
             test "$status" = "502"
           done
-          if docker logs abysspanel-smoke 2>&1 | grep -q 'Xray startup failed'; then
+          if docker logs void-smoke 2>&1 | grep -q 'Xray startup failed'; then
             echo "Xray failed to start; see container logs above."
             exit 1
           fi
           # Exercise genuine VLESS handshakes and traffic over every transport,
           # not just an HTTP status code from the reverse-proxy route.
-          docker cp scripts/smoke_transports.py abysspanel-smoke:/tmp/smoke_transports.py
-          docker exec abysspanel-smoke python /tmp/smoke_transports.py
+          docker cp scripts/smoke_transports.py void-smoke:/tmp/smoke_transports.py
+          docker exec void-smoke python /tmp/smoke_transports.py
           # Confirm the app watchdog recovers Xray after the smoke script kills it.
           # Then restart the entire container and verify SQLite state on the volume.
-          docker restart abysspanel-smoke >/dev/null
+          docker restart void-smoke >/dev/null
           ready=0
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:18080/health | grep -q '"xray":"running"'; then ready=1; break; fi
             sleep 1
           done
           test "$ready" = "1"
-          docker exec -i abysspanel-smoke python - <<'PY'
+          docker exec -i void-smoke python - <<'PY'
           import sqlite3
           conn = sqlite3.connect("/data/panel.sqlite3", timeout=10)
           try:
