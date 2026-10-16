@@ -1144,6 +1144,36 @@ html body .workspace>#createServiceCard.nav-hidden,
 html body .workspace>section[id].nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
 html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
 html body .workspace>#dashboardUsageCard:not(.nav-hidden){display:block!important}
+
+/* Reference match pass: restore the two-column eclipse login composition from the supplied screenshots. */
+@media(min-width:851px){
+ .login-layout{direction:ltr!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;place-items:center!important;align-content:stretch!important;gap:clamp(24px,4vw,72px)!important;padding:5vh clamp(26px,5vw,86px)!important;min-height:100vh!important}
+ .login-layout>.login-visual{position:relative!important;inset:auto!important;grid-column:1!important;grid-row:1!important;width:100%!important;height:100%!important;min-height:620px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;overflow:visible!important;pointer-events:none!important}
+ .login-layout>.login-visual .visual-orbit{position:absolute!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;width:min(43vw,610px)!important;opacity:.75!important}
+ .login-layout>.card{grid-column:2!important;grid-row:1!important;justify-self:center!important;align-self:center!important;width:min(100%,430px)!important}
+ .login-layout:before{background:radial-gradient(ellipse at 24% 50%,rgba(160,163,171,.04),transparent 34%),#020202!important}
+}
+@media(max-width:850px){
+ .login-layout{direction:rtl!important;grid-template-columns:minmax(0,1fr)!important}
+ .login-layout>.login-visual{position:fixed!important;inset:0!important;min-height:0!important}
+ .login-layout>.login-visual .visual-orbit{top:8%!important;left:50%!important;transform:translateX(-50%)!important;width:82vw!important;opacity:.28!important}
+ .login-layout>.card{grid-column:1!important;grid-row:1!important}
+}
+/* Dashboard components follow the compact reference dashboard proportions. */
+@media(min-width:1151px){
+ .workspace>#dashboardUsageCard{grid-column:span 7!important}
+ .workspace>#panelHealthCard{grid-column:span 5!important}
+}
+.workspace>#panelHealthCard{padding:18px!important}
+.workspace>#panelHealthCard #status{gap:7px!important}
+.workspace>#panelHealthCard #status>*{padding:9px 11px!important;border-radius:11px!important}
+.sidebar{width:218px!important}
+.workspace{max-width:calc(100% - 218px)!important}
+@media(max-width:850px){
+ .sidebar{width:min(290px,84vw)!important}
+ .workspace{max-width:100%!important}
+}
+
 /* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
 /* Keep the theme selector inside the dashboard toolbar; it is not part of the login composition. */
 body:has(.login-layout) #abyssThemeDock{display:none!important}
