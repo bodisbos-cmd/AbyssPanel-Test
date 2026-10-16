@@ -1174,6 +1174,22 @@ html body .workspace>#dashboardUsageCard:not(.nav-hidden){display:block!importan
  .workspace{max-width:100%!important}
 }
 
+
+/* Explicit ID-level section hiding: legacy ID selectors with !important otherwise keep hidden sections in the grid. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>#createServiceCard.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden),
+html body .workspace>#createServiceCard:not(.nav-hidden){display:block!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden){grid-column:span 8!important}
+html body .workspace>#panelHealthCard:not(.nav-hidden){grid-column:span 4!important}
+@media(max-width:980px){
+ html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+ html body .workspace>#panelHealthCard:not(.nav-hidden){grid-column:1/-1!important}
+}
 /* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
 /* Keep the theme selector inside the dashboard toolbar; it is not part of the login composition. */
 body:has(.login-layout) #abyssThemeDock{display:none!important}
