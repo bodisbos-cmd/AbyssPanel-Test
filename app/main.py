@@ -1065,7 +1065,7 @@ ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
       menu.innerHTML=open?'✕ <span>بستن</span>':'☰ <span>منو</span>';
     };
     window.toggleSidebar=()=>setOpen(!sidebar.classList.contains('open'));
-    menu.onclick=null;menu.removeAttribute('onclick');menu.addEventListener('click',e=>{e.preventDefault();setOpen(!sidebar.classList.contains('open'));});
+    menu.removeAttribute('onclick');menu.addEventListener('click',e=>{e.preventDefault();setOpen(!sidebar.classList.contains('open'));});
     shade.addEventListener('click',()=>setOpen(false));
     sidebar.querySelectorAll('[data-nav]').forEach(item=>item.addEventListener('click',()=>setOpen(false)));
     document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
