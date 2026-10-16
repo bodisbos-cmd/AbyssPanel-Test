@@ -120,6 +120,13 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="panelHelpDialog"' in response.text
     assert 'class="account-badge"' in response.text
     assert 'افزودن کاربر +' in response.text
+    dashboard_script = client.get("/dashboard.js")
+    assert dashboard_script.status_code == 200
+    assert "function runGlobalSearch()" in dashboard_script.text
+    assert "function showPanelHelp()" in dashboard_script.text
+    assert "function loadServerStatus()" in dashboard_script.text
+    assert "function loadReports()" in dashboard_script.text
+    assert "function renderProtocolCatalog(profiles)" in dashboard_script.text
     assert response.text.count('id="name"') == 1
     assert response.text.count('id="clientProfileChoices"') == 1
     assert 'data-section-page="clients"' in response.text
@@ -152,7 +159,7 @@ def test_embedded_dashboard_scripts_have_valid_javascript_syntax():
             timeout=15,
             check=False,
         )
-        assert result.returncode == 0, f"JavaScript chunk {index} has a syntax error:\\n{result.stderr}"
+        assert result.returncode == 0, f"JavaScript chunk {index} has a syntax error:\n{result.stderr}"
 
 
 def test_dashboard_requires_login(client):
