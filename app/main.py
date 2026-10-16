@@ -1111,6 +1111,37 @@ html body .workspace #dashboardUsageCard canvas{display:block;width:100%!importa
 }
 @media(min-width:851px) and (max-width:1150px){html body .workspace #overviewStats[data-section-page="dashboard"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+/* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
+:root{--ab-mint:#a9b9b0!important;--abyss-mint:#a9b9b0!important}
+html,body{max-width:100%;overflow-x:clip!important}
+input[type=checkbox],input[type=radio],.profile-option input{accent-color:#a9b9b0!important}
+.login-layout>.card{border-top-color:rgba(205,208,214,.22)!important}
+.login-layout>.card button{background:linear-gradient(145deg,#c8c9cc,#96989e)!important;color:#09090a!important}
+.workspace>#dashboardUsageCard{grid-column:1/-1!important;width:100%!important}
+.workspace>#panelHealthCard{grid-column:1/-1!important;width:100%!important;display:block!important;min-width:0!important;overflow:hidden!important}
+.workspace>#panelHealthCard #status{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;width:100%!important;min-width:0!important}
+.workspace>#panelHealthCard #status>*{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;white-space:normal!important}
+.workspace>#panelHealthCard .section-title,.workspace>#panelHealthCard .small{max-width:100%!important;overflow-wrap:anywhere!important}
+.workspace>#dashboardUsageCard>.stats{margin-top:14px!important}
+.workspace>#dashboardUsageCard>.stats>.card{border-radius:16px!important}
+@media(max-width:850px){
+ body:not(.abyss-menu-open) .sidebar{transform:translateX(-110%)!important;visibility:hidden!important;pointer-events:none!important}
+ body.abyss-menu-open .sidebar{transform:translateX(0)!important;visibility:visible!important;pointer-events:auto!important}
+ .workspace{width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;overflow-x:clip!important}
+ .workspace .top,.workspace .top>*{max-width:100%!important;min-width:0!important}
+ .workspace .abyss-brand-row{max-width:100%!important;overflow:hidden!important}
+ .workspace .brand-name{min-width:0!important;max-width:100%!important}
+ .workspace .top .tools{min-width:0!important}
+ .workspace .top .tools>*{min-width:0!important;max-width:100%!important}
+ .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:390px){
+ .workspace{padding-left:10px!important;padding-right:10px!important}
+ .workspace .brand-name b{font-size:14px!important;letter-spacing:.08em!important}
+ .workspace .top .tools button{flex:1 1 calc(33.333% - 7px)!important}
+ .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
