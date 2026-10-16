@@ -68,6 +68,13 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="abyss-theme-controller"' in login_page.text
     assert 'data-abyss-theme="angel"' in login_page.text
     admin_client(client)
+    profiles = client.get("/api/settings").json()["profiles"]
+    websocket = next(p for p in profiles if p["key"] == "ws")
+    assert websocket["network"] == "ws"
+    assert websocket["path"] == "/ws"
+    assert websocket["port"] == 10001
+    assert websocket["protocol"] == "vless"
+    assert any(p["experimental"] for p in profiles)
     response = client.get("/")
     assert response.status_code == 200
     assert "no-store" in response.headers.get("cache-control", "")
