@@ -1022,6 +1022,32 @@ html[data-abyss-theme="angel"] .top-tools-search,html[data-abyss-theme="angel"] 
 .login-visual .visual-orbit:after{inset:13%!important;border:1px solid rgba(220,222,226,.14)!important;border-radius:50%!important;transform:none!important;box-shadow:0 0 26px rgba(225,226,230,.08),inset 0 0 22px rgba(220,222,226,.035)!important;background:transparent!important;}
 .login-visual .visual-eyebrow{letter-spacing:.25em}
 @media(max-width:700px){.login-visual{display:none!important}}
+
+/* Desktop reference layout: persistent left rail; drawer only on mobile. */
+@media(min-width:851px){
+ #menuToggle{display:none!important} #abyssMenuShade{display:none!important}
+ .app-shell{display:block!important;min-height:100vh!important}
+ .sidebar{position:fixed!important;left:0!important;right:auto!important;top:0!important;bottom:0!important;width:248px!important;height:100dvh!important;max-height:100dvh!important;transform:translateX(0)!important;visibility:visible!important;overflow-y:auto!important;border-right:1px solid rgba(185,188,194,.18)!important;padding:22px 14px!important;z-index:100!important}
+ .workspace{width:calc(100% - 248px)!important;max-width:none!important;margin:0 0 0 248px!important;padding:28px clamp(18px,2vw,34px) 42px!important;min-width:0!important}
+ .workspace .top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-top:0!important;margin-bottom:22px}
+ .workspace .top .abyss-brand-row{margin-right:auto}
+ .workspace .top .section-heading{flex:1 0 100%;margin:8px 0 0}
+ .workspace .top .tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+ .stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+ .workspace [data-section-page],.workspace .card,.workspace .panel,.workspace .box{min-width:0}
+}
+@media(min-width:851px) and (max-width:1150px){
+ .sidebar{width:220px!important}
+ .workspace{width:calc(100% - 220px)!important;margin-left:220px!important;padding-inline:18px!important}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:850px){
+ #menuToggle{display:inline-flex!important}
+ .sidebar{transform:translateX(-105%)!important;visibility:visible!important}
+ .sidebar.open{transform:translateX(0)!important}
+ .workspace{width:100%!important;max-width:none!important;margin:0!important}
+}
+@media(prefers-reduced-motion:reduce){.sidebar,#menuToggle,#abyssMenuShade{transition:none!important}}
 </style>"""
 ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
 (()=> {
