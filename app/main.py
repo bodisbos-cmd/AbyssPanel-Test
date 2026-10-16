@@ -1082,8 +1082,23 @@ ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
 })();
 </script>"""
 LOGIN = LOGIN.replace('<body><main class="card">','<body><div class="login-layout"><aside class="login-visual" aria-label="Abyss Tunnel"><div class="visual-orbit" aria-hidden="true"></div><div class="visual-eyebrow">ABYSS TUNNEL</div><h2>• I T A •</h2><p>Secure · Private · Unlimited</p></aside><main class="card">').replace('</form></main></body>','</form></main><dialog id="loginHelpDialog"><div class="modal-top"><div><h2>بازیابی رمز عبور</h2><div class="small">راهنمای دسترسی امن</div></div><button type="button" onclick="document.getElementById(\'loginHelpDialog\').close()" aria-label="بستن">✕</button></div><p class="small">بازیابی از طریق ایمیل در این استقرار پیکربندی نشده است. اگر رمز عبور را تغییر داده‌ای و فراموش کرده‌ای، از مالک پنل برای بازنشانی امن کمک بگیر.</p></dialog></div></body>')
-LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + "</body>")
-DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + "</body>")
+ABYSS_FINAL_LAYOUT_CSS = r"""<style id="abyss-final-layout">
+/* Final cascade layer: deliberately last so the reference layout wins over legacy inline templates. */
+.login-layout{position:relative!important;isolation:isolate!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;place-items:center!important;align-content:center!important;gap:0!important;width:100%!important;max-width:none!important;min-height:100dvh!important;margin:0!important;padding:28px 14px!important;direction:rtl!important}
+.login-visual{position:fixed!important;inset:0!important;z-index:0!important;display:block!important;pointer-events:none!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.login-visual .visual-eyebrow,.login-visual h2,.login-visual p{display:none!important}
+.login-visual .visual-orbit{position:absolute!important;top:4%!important;left:4%!important;width:min(56vw,610px)!important;max-width:none!important;aspect-ratio:1!important;margin:0!important;opacity:.21!important;pointer-events:none!important}
+.login-layout>.card{position:relative!important;z-index:2!important;width:min(100%,430px)!important;max-width:430px!important;margin:0 auto!important;justify-self:center!important;align-self:center!important}
+.login-layout:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 50% 42%,rgba(205,207,213,.075),transparent 38%),radial-gradient(circle at 50% 50%,#050505 0,#020202 72%)}
+[data-section-page].nav-hidden{display:none!important}
+[data-section-page]:not(.nav-hidden){display:block}
+#abyssMenuShade{position:fixed;inset:0;z-index:49;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;transition:opacity .2s ease}
+body.abyss-menu-open #abyssMenuShade{opacity:1;pointer-events:auto}
+@media(max-width:850px){.login-layout{padding:20px 14px!important}.login-layout>.card{width:min(100%,420px)!important}.login-visual .visual-orbit{width:90vw!important;left:-20vw!important;top:-8%!important;opacity:.15!important}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>"""
+LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
+DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 
 @app.get("/dashboard.js",response_class=PlainTextResponse)
 async def dashboard_js():
