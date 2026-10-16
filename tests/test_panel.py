@@ -138,7 +138,7 @@ def test_embedded_dashboard_scripts_have_valid_javascript_syntax():
 
     scripts = []
     for document in (panel.LOGIN, panel.DASH):
-        scripts.extend(re.findall(r"<script\\b[^>]*>(.*?)</script>", document, flags=re.S))
+        scripts.extend(re.findall(r"<script\b[^>]*>(.*?)</script>", document, flags=re.S))
     scripts.append(panel.DASH_JS)
 
     for index, script in enumerate(scripts):
