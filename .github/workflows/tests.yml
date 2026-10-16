@@ -29,12 +29,19 @@ jobs:
             docker rm -f void-smoke >/dev/null 2>&1 || true
           }
           trap cleanup EXIT
+          # The web app can answer /health before the Xray process finishes
+          # binding its listeners. Wait for both services before testing routes.
           ready=0
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:18080/health >/dev/null; then ready=1; break; fi
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:18080/health | grep -q '"xray":"running"'; then ready=1; break; fi
             sleep 1
           done
-          test "$ready" = "1"
+          if [ "$ready" != "1" ]; then
+            echo "Container did not become healthy with Xray running."
+            curl -fsS http://127.0.0.1:18080/health || true
+            docker logs void-smoke || true
+            exit 1
+          fi
           curl -fsS http://127.0.0.1:18080/health | grep -q '"ok":true'
           curl -fsS http://127.0.0.1:18080/login | grep -q 'خوش برگشتی'
           for path in /ws /httpupgrade /trojan-ws /vmess-ws /connect /upgrade; do
