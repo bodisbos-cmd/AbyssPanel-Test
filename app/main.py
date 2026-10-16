@@ -1111,6 +1111,20 @@ html body .workspace #dashboardUsageCard canvas{display:block;width:100%!importa
 }
 @media(min-width:851px) and (max-width:1150px){html body .workspace #overviewStats[data-section-page="dashboard"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ID-specific hiding is required because legacy #id rules have higher specificity than generic section selectors. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>section#clientsCard.nav-hidden,
+html body .workspace>section#userManagement.nav-hidden,
+html body .workspace>section#protocolsCard.nav-hidden,
+html body .workspace>section#serversCard.nav-hidden,
+html body .workspace>section#reportsCard.nav-hidden,
+html body .workspace>section#settingsCard.nav-hidden{display:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden){display:block!important}
+html body .workspace>#panelHealthCard:not(.nav-hidden){display:block!important}
 /* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
 :root{--ab-mint:#a9b9b0!important;--abyss-mint:#a9b9b0!important}
 html,body{max-width:100%;overflow-x:clip!important}
