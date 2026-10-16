@@ -12,6 +12,7 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -44,8 +45,8 @@ jobs:
               page = browser.new_page(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
               errors = []
               page.on("pageerror", lambda e: errors.append(str(e)))
-              page.goto(base + "/login", wait_until="networkidle")
-              page.screenshot(path=str(out / "01-login-desktop.png"), full_page=True, animations="disabled")
+              page.goto(base + "/login", wait_until="domcontentloaded")
+              page.screenshot(path=str(out / "01-login-desktop.png"), full_page=False, animations="disabled")
               page.locator('input[name="username"]').fill("admin")
               page.locator('input[name="password"]').fill("admin")
               page.locator('button[type="submit"]').click()
