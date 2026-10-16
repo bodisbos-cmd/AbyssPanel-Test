@@ -1135,6 +1135,15 @@ html body .workspace>section.nav-hidden{display:none!important;visibility:hidden
 html body .workspace>#overviewStats:not(.nav-hidden),
 html body .workspace>#dashboardUsageCard:not(.nav-hidden),
 html body .workspace>#panelHealthCard:not(.nav-hidden){visibility:visible!important}
+
+/* Navigation visibility must outrank legacy ID selectors carrying display:grid!important. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>#createServiceCard.nav-hidden,
+html body .workspace>section[id].nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden){display:block!important}
 /* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
 :root{--ab-mint:#a9b9b0!important;--abyss-mint:#a9b9b0!important}
 html,body{max-width:100%;overflow-x:clip!important}
