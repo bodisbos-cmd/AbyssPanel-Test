@@ -93,6 +93,8 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert "repeating-conic-gradient" in response.text
     assert "ABYSS TUNNEL" in login_page.text
     assert "Secure · Private · Unlimited" in login_page.text
+    assert 'class="login-password-toggle"' in login_page.text
+    assert 'aria-pressed="false"' in login_page.text
     assert 'data-nav="create"' in response.text
     assert 'data-nav="servers"' in response.text
     assert 'data-nav="protocols"' in response.text
@@ -103,6 +105,12 @@ def test_dashboard_is_not_cached_and_has_section_navigation(client):
     assert 'id="reportsPage"' in response.text
     assert 'id="protocolCatalog"' in response.text
     assert 'id="reportProfiles"' in response.text
+    assert 'id="serverTableBody"' in response.text
+    assert 'id="dashboardComponentStatus"' in response.text
+    assert 'id="globalSearch"' in response.text
+    assert 'id="panelHelpDialog"' in response.text
+    assert 'class="account-badge"' in response.text
+    assert 'افزودن کاربر +' in response.text
     assert response.text.count('id="name"') == 1
     assert response.text.count('id="clientProfileChoices"') == 1
     assert 'data-section-page="clients"' in response.text
