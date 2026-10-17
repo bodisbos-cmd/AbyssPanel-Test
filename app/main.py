@@ -1806,6 +1806,33 @@ html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
  html body main.app-shell>.workspace>#dashboardQuickCard #recentActivityList{max-height:205px!important}
  html body main.app-shell>.workspace>#dashboardQuickCard .quick-detail-row strong{max-width:68%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
 }
+/* Keep sidebar navigation and creator links in normal flow; never let the footer overlap the last menu item. */
+html body main.app-shell>aside.sidebar{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;
+ scrollbar-gutter:stable!important;box-sizing:border-box!important;
+}
+html body main.app-shell>aside.sidebar>.side-nav{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+ gap:4px!important;flex:0 0 auto!important;position:relative!important;
+}
+html body main.app-shell>aside.sidebar>.side-nav>.nav-item{
+ position:relative!important;flex:0 0 auto!important;box-sizing:border-box!important;
+ margin:0!important;transform:none!important;min-width:0!important;
+}
+html body main.app-shell>aside.sidebar>.side-caption:last-of-type{
+ flex:0 0 auto!important;margin:14px 0 4px!important;padding-top:10px!important;
+ border-top:1px solid var(--ab-line)!important;
+}
+html body main.app-shell>aside.sidebar>.abyss-utility-links{
+ position:relative!important;inset:auto!important;flex:0 0 auto!important;
+ margin:10px 0 12px!important;padding-bottom:6px!important;
+}
+@media(max-width:850px){
+ html body main.app-shell>aside.sidebar{padding-bottom:max(16px,env(safe-area-inset-bottom))!important}
+ html body main.app-shell>aside.sidebar>.abyss-utility-links{gap:6px!important}
+ html body main.app-shell>aside.sidebar>.abyss-utility-links a{max-width:100%!important}
+}
 /* Keep mobile controls usable without turning each toolbar action into a full-width row. */
 @media(max-width:850px){
  html body main.app-shell>.workspace>.top{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0!important}
