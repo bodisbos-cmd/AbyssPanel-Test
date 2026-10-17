@@ -1188,6 +1188,13 @@ html body .workspace>#panelHealthCard:not(.nav-hidden){grid-column:span 4!import
  html body .workspace>#dashboardUsageCard:not(.nav-hidden),
  html body .workspace>#panelHealthCard:not(.nav-hidden){grid-column:1/-1!important}
 }
+/* Hide ID-targeted dashboard sections even against legacy ID selectors using display:grid!important. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden){display:block!important}
 /* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
 /* Keep the theme selector inside the dashboard toolbar; it is not part of the login composition. */
 body:has(.login-layout) #abyssThemeDock{display:none!important}
