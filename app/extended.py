@@ -278,12 +278,36 @@ def install_extended(app, namespace):
         nginx_error=None
         if nginx_installed:
             try:
-                nginx_check=await asyncio.to_thread(subprocess.run,["nginx","-t"],capture_output=True,text=True,timeout=8)
-                nginx_ok=nginx_check.returncode==0
-                if not nginx_ok: nginx_error=(nginx_check.stderr or nginx_check.stdout)[-400:]
+                # The live Nginx master is started as root by scripts/start.sh, but
+                # this diagnostic runs inside the unprivileged app worker. Testing
+                # against its real /tmp/nginx.pid therefore fails with EACCES even
+                # when the active config is valid. Test an isolated copy with only
+                # the root-only "user" directive removed and a private temporary pid.
+                live_config=Path("/etc/nginx/nginx.conf")
+                if not live_config.is_file():
+                    raise OSError("Nginx configuration file /etc/nginx/nginx.conf was not found")
+                with tempfile.TemporaryDirectory(prefix="void-nginx-check-") as temp_dir:
+                    temp_path=Path(temp_dir)
+                    lines=[]
+                    for line in live_config.read_text(encoding="utf-8").splitlines():
+                        directive=line.strip()
+                        if directive.startswith("user ") or directive.startswith("pid "):
+                            continue
+                        lines.append(line)
+                    probe_config=temp_path/"nginx.conf"
+                    probe_config.write_text(
+                        "pid "+str(temp_path/"nginx-diagnostics.pid")+";\\n"+"\\n".join(lines)+"\\n",
+                        encoding="utf-8")
+                    nginx_check=await asyncio.to_thread(
+                        subprocess.run,["nginx","-t","-c",str(probe_config)],
+                        capture_output=True,text=True,timeout=8)
+                    nginx_output="\\n".join(part.strip() for part in (nginx_check.stdout,nginx_check.stderr) if part and part.strip())
+                    nginx_ok=nginx_check.returncode==0
+                    if not nginx_ok:
+                        nginx_error=nginx_output[-600:] or f"Nginx config test exited with code {nginx_check.returncode}"
             except (OSError,subprocess.SubprocessError) as exc:
                 nginx_ok=False
-                nginx_error=str(exc)[:250]
+                nginx_error=str(exc)[:400]
         with p.db() as c:
             rows=c.execute(
                 "SELECT profile_key,COUNT(*) AS reports,SUM(CASE WHEN result='ok' THEN 1 ELSE 0 END) AS successes "
