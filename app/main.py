@@ -1280,6 +1280,32 @@ html body .workspace>#createServiceCard .reference-page-head{margin-block-start:
  html body .workspace .top .tools #abyssThemeDock{grid-column:span 2!important;width:100%!important;max-width:100%!important;min-width:0!important;display:flex!important;justify-content:center!important;gap:5px!important;padding:5px 7px!important}
  html body .workspace .top .tools #abyssThemeDock select{min-width:0!important;width:auto!important;max-width:calc(100% - 34px)!important;font-size:10px!important}
 }
+
+/* Visual review fix: non-dashboard sections must occupy the first available workspace row.
+   Older layout rules left their actual forms/tables below a large empty dashboard-sized grid area. */
+@media(min-width:851px){
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard){
+   grid-row:auto!important;
+   grid-column:1/-1!important;
+   align-self:start!important;
+   min-height:0!important;
+   height:auto!important;
+   margin-block:0 14px!important;
+ }
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard)>.reference-page-head{
+   margin-block-start:0!important;
+ }
+}
+@media(max-width:850px){
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard){
+   grid-row:auto!important;
+   grid-column:1/-1!important;
+   align-self:start!important;
+   min-height:0!important;
+   height:auto!important;
+   margin-block:0 12px!important;
+ }
+}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
