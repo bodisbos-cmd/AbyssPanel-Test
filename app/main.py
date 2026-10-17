@@ -1306,6 +1306,32 @@ html body .workspace>#createServiceCard .reference-page-head{margin-block-start:
    margin-block:0 12px!important;
  }
 }
+
+/* Screenshot-review follow-up: restore the reference dashboard's side-by-side monitoring
+   and service-health cards; keep recent activity from stretching the entire page. */
+@media(min-width:1151px){
+ html body .workspace>#dashboardUsageCard[data-section-page="dashboard"]{
+   grid-column:span 7!important;width:auto!important;min-width:0!important;margin-top:0!important;
+ }
+ html body .workspace>#panelHealthCard[data-section-page="dashboard"]{
+   grid-column:span 5!important;width:auto!important;min-width:0!important;align-self:start!important;
+ }
+}
+html body .workspace>#panelHealthCard #recentActivityList{
+ max-height:260px!important;overflow-y:auto!important;overscroll-behavior:contain!important;
+ scrollbar-width:thin!important;
+}
+html body .workspace>#panelHealthCard #dashboardComponentStatus{width:100%!important;min-width:0!important}
+html body .workspace>#panelHealthCard .section-title{line-height:1.45!important}
+@media(min-width:851px) and (max-width:1150px){
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{
+   grid-column:1/-1!important;width:100%!important;
+ }
+}
+@media(max-width:850px){
+ html body .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#panelHealthCard #recentActivityList{max-height:220px!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
