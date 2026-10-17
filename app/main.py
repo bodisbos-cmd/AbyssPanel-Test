@@ -1368,6 +1368,73 @@ html body .workspace>#panelHealthCard #recentActivityList{
  html body .workspace>#panelHealthCard{min-width:0!important;max-width:100%!important}
  html body .workspace>#dashboardUsageCard .chart-wrap{overflow:hidden!important}
 }
+
+/* Reference fidelity pass: establish an intentional dashboard grid rather than relying on
+   auto-placement; keep the overview metrics above the chart and service health panels. */
+@media(min-width:851px){
+ html body .app-shell{grid-template-columns:196px minmax(0,1fr)!important;max-width:none!important}
+ html body .sidebar{width:196px!important;box-sizing:border-box!important;padding:18px 10px!important}
+ html body .workspace{
+   display:grid!important;
+   grid-template-columns:repeat(12,minmax(0,1fr))!important;
+   grid-auto-flow:row!important;
+   align-content:start!important;
+   align-items:start!important;
+   gap:12px!important;
+   width:100%!important;max-width:none!important;
+   min-width:0!important;
+   padding:14px 18px 26px!important;
+ }
+ html body .workspace>.top{grid-column:1/-1!important;grid-row:1!important;min-width:0!important;display:flex!important;align-items:center!important;gap:12px!important;padding:2px 0 12px!important}
+ html body .workspace>#overviewStats{grid-column:1/-1!important;grid-row:2!important;margin:0!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;min-width:0!important}
+ html body .workspace>#dashboardUsageCard{grid-column:6/span 7!important;grid-row:3!important;align-self:start!important;margin:0!important;min-width:0!important}
+ html body .workspace>#panelHealthCard{grid-column:1/span 5!important;grid-row:3!important;align-self:start!important;margin:0!important;min-width:0!important}
+ html body .workspace>.top .abyss-brand-row{flex:0 0 auto!important}
+ html body .workspace>.top .mint{margin-inline-start:auto!important;white-space:nowrap!important}
+ html body .workspace>.top .section-heading{margin:0!important;font-size:18px!important;white-space:nowrap!important}
+ html body .workspace>.top .tools{flex:1 1 auto!important;min-width:0!important;display:flex!important;justify-content:flex-end!important;flex-wrap:wrap!important;gap:6px!important}
+ html body .workspace>.top .tools input{width:190px!important;min-width:100px!important}
+ html body .workspace>#overviewStats>.card{min-width:0!important;margin:0!important;padding:15px 16px!important}
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{padding:16px!important}
+ html body .workspace>#dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin:12px 0!important}
+ html body .workspace>#dashboardUsageCard>.stats>.card{min-width:0!important;margin:0!important;padding:10px!important}
+ html body .workspace>#dashboardUsageCard canvas{display:block!important;width:100%!important;height:150px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
+ html body .workspace>#panelHealthCard .report-events{display:grid!important;gap:7px!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){
+   grid-column:1/-1!important;grid-row:auto!important;align-self:start!important;margin:0!important;min-width:0!important;
+ }
+}
+html body .sidebar{background:linear-gradient(180deg,rgba(9,9,10,.98),rgba(3,3,4,.99))!important;border-right:1px solid rgba(180,182,188,.16)!important;border-left:1px solid rgba(180,182,188,.12)!important}
+html body .side-brand{padding:7px 8px 18px!important}
+html body .side-nav{gap:4px!important}
+html body .nav-item{min-height:37px!important;padding:9px 10px!important;border-radius:10px!important;font-size:12px!important}
+html body .nav-item:hover,html body .nav-item.active{background:linear-gradient(120deg,rgba(220,222,228,.13),rgba(220,222,228,.035))!important;border-color:rgba(205,207,213,.18)!important;color:#f0f0f2!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+html body .workspace .card{background:linear-gradient(145deg,rgba(16,16,18,.97),rgba(6,6,7,.98))!important;border-color:rgba(176,179,187,.17)!important;box-shadow:0 10px 28px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.035)!important;border-radius:13px!important}
+html body .workspace #overviewStats>.card .num{font-size:clamp(20px,2vw,29px)!important}
+html body .workspace .section-title{font-size:14px!important;letter-spacing:0!important}
+html body .workspace .small{line-height:1.5!important}
+@media(min-width:851px) and (max-width:1150px){
+ html body .workspace{grid-template-columns:repeat(6,minmax(0,1fr))!important;padding:12px!important}
+ html body .workspace>.top,html body .workspace>#overviewStats{grid-column:1/-1!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/-1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1/-1!important;grid-row:4!important}
+ html body .workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:850px){
+ html body .app-shell{display:block!important}
+ html body .sidebar{width:min(290px,84vw)!important;max-width:84vw!important;padding:18px 12px!important}
+ html body .workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important;padding:8px 12px 24px!important}
+ html body .workspace>.top{grid-column:1!important;grid-row:auto!important;display:flex!important;flex-wrap:wrap!important;gap:8px!important;padding:8px 0 12px!important}
+ html body .workspace>#overviewStats{grid-column:1!important;grid-row:auto!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:0!important}
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0!important;width:100%!important}
+ html body .workspace>#dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+ html body .workspace>#dashboardUsageCard canvas{max-width:100%!important;height:120px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0!important;width:100%!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
