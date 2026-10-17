@@ -1,0 +1,284 @@
+name: Visual preview
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build Void
+        run: docker build --pull -t void-visual:ci .
+      - name: Start isolated preview
+        run: |
+          mkdir -p "$RUNNER_TEMP/void-visual-data"
+          docker run -d --name void-visual -p 18080:8080 -e COOKIE_SECURE=0 -e ABYSS_TEST_MODE=1 -e BASE_URL=http://127.0.0.1:18080 -v "$RUNNER_TEMP/void-visual-data:/data" void-visual:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18080/health | grep -q '"xray":"running"'; then exit 0; fi
+            sleep 1
+          done
+          docker logs void-visual
+          exit 1
+      - name: Seed synthetic data for visual review only
+        run: |
+          docker exec -i void-visual python - <<'PY'
+          import json, secrets, sqlite3, uuid
+          from datetime import datetime, timedelta, timezone
+          db = sqlite3.connect("/data/panel.sqlite3")
+          now = datetime.now(timezone.utc)
+          fixtures = [
+              ("user123", 30, 100, 45.2),
+              ("samira", 22, 50, 18.4),
+              ("ali", 18, 30, 12.7),
+              ("mohammad", 12, 20, 6.1),
+              ("night", 8, 10, 3.6),
+              ("reza", 3, 5, 1.2),
+          ]
+          for i, (name, days, quota_gb, used_gb) in enumerate(fixtures):
+              created = (now - timedelta(days=i)).isoformat(timespec="seconds")
+              expires = (now + timedelta(days=days)).isoformat(timespec="seconds")
+              db.execute(
+                  "INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,profile_keys,owner_id) VALUES(?,?,?,?,1,?,?,?,?,?,?,NULL)",
+                  (f"visual-{i+1:02d}", name, str(uuid.uuid4()), ("preview-visual-token-0001" if i == 0 else secrets.token_urlsafe(24)), created,
+                   "Visual preview fixture", expires, quota_gb * 1024**3, int(used_gb * 1024**3),
+                   json.dumps(["ws","httpupgrade","xhttp_auto"]))
+              )
+              event_at = (now - timedelta(days=5-i)).isoformat(timespec="seconds")
+              db.execute("INSERT INTO events(at,level,message) VALUES(?,?,?)",
+                         (event_at, "INFO", f"Visual preview: service created for {name}"))
+          db.commit()
+          db.close()
+          print("Seeded 6 isolated visual-preview clients and events.")
+          PY
+      - name: Install browser for real screenshots
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Capture login, dashboard, sections and mobile menu
+        run: |
+          mkdir -p visual-preview
+          python - <<'PY'
+          from pathlib import Path
+          from playwright.sync_api import sync_playwright
+          base = "http://127.0.0.1:18080"
+          out = Path("visual-preview")
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              page = browser.new_page(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
+              errors = []
+              page.on("pageerror", lambda e: errors.append(str(e) + " | " + str(getattr(e, "stack", ""))))
+              page.goto(base + "/login", wait_until="domcontentloaded")
+              print("LOGIN_LAYOUT=" + str(page.locator(".login-layout").evaluate("(e) => ({grid:getComputedStyle(e).gridTemplateColumns,display:getComputedStyle(e).display,visual:getComputedStyle(e.querySelector('.login-visual')).display,repairText:(document.getElementById('abyss-layout-repair')||{}).textContent?.includes('Reference correction'),repairCount:document.querySelectorAll('#abyss-layout-repair').length,repairStyles:[...document.querySelectorAll('style')].filter(s=>s.id==='abyss-layout-repair').map(s=>({len:s.textContent.length,grid:s.textContent.includes('grid-template-columns:minmax(0,1fr)!important')}))})")))
+              page.screenshot(path=str(out / "01-login-desktop.png"), full_page=False, animations="disabled")
+              page.locator('input[name="username"]').fill("admin")
+              page.locator('input[name="password"]').fill("admin")
+              page.locator("form button").last.click()
+              page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
+              # The dashboard finishes its status/metrics requests asynchronously; wait for health data, then allow another real telemetry sample for the graph.
+              page.wait_for_function("""() => {
+                const e=document.getElementById('dashboardComponentStatus');
+                return e && e.querySelectorAll('.dashboard-component').length === 4;
+              }""", timeout=45000)
+              page.wait_for_timeout(16000)
+              def visible_sections(target):
+                  return target.locator("[data-section-page]").evaluate_all("(els) => els.filter(e => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0).map(e => e.dataset.sectionPage)")
+              def assert_active_section(name):
+                  page.wait_for_function("""expected => {
+                    const visible = [...document.querySelectorAll('[data-section-page]')].filter(e =>
+                      getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0);
+                    return visible.length > 0 && visible.every(e => e.dataset.sectionPage === expected);
+                  }""", arg=name, timeout=5000)
+                  actual = visible_sections(page)
+                  print("ACTIVE_SECTION_" + name.upper() + "=" + repr(actual))
+                  if not actual or any(section != name for section in actual):
+                      raise SystemExit("Navigation showed inactive sections for " + name + ": " + repr(actual))
+              assert_active_section("dashboard")
+              dashboard_layout = page.evaluate("""() => {
+                const rect = id => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height}; };
+                const chart=rect('dashboardUsageCard'), health=rect('panelHealthCard'), quick=rect('dashboardQuickCard'), stats=rect('overviewStats'), top=rect('sectionTitle');
+                const overlaps=(x,y)=>!(x.x+x.width<=y.x || y.x+y.width<=x.x || x.y+x.height<=y.y || y.y+y.height<=x.y);
+                const sameRow=Math.max(chart.y,health.y,quick.y)-Math.min(chart.y,health.y,quick.y)<2;
+                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,top,stats,chart,health,quick,sameRow,
+                  chartXBeforeHealth:chart.x<health.x,healthXBeforeQuick:health.x<quick.x,
+                  statsChartOverlap:overlaps(stats,chart),statsHealthOverlap:overlaps(stats,health),statsQuickOverlap:overlaps(stats,quick),
+                  chartHealthOverlap:overlaps(chart,health),chartQuickOverlap:overlaps(chart,quick),healthQuickOverlap:overlaps(health,quick),
+                  statsAboveCards:stats.y+stats.height<=Math.min(chart.y,health.y,quick.y)+1};
+              }""")
+              print("DASHBOARD_LAYOUT=" + repr(dashboard_layout))
+              sidebar_layout = page.evaluate("""() => {
+                const r = e => { const b=e.getBoundingClientRect(); return {top:b.top,bottom:b.bottom,height:b.height}; };
+                const nav=document.querySelector('#sidebar>.side-nav');
+                const captions=[...document.querySelectorAll('#sidebar>.side-caption')]; const caption=captions[captions.length-1];
+                const links=document.querySelector('#sidebar>.abyss-utility-links');
+                return {nav:nav?r(nav):null,caption:caption?r(caption):null,links:links?r(links):null,scrollHeight:document.querySelector('#sidebar')?.scrollHeight,clientHeight:document.querySelector('#sidebar')?.clientHeight};
+              }""")
+              print("SIDEBAR_LAYOUT=" + repr(sidebar_layout))
+              if not sidebar_layout["nav"] or not sidebar_layout["caption"] or sidebar_layout["nav"]["bottom"] > sidebar_layout["caption"]["top"] + 1:
+                  raise SystemExit("Sidebar creator/footer overlaps navigation: " + repr(sidebar_layout))
+              if sidebar_layout["links"] and sidebar_layout["caption"]["bottom"] > sidebar_layout["links"]["top"] + 1:
+                  raise SystemExit("Sidebar utility links overlap creator label: " + repr(sidebar_layout))
+              if dashboard_layout["documentWidth"] > dashboard_layout["viewport"] + 1:
+                  raise SystemExit("Desktop layout has horizontal overflow: " + repr(dashboard_layout))
+              if dashboard_layout["statsChartOverlap"] or dashboard_layout["statsHealthOverlap"] or dashboard_layout["statsQuickOverlap"] or not dashboard_layout["statsAboveCards"]:
+                  raise SystemExit("Dashboard metrics overlap monitoring cards or appear below them: " + repr(dashboard_layout))
+              if not dashboard_layout["sameRow"] or not dashboard_layout["chartXBeforeHealth"] or not dashboard_layout["healthXBeforeQuick"]:
+                  raise SystemExit("Dashboard cards do not match the reference row order (chart left, health center, quick details right): " + repr(dashboard_layout))
+              if any(dashboard_layout[k] for k in ("chartHealthOverlap","chartQuickOverlap","healthQuickOverlap")):
+                  raise SystemExit("Dashboard cards overlap: " + repr(dashboard_layout))
+              page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
+              for nav, filename in [("clients","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
+                  locator = page.locator('[data-nav="' + nav + '"]').first
+                  if not locator.count():
+                      raise SystemExit("Missing navigation item: " + nav)
+                  locator.click()
+                  assert_active_section(nav)
+                  if nav == "servers":
+                      page.wait_for_function("""() => {
+                        const e=document.getElementById('serverStatusGrid');
+                        return e && !e.innerText.includes('در حال بررسی اجزا');
+                      }""", timeout=45000)
+                      diagnosis = page.evaluate("""async () => {
+                        const r = await fetch('/api/system/diagnostics', {cache:'no-store'});
+                        return {httpStatus:r.status, data:await r.json()};
+                      }""")
+                      diagnostic_data = diagnosis["data"]
+                      failures = [x for x in diagnostic_data.get("profiles", [])
+                                  if x.get("enabled") and (not x.get("listener_ok") or not x.get("route_ok"))]
+                      print("SERVER_DIAGNOSTICS=" + repr({
+                        "httpStatus":diagnosis["httpStatus"],
+                        "summary":diagnostic_data.get("summary"),
+                        "nginx_ok":diagnostic_data.get("nginx_ok"),
+                        "failedRoutes":[{"key":x.get("key"),"status":x.get("status"),"http":x.get("http_status"),"error":x.get("error"),"hint":x.get("hint")} for x in failures]
+                      }))
+                      if diagnosis["httpStatus"] != 200 or not diagnostic_data.get("nginx_ok") or failures:
+                          raise SystemExit("Live server diagnostics found configuration or route failures")
+                      note_lengths = page.locator("#serverStatusGrid .server-state .small").evaluate_all("(els) => els.map(e => (e.textContent || '').trim().length)")
+                      print("SERVER_STATUS_NOTE_LENGTHS=" + repr(note_lengths))
+                      if note_lengths and max(note_lengths) > 240:
+                          raise SystemExit("Server status cards contain unbounded diagnostic/debug output: " + repr(note_lengths))
+                  elif nav == "reports":
+                      page.wait_for_function("""() => {
+                        const e=document.getElementById('reportSummary');
+                        return e && !e.innerText.includes('در حال اجرای بررسی‌های واقعی');
+                      }""", timeout=45000)
+                  page.screenshot(path=str(out / filename), full_page=False, animations="disabled")
+              page.locator('[data-nav="dashboard"]').first.click()
+              assert_active_section("dashboard")
+              page.set_viewport_size({"width":1024,"height":768})
+              page.wait_for_timeout(300)
+              tablet_layout = page.evaluate("""() => {
+                const rect=id=>{const e=document.getElementById(id);const b=e.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height}};
+                const overlaps=(a,b)=>!(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
+                const stats=rect('overviewStats'),chart=rect('dashboardUsageCard'),health=rect('panelHealthCard'),quick=rect('dashboardQuickCard');
+                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,stats,chart,health,quick,
+                  statsOverlap:overlaps(stats,chart)||overlaps(stats,health)||overlaps(stats,quick),
+                  cardsOverlap:overlaps(chart,health)||overlaps(chart,quick)||overlaps(health,quick),
+                  chartHealthSameRow:Math.abs(chart.y-health.y)<2,chartLeftOfHealth:chart.x<health.x,
+                  quickBelowCards:quick.y>=Math.max(chart.y+chart.height,health.y+health.height)-1};
+              }""")
+              print("TABLET_LAYOUT=" + repr(tablet_layout))
+              if tablet_layout["documentWidth"] > tablet_layout["viewport"] + 1:
+                  raise SystemExit("Tablet layout has horizontal overflow: " + repr(tablet_layout))
+              if tablet_layout["statsOverlap"] or tablet_layout["cardsOverlap"]:
+                  raise SystemExit("Tablet dashboard cards overlap: " + repr(tablet_layout))
+              if not tablet_layout["chartHealthSameRow"] or not tablet_layout["chartLeftOfHealth"] or not tablet_layout["quickBelowCards"]:
+                  raise SystemExit("Tablet dashboard does not follow the intended chart/status/details order: " + repr(tablet_layout))
+              page.screenshot(path=str(out / "13-dashboard-tablet.png"), full_page=False, animations="disabled")
+              subscription = browser.new_page(viewport={"width":1440,"height":1000}, device_scale_factor=1)
+              subscription.on("pageerror", lambda e: errors.append("subscription: " + str(e) + " | " + str(getattr(e, "stack", ""))))
+              response = subscription.goto(base + "/sub/preview-visual-token-0001", wait_until="domcontentloaded")
+              if response is None or response.status >= 400:
+                  raise SystemExit("Subscription page did not load successfully: " + str(response.status if response else None))
+              subscription.wait_for_selector(".profile-choice", timeout=5000)
+              if subscription.locator(".profile-choice").count() < 3 or not subscription.locator(".hero h1").count():
+                  raise SystemExit("Subscription page is missing its service overview or connection profiles")
+              qr = subscription.locator("img.qr")
+              qr_result = qr.evaluate("""img => ({
+                src: img.currentSrc || img.src,
+                complete: img.complete,
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight
+              })""")
+              print("SUBSCRIPTION_QR=" + repr(qr_result))
+              if not qr_result["complete"] or qr_result["naturalWidth"] < 1 or qr_result["naturalHeight"] < 1:
+                  qr_response = subscription.request.get(qr_result["src"])
+                  print("SUBSCRIPTION_QR_RESPONSE=" + repr({
+                    "status": qr_response.status,
+                    "contentType": qr_response.headers.get("content-type"),
+                    "bodyPrefix": qr_response.body()[:180]
+                  }))
+                  raise SystemExit("Subscription QR failed to render: " + repr(qr_result))
+              subscription.screenshot(path=str(out / "11-subscription-desktop.png"), full_page=True, animations="disabled")
+              subscription_mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
+              subscription_mobile.on("pageerror", lambda e: errors.append("subscription mobile: " + str(e) + " | " + str(getattr(e, "stack", ""))))
+              sub_response = subscription_mobile.goto(base + "/sub/preview-visual-token-0001", wait_until="domcontentloaded")
+              if sub_response is None or sub_response.status >= 400:
+                  raise SystemExit("Mobile subscription page did not load successfully")
+              sub_overflow = subscription_mobile.evaluate("() => ({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth})")
+              print("SUBSCRIPTION_MOBILE_OVERFLOW=" + repr(sub_overflow))
+              if max(sub_overflow["documentWidth"],sub_overflow["bodyWidth"]) > sub_overflow["viewport"] + 1:
+                  raise SystemExit("Subscription page has horizontal overflow: " + repr(sub_overflow))
+              subscription_mobile.screenshot(path=str(out / "12-subscription-mobile.png"), full_page=True, animations="disabled")
+              mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
+              mobile.on("pageerror", lambda e: errors.append("mobile: " + str(e) + " | " + str(getattr(e, "stack", ""))))
+              mobile.goto(base + "/login", wait_until="domcontentloaded")
+              mobile.locator('input[name="username"]').fill("admin")
+              mobile.locator('input[name="password"]').fill("admin")
+              mobile.locator("form button").last.click()
+              mobile.wait_for_url(lambda url: "/login" not in url, timeout=15000)
+              mobile.wait_for_timeout(500)
+              mobile_overflow = mobile.evaluate("() => ({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,headerHeight:document.querySelector('.workspace>.top')?.getBoundingClientRect().height})")
+              print("MOBILE_OVERFLOW=" + repr(mobile_overflow))
+              if max(mobile_overflow["documentWidth"],mobile_overflow["bodyWidth"]) > mobile_overflow["viewport"] + 1:
+                  raise SystemExit("Mobile layout has horizontal overflow: " + repr(mobile_overflow))
+              if mobile_overflow["headerHeight"] is None or mobile_overflow["headerHeight"] > 430:
+                  raise SystemExit("Mobile toolbar is excessively tall instead of using compact controls: " + repr(mobile_overflow))
+              mobile.screenshot(path=str(out / "09-dashboard-mobile.png"), full_page=False, animations="disabled")
+              toggle = mobile.locator("#menuToggle")
+              if not toggle.count():
+                  raise SystemExit("Mobile drawer toggle is missing")
+              toggle.click()
+              mobile.wait_for_function("document.body.classList.contains('abyss-menu-open') && document.querySelector('#sidebar').classList.contains('open')", timeout=3000)
+              mobile.wait_for_timeout(350)
+              drawer_layers = mobile.evaluate("""() => {
+                const sidebar=document.getElementById('sidebar'), shade=document.getElementById('abyssMenuShade');
+                const captions=[...sidebar.querySelectorAll(':scope>.side-caption')], nav=sidebar.querySelector(':scope>.side-nav'), links=sidebar.querySelector(':scope>.abyss-utility-links');
+                const box=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height}};
+                return {shadeParent:shade?.parentElement?.className, shadeZ:shade?Number(getComputedStyle(shade).zIndex):null,
+                  sidebarZ:Number(getComputedStyle(sidebar).zIndex), sidebarFilter:getComputedStyle(sidebar).filter,
+                  nav:box(nav),caption:box(captions[captions.length-1]),links:box(links),
+                  menuOpen:document.body.classList.contains('abyss-menu-open')};
+              }""")
+              print("MOBILE_DRAWER_LAYERS=" + repr(drawer_layers))
+              if drawer_layers["shadeParent"] != "app-shell" or drawer_layers["shadeZ"] >= drawer_layers["sidebarZ"] or drawer_layers["sidebarFilter"] != "none":
+                  raise SystemExit("Mobile overlay obscures or blurs the drawer: " + repr(drawer_layers))
+              if not drawer_layers["nav"] or not drawer_layers["caption"] or drawer_layers["nav"]["bottom"] > drawer_layers["caption"]["top"] + 1:
+                  raise SystemExit("Mobile drawer footer overlaps navigation: " + repr(drawer_layers))
+              if drawer_layers["links"] and drawer_layers["caption"]["bottom"] > drawer_layers["links"]["top"] + 1:
+                  raise SystemExit("Mobile drawer utility links overlap creator label: " + repr(drawer_layers))
+              mobile.screenshot(path=str(out / "10-mobile-menu.png"), full_page=False, animations="disabled")
+              print("BROWSER_ERRORS=" + repr(errors))
+              if errors:
+                  raise SystemExit("Browser JavaScript errors detected: " + repr(errors))
+              browser.close()
+          PY
+      - name: Upload visual preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: void-visual-preview
+          path: visual-preview/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Cleanup
+        if: always()
+        run: docker rm -f void-visual >/dev/null 2>&1 || true

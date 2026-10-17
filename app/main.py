@@ -417,7 +417,7 @@ def rate_check(r,key,limit=8,window=300):
         if count>=limit: return False
         c.execute("UPDATE settings SET value=? WHERE key=?",(f"{start}:{count+1}",k)); return True
 
-LOGIN='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><title>Abyss Tunnel · ورود</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:18px;background:radial-gradient(ellipse at 50% 0,#163a43 0,transparent 52%),#080b12;color:#edf2ff;font:15px system-ui,-apple-system,sans-serif}.card{width:min(420px,100%);padding:clamp(22px,6vw,34px);border:1px solid #263b49;border-radius:22px;background:rgba(16,22,34,.96);box-shadow:0 24px 90px #0006}h1{margin:12px 0 8px;font-size:clamp(26px,7vw,34px)}p{line-height:1.9}.mint{color:#8de8d6;letter-spacing:.13em;font-size:11px;font-weight:800}.muted{color:#91a3b4}label{display:block;margin:16px 0 7px;font-size:13px}input{width:100%;min-width:0;padding:13px;border-radius:10px;border:1px solid #2a3548;background:#090e17;color:white;font:inherit}input:focus{outline:2px solid #76e4d1;outline-offset:1px}button{width:100%;padding:13px;margin-top:16px;background:#8de8d6;color:#061412;border:0;border-radius:10px;font:inherit;font-weight:800;cursor:pointer}.err{color:#ff9f9f;font-size:12px;overflow-wrap:anywhere}.symbol{display:grid;place-items:center;width:44px;height:44px;border:1px solid #2c5958;border-radius:13px;background:#102b30;color:#8de8d6;font-size:23px;margin-top:24px}.app-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100dvh;max-width:1700px;margin:0 auto;background:#080b12}
+LOGIN='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><title>Abyss Tunnel · ورود</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:18px;background:radial-gradient(ellipse at 50% 0,#163a43 0,transparent 52%),#080b12;color:#edf2ff;font:15px system-ui,-apple-system,sans-serif}.card{width:min(420px,100%);padding:clamp(22px,6vw,34px);border:1px solid #263b49;border-radius:22px;background:rgba(16,22,34,.96);box-shadow:0 24px 90px #0006}h1{margin:12px 0 8px;font-size:clamp(26px,7vw,34px)}p{line-height:1.9}.mint{color:#8de8d6;letter-spacing:.13em;font-size:11px;font-weight:800}.muted{color:#91a3b4}label{display:block;margin:16px 0 7px;font-size:13px}input{width:100%;min-width:0;padding:13px;border-radius:10px;border:1px solid #2a3548;background:#090e17;color:white;font:inherit}input:focus{outline:2px solid #76e4d1;outline-offset:1px}button{width:100%;padding:13px;margin-top:16px;background:#8de8d6;color:#061412;border:0;border-radius:10px;font:inherit;font-weight:800;cursor:pointer}.err{color:#ff9f9f;font-size:12px;overflow-wrap:anywhere}.symbol{display:grid;place-items:center;width:44px;height:44px;border:1px solid #2c5958;border-radius:13px;background:#102b30;color:#8de8d6;font-size:23px;margin-top:24px}.app-shell{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100dvh;max-width:1700px;margin:0 auto;background:#080b12}
 .sidebar{position:sticky;top:0;height:100dvh;align-self:start;padding:22px 14px;border-left:1px solid #202d3b;background:linear-gradient(180deg,#0d141e,#090d14);z-index:25}
 .side-brand{padding:9px 10px 23px;color:#8de8d6;font-size:13px;font-weight:850;letter-spacing:.12em}
 .side-caption{padding:12px 10px 7px;color:#687d91;font-size:10px;letter-spacing:.12em}
@@ -437,8 +437,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}main,.container,.wrap{min-width:0}
 @media(max-width:600px){body{font-size:14px}main,.container,.wrap{padding-left:12px!important;padding-right:12px!important}.card,.panel,.box{border-radius:15px!important}.row{flex-wrap:wrap}.row>*{max-width:100%}button,.btn{min-height:42px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-</style><style id="abyss-login-premium">body{overflow:hidden;background:radial-gradient(ellipse at 15% 20%,rgba(38,107,112,.23),transparent 38%),radial-gradient(ellipse at 85% 85%,rgba(42,61,100,.22),transparent 40%),#070a10}.card{position:relative;overflow:hidden;border-color:#2b4653;background:linear-gradient(155deg,rgba(17,27,41,.98),rgba(9,14,23,.98));box-shadow:0 32px 110px #0009,0 0 0 1px #8de8d60a}.card:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#8de8d6,#547a9c,transparent)}.mint{font-size:10px;letter-spacing:.19em}.symbol{width:54px;height:54px;margin-top:26px;border-radius:17px;border-color:#396b6a;background:linear-gradient(145deg,#163b3d,#0d1c27);box-shadow:0 10px 35px #0005;font-size:25px}form{margin-top:20px}label{color:#b8c9d7}button{box-shadow:0 10px 26px #8de8d61b}button:hover{filter:brightness(1.06)}@media(max-width:420px){.card{border-radius:19px}.symbol{margin-top:20px}}</style></head><body><main class="card"><div class="abyss-brand-row login-brand"><span class="abyss-logo-mark" aria-hidden="true"></span><span class="brand-name">ABYSS TUNNEL<small>• I T A •</small></span></div><h1>ورود به پنل مدیریت</h1><p class="muted">برای ادامه، اطلاعات خود را وارد کنید.</p><form method="post"><input type="hidden" name="csrf_token" value="{{CSRF}}"><label for="username">نام کاربری</label><div class="login-input-wrap"><span class="login-input-icon" aria-hidden="true">♙</span><input id="username" name="username" placeholder="نام کاربری" autocomplete="username" required></div><label for="password">رمز عبور</label><div class="login-input-wrap"><span class="login-input-icon" aria-hidden="true">♧</span><input id="password" type="password" name="password" placeholder="رمز عبور" autocomplete="current-password" required><button type="button" class="login-password-toggle" aria-label="نمایش رمز عبور" aria-pressed="false" onclick="const i=document.getElementById('password');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='text'?'◌':'◉';this.setAttribute('aria-pressed',i.type==='text');this.setAttribute('aria-label',i.type==='text'?'پنهان کردن رمز عبور':'نمایش رمز عبور')">◉</button></div><div class="login-extra-row"><label class="remember-option"><input type="checkbox" name="remember_me" value="on"><span>مرا به خاطر بسپار</span></label><a href="#" onclick="document.getElementById('loginHelpDialog').showModal();return false">فراموشی رمز عبور؟</a></div><p class="err">{{ERROR}}</p><button>ورود</button></form></main></body></html>'''
-DASH='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abyss Tunnel</title><style>
+</style><style id="abyss-login-premium">body{overflow:hidden;background:radial-gradient(ellipse at 15% 20%,rgba(38,107,112,.23),transparent 38%),radial-gradient(ellipse at 85% 85%,rgba(42,61,100,.22),transparent 40%),#070a10}.card{position:relative;overflow:hidden;border-color:#2b4653;background:linear-gradient(155deg,rgba(17,27,41,.98),rgba(9,14,23,.98));box-shadow:0 32px 110px #0009,0 0 0 1px #8de8d60a}.card:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,transparent,#8de8d6,#547a9c,transparent)}.mint{font-size:10px;letter-spacing:.19em}.symbol{width:54px;height:54px;margin-top:26px;border-radius:17px;border-color:#396b6a;background:linear-gradient(145deg,#163b3d,#0d1c27);box-shadow:0 10px 35px #0005;font-size:25px}form{margin-top:20px}label{color:#b8c9d7}button{box-shadow:0 10px 26px #8de8d61b}button:hover{filter:brightness(1.06)}@media(max-width:420px){.card{border-radius:19px}.symbol{margin-top:20px}}</style><style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head><body><main class="card"><div class="abyss-brand-row login-brand"><span class="abyss-logo-mark" aria-hidden="true"></span><span class="brand-name">ABYSS TUNNEL<small>• I T A •</small></span></div><h1>ورود به پنل مدیریت</h1><p class="muted">برای ادامه، اطلاعات خود را وارد کنید.</p><form method="post"><input type="hidden" name="csrf_token" value="{{CSRF}}"><label for="username">نام کاربری</label><div class="login-input-wrap"><span class="login-input-icon" aria-hidden="true">♙</span><input id="username" name="username" placeholder="نام کاربری" autocomplete="username" required></div><label for="password">رمز عبور</label><div class="login-input-wrap"><span class="login-input-icon" aria-hidden="true">♧</span><input id="password" type="password" name="password" placeholder="رمز عبور" autocomplete="current-password" required><button type="button" class="login-password-toggle" aria-label="نمایش رمز عبور" aria-pressed="false" onclick="const i=document.getElementById('password');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='text'?'◌':'◉';this.setAttribute('aria-pressed',i.type==='text');this.setAttribute('aria-label',i.type==='text'?'پنهان کردن رمز عبور':'نمایش رمز عبور')">◉</button></div><div class="login-extra-row"><label class="remember-option"><input type="checkbox" name="remember_me" value="on"><span>مرا به خاطر بسپار</span></label><a href="#" onclick="document.getElementById('loginHelpDialog').showModal();return false">فراموشی رمز عبور؟</a></div><p class="err">{{ERROR}}</p><button>ورود</button></form></main></body></html>'''
+DASH='''<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abyss Tunnel</title><style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080b12;color:#edf2ff;font:14px system-ui,-apple-system,sans-serif}.wrap{max-width:1100px;margin:auto;padding:22px 14px}.card{background:#101622;border:1px solid #222d40;border-radius:14px;padding:17px;margin:14px 0}.top,.row,.client{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.mint{color:#76e4d1;font-size:11px;letter-spacing:.12em}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.num{font-size:26px;font-weight:750}.fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}input,button{font:inherit;border-radius:8px;padding:10px}input{min-width:0;width:100%;background:#090e17;color:white;border:1px solid #2a3548}button{cursor:pointer;background:#14202b;color:white;border:1px solid #2d3b50}button.primary{background:#76e4d1;color:#07120f;font-weight:700}.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.client{padding:14px 0;border-top:1px solid #222d40}.client-info{min-width:180px;flex:1}.actions{display:flex;gap:6px;flex-wrap:wrap}.small{font-size:11px;color:#8794ac;line-height:1.8}.section-title{font-weight:700}.hidden{display:none!important}#status{color:#76e4d1}.client-name{overflow-wrap:anywhere}dialog{width:min(720px,calc(100% - 20px));max-height:90dvh;overflow:auto;padding:20px;border:1px solid #304254;border-radius:18px;background:#101722;color:#edf2ff;box-shadow:0 25px 90px #0009}dialog::backdrop{background:#02050bd9;backdrop-filter:blur(5px)}.modal-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}.modal-top h2{font-size:18px;margin:0}.sub-layout{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:16px;align-items:start}.sub-field{margin:12px 0}.sub-field label{display:block;font-size:12px;color:#9babc0;margin-bottom:6px}.sub-field input{direction:ltr;text-align:left;font-size:12px}.sub-buttons{display:flex;flex-wrap:wrap;gap:8px}.qr-preview{width:170px;max-width:100%;background:white;border-radius:12px;padding:8px;aspect-ratio:1}.danger{border-color:#70404a;color:#ffb5bd}.profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:13px}.profile-setting{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #27384a;border-radius:10px;background:#0b111b;min-width:0}.profile-setting input{width:18px;height:18px;accent-color:#76e4d1;flex-shrink:0}.profile-setting span{overflow-wrap:anywhere}.button-link{display:inline-flex;align-items:center;padding:10px;border-radius:8px;border:1px solid #2d3b50;background:#14202b;color:white;text-decoration:none;font:inherit}@media(max-width:700px){.stats{grid-template-columns:1fr 1fr}.fields{grid-template-columns:1fr 1fr}.wrap{padding:14px 10px}.actions button{padding:8px;font-size:12px}}@media(max-width:560px){.sub-layout{grid-template-columns:1fr}.profile-grid{grid-template-columns:1fr}.qr-preview{width:145px;display:block;margin:8px auto 0}}@media(max-width:420px){.stats,.fields{grid-template-columns:1fr}}
 </style><style id="abyss-premium-upgrade">
 :root{color-scheme:dark;--abyss-bg:#070a10;--abyss-panel:#101722;--abyss-line:#263748;--abyss-mint:#8de8d6;--abyss-text:#edf3fb;--abyss-muted:#9aabbd}
@@ -449,7 +449,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}main,.container,.wrap{min-width:0}
 @media(max-width:600px){body{font-size:14px}main,.container,.wrap{padding-left:12px!important;padding-right:12px!important}.card,.panel,.box{border-radius:15px!important}.row{flex-wrap:wrap}.row>*{max-width:100%}button,.btn{min-height:42px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-</style><style id="abyss-premium-layout">.app-shell{max-width:1800px;grid-template-columns:258px minmax(0,1fr)}.sidebar{padding:26px 16px;background:linear-gradient(180deg,#0d1620,#080c13);border-left:1px solid #263849}.side-brand{font-size:14px;letter-spacing:.16em;padding:10px 12px 25px}.side-caption{font-size:10px;letter-spacing:.14em}.nav-item{font-size:13px;min-height:43px}.nav-item.active{box-shadow:inset -3px 0 #8de8d6}.workspace{max-width:1460px;padding:26px clamp(14px,2.5vw,36px) 46px}.top{align-items:center;gap:18px;padding:12px 0 20px}.top .tools{justify-content:flex-start;flex-wrap:wrap}.section-heading{font-size:23px;letter-spacing:-.02em}.stats{gap:14px}.stats>.card,.workspace>section.card{border-radius:18px;padding:21px;background:linear-gradient(145deg,#111b28,#0c121c)}.fields{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.field{display:grid;gap:7px;min-width:0;color:#9aafc1;font-size:12px}.field input,.field select{height:44px;padding:11px 12px;border-radius:11px;background:#080e17;border-color:#2c3d50}.field input:focus,.field select:focus{border-color:#8de8d6;box-shadow:0 0 0 3px #8de8d61c}.workspace .section-title{font-size:16px}.workspace .small{line-height:1.85}.workspace .client{padding:16px 0;border-top-color:#263647}.workspace .actions{gap:7px}.workspace button,.workspace .button-link{border-radius:10px;min-height:40px}.workspace button.primary{box-shadow:0 7px 22px #8de8d61a}.workspace #clients{display:grid;gap:9px}.workspace #clients .client{padding:14px;border:1px solid #263749;border-radius:13px;background:#0a111b}.workspace #subDialog{border-color:#304556}.workspace .stats .num{font-size:29px}.workspace [data-section-page]{scroll-margin-top:20px}#menuToggle{border-radius:12px;box-shadow:0 10px 25px #0005}.sidebar.open{box-shadow:0 0 0 9999px #02050bc7}.workspace .tools button{white-space:nowrap}@media(max-width:850px){.workspace{padding:10px 12px 30px}.top{padding-top:10px}.top .tools{gap:7px}.top .tools button{flex:1}.fields{grid-template-columns:1fr}.sidebar{z-index:60}.workspace>section.card{padding:15px}.stats>.card{padding:15px}}@media(min-width:851px){#menuToggle{display:none!important}}@media(prefers-reduced-motion:reduce){.nav-item,.workspace button{transition:none!important}}</style></head><body><main class="app-shell">
+</style><style id="abyss-premium-layout">.app-shell{max-width:1800px;grid-template-columns:258px minmax(0,1fr)}.sidebar{padding:26px 16px;background:linear-gradient(180deg,#0d1620,#080c13);border-left:1px solid #263849}.side-brand{font-size:14px;letter-spacing:.16em;padding:10px 12px 25px}.side-caption{font-size:10px;letter-spacing:.14em}.nav-item{font-size:13px;min-height:43px}.nav-item.active{box-shadow:inset -3px 0 #8de8d6}.workspace{max-width:1460px;padding:26px clamp(14px,2.5vw,36px) 46px}.top{align-items:center;gap:18px;padding:12px 0 20px}.top .tools{justify-content:flex-start;flex-wrap:wrap}.section-heading{font-size:23px;letter-spacing:-.02em}.stats{gap:14px}.stats>.card,.workspace>section.card{border-radius:18px;padding:21px;background:linear-gradient(145deg,#111b28,#0c121c)}.fields{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.field{display:grid;gap:7px;min-width:0;color:#9aafc1;font-size:12px}.field input,.field select{height:44px;padding:11px 12px;border-radius:11px;background:#080e17;border-color:#2c3d50}.field input:focus,.field select:focus{border-color:#8de8d6;box-shadow:0 0 0 3px #8de8d61c}.workspace .section-title{font-size:16px}.workspace .small{line-height:1.85}.workspace .client{padding:16px 0;border-top-color:#263647}.workspace .actions{gap:7px}.workspace button,.workspace .button-link{border-radius:10px;min-height:40px}.workspace button.primary{box-shadow:0 7px 22px #8de8d61a}.workspace #clients{display:grid;gap:9px}.workspace #clients .client{padding:14px;border:1px solid #263749;border-radius:13px;background:#0a111b}.workspace #subDialog{border-color:#304556}.workspace .stats .num{font-size:29px}.workspace [data-section-page]{scroll-margin-top:20px}#menuToggle{border-radius:12px;box-shadow:0 10px 25px #0005}.sidebar.open{box-shadow:0 0 0 9999px #02050bc7}.workspace .tools button{white-space:nowrap}@media(max-width:850px){.workspace{padding:10px 12px 30px}.top{padding-top:10px}.top .tools{gap:7px}.top .tools button{flex:1}.fields{grid-template-columns:1fr}.sidebar{z-index:60}.workspace>section.card{padding:15px}.stats>.card{padding:15px}}@media(min-width:851px){#menuToggle{display:none!important}}@media(prefers-reduced-motion:reduce){.nav-item,.workspace button{transition:none!important}}</style><style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head><body><main class="app-shell">
 <button type="button" id="menuToggle" onclick="toggleSidebar()" aria-label="باز کردن منو">☰ منو</button>
 <aside class="sidebar" id="sidebar"><div class="side-brand abyss-brand-row"><span class="abyss-logo-mark" aria-hidden="true"></span><span class="brand-name">ABYSS TUNNEL<small>• I T A •</small></span></div><div class="side-caption">مدیریت داشبورد</div><nav class="side-nav" aria-label="ناوبری داشبورد">
 <button class="nav-item active" data-nav="dashboard" onclick="showSection('dashboard')"><span class="nav-icon">◫</span>نمای کلی</button>
@@ -463,12 +463,10 @@ input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:1
 <button class="nav-item" data-nav="apikeys" data-owner-only onclick="showSection('apikeys')"><span class="nav-icon">⌘</span>API و ربات</button>
 <button class="nav-item" data-nav="events" onclick="showSection('events')"><span class="nav-icon">≋</span>رویدادهای اخیر</button>
 <a class="nav-item" href="/api-docs" target="_blank" rel="noopener"><span class="nav-icon">↗</span>مستندات API</a>
-<a class="nav-item" href="https://github.com/bodisbos-cmd/Void" target="_blank" rel="noopener"><span class="nav-icon">⌘</span>GitHub</a>
-<a class="nav-item" href="https://github.com/bodisbos-cmd/Void/stargazers" target="_blank" rel="noopener"><span class="nav-icon">☆</span>ستاره دادن</a>
 </nav><div class="side-caption" style="margin-top:22px">سازنده · Abyss Tunnel</div><div class="abyss-utility-links"><a href="https://github.com/bodisbos-cmd/Void" target="_blank" rel="noopener">⌘ GitHub</a><a href="https://github.com/bodisbos-cmd/Void/stargazers" target="_blank" rel="noopener">☆ ستاره دادن</a><a href="#support-link-not-configured" onclick="if(this.getAttribute('href')==='#support-link-not-configured'){alert('لینک حمایت مالی هنوز تنظیم نشده است؛ متغیر SUPPORT_URL را در Railway تنظیم کن.');return false}">◇ حمایت از پروژه</a></div></aside>
 <div class="workspace"><header class="top"><div class="abyss-brand-row"><span class="abyss-logo-mark" aria-hidden="true"></span><span class="brand-name"><b>ABYSS TUNNEL</b><small>• I T A • · داشبورد مدیریت</small></span></div><div class="mint" data-i18n="tagline">داشبورد مدیریتی خصوصی</div><div id="sectionTitle" class="section-heading">نمای کلی</div><div class="tools"><input class="top-tools-search" id="globalSearch" type="search" placeholder="جست‌وجوی کاربر…" data-i18n-placeholder="search" aria-label="جست‌وجوی کاربر" onkeydown="if(event.key==='Enter'){event.preventDefault();runGlobalSearch()}"><button type="button" class="toolbar-icon" onclick="showSection('events')" title="رویدادهای اخیر" aria-label="رویدادهای اخیر"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="toolbar-icon" onclick="showSection('settings')" title="تنظیمات اتصال" aria-label="تنظیمات اتصال">⚙</button><button id="langBtn" onclick="toggleLanguage()">English</button><button type="button" class="toolbar-icon" onclick="showPanelHelp()" title="راهنمای پنل" aria-label="راهنمای پنل">?</button><span class="account-badge"><span class="account-avatar" aria-hidden="true">◉</span><span class="account-copy"><b id="accountUsername">مدیر پنل</b><small id="accountRole">حساب مدیریت</small></span></span><button onclick="changePassword()" data-i18n="changePassword">تغییر رمز عبور</button><button onclick="load()" data-i18n="refresh">به‌روزرسانی</button><button onclick="location.href='/logout'" data-i18n="logout">خروج</button></div></header>
 <section id="overviewStats" class="stats" data-section-page="dashboard"><div class="card"><span data-i18n="total">کل کاربران</span><div class="num" id="total">—</div></div><div class="card"><span data-i18n="active">کاربران فعال</span><div class="num" id="active">—</div></div><div class="card"><span data-i18n="xray">وضعیت Xray</span><div class="num" id="xray">—</div></div><div class="card"><span>مصرف ثبت‌شده</span><div class="num" id="dashboardTraffic">—</div><div class="small">ترافیک ثبت‌شدهٔ داشبورد</div></div></section>
-<section id="dashboardUsageCard" class="card" data-section-page="dashboard"><div class="section-title">وضعیت سرویس‌ها</div><div class="small">وضعیت فرایندها و منابع همین کانتینر؛ نه پینگ واقعی اپراتور موبایل.</div><div class="stats"><div class="card"><span>CPU</span><div class="num" id="dashCpu">—</div></div><div class="card"><span>RAM</span><div class="num" id="dashRam">—</div></div><div class="card"><span>دیسک</span><div class="num" id="dashDisk">—</div></div></div><canvas id="usageSparkline" height="144" aria-label="نمودار زنده منابع"></canvas><div id="chartLegend" class="chart-legend"><span><i class="cpu"></i>CPU</span><span><i class="ram"></i>RAM</span><span><i class="net"></i>ترافیک</span></div><div id="chartNote" class="small" style="margin-top:7px">در انتظار نخستین نمونهٔ واقعی منابع…</div></section>
+<section id="dashboardUsageCard" class="card" data-section-page="dashboard"><div class="section-title">مصرف منابع و عملکرد</div><div class="small">وضعیت فرایندها و منابع همین کانتینر؛ نه پینگ واقعی اپراتور موبایل.</div><div class="stats"><div class="card"><span>CPU</span><div class="num" id="dashCpu">—</div></div><div class="card"><span>RAM</span><div class="num" id="dashRam">—</div></div><div class="card"><span>دیسک</span><div class="num" id="dashDisk">—</div></div></div><canvas id="usageSparkline" height="144" aria-label="نمودار زنده منابع"></canvas><div id="chartLegend" class="chart-legend"><span><i class="cpu"></i>CPU</span><span><i class="ram"></i>RAM</span><span><i class="net"></i>ترافیک</span></div><div id="chartNote" class="small" style="margin-top:7px">در انتظار نخستین نمونهٔ واقعی منابع…</div></section>
 <section class="card" data-section-page="clients"><div class="row"><div><div class="section-title" data-i18n="clients">مدیریت کاربران <span class="help-dot" title="ساخت سرویس، مدیریت زمان و حجم و کنترل دسترسی." aria-label="راهنمای مدیریت کاربران">؟</span></div><div class="small" data-i18n="clientHelp">ساخت سرویس، کنترل دسترسی و مدیریت لینک اشتراک</div></div><div class="users-search-actions"><input id="search" placeholder="جست‌وجوی نام یا شناسه…" oninput="renderClients()" data-i18n-placeholder="search"><button class="primary" type="button" onclick="showSection('create')">افزودن کاربر +</button></div></div>
 <div id="clients" style="margin-top:12px"></div></section><section class="card" id="createServiceCard" data-section-page="create"><div class="reference-page-head"><div><div class="section-title">ساخت سرویس جدید <span class="help-dot" title="برای سرویس زمان، حجم و پروفایل‌های اتصال را مشخص کن." aria-label="راهنمای ساخت سرویس">؟</span></div><div class="small">سرویس را برای کاربر بساز؛ هر تغییری در محدودیت‌ها و پروفایل‌ها به همین سرویس اعمال می‌شود.</div></div></div><div class="fields"><input id="name" maxlength="64" placeholder="نام کاربر" data-i18n-placeholder="name" title="نام نمایشی سرویس"><input id="days" type="number" min="1" max="3650" placeholder="مدت (روز، اختیاری)" data-i18n-placeholder="days" title="خالی گذاشتن یعنی بدون انقضا"><input id="quota" type="number" min="1" max="100000" placeholder="حجم (GB، اختیاری)" data-i18n-placeholder="quota" title="خالی گذاشتن یعنی بدون محدودیت حجم"><input id="note" maxlength="300" placeholder="یادداشت (اختیاری)" data-i18n-placeholder="note"></div><div class="section-title" style="margin-top:16px">پروفایل‌های قابل ارائه <span class="help-dot" title="چند پروفایل را هم‌زمان انتخاب کن. فقط پروفایل‌های فعال سراسری قابل ارائه‌اند." aria-label="راهنمای انتخاب پروفایل‌ها">؟</span></div><div id="clientProfileChoices" class="profile-grid"></div><div class="row" style="margin-top:9px"><span class="small" data-i18n="optional">خالی گذاشتن مدت و حجم یعنی نامحدود.</span><button class="primary" onclick="add()" data-i18n="create">+ ساخت کاربر</button></div></section>
 
@@ -494,7 +492,7 @@ input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:1
 <section class="card" id="backupCard" data-section-page="backup"><div class="section-title">پشتیبان‌گیری و بازیابی <span class="help-dot" title="نسخهٔ پشتیبان شامل اطلاعات حساس و لینک‌های دسترسی است؛ محرمانه نگهش دار." aria-label="راهنمای پشتیبان‌گیری">؟</span></div><div class="small">فایل پشتیبان شامل اطلاعات حساس کاربران است؛ آن را محرمانه نگه دار.</div><div class="tools" style="margin-top:12px"><button class="primary" onclick="location.href='/api/backup'">دریافت نسخه پشتیبان</button><input id="restoreFile" type="file" accept=".sqlite3,.db,application/vnd.sqlite3"><button class="danger" onclick="restoreBackup()">بازیابی از فایل</button></div></section><section class="card" id="resellerCard" data-section-page="reseller"><div class="section-title">حساب‌های نمایندگی و تقسیم حجم</div><div class="small">بخشی از حجم تخصیص‌یافته‌ات را به یک نماینده بده. مجموع حجم سرویس‌ها و حساب‌های نمایندگی از سهمیه‌ات بیشتر نمی‌شود.</div><div class="fields"><input id="resellerUsername" maxlength="48" placeholder="نام کاربری نماینده"><input id="resellerPassword" type="password" placeholder="رمز عبور حداقل ۱۴ نویسه"><input id="resellerQuota" type="number" min="0.1" step="0.1" placeholder="حجم اختصاصی (GB)"><button class="primary" onclick="addReseller()">ساخت نماینده</button></div><div id="resellerList" style="margin-top:12px"></div><div id="allocationStatus" class="small"></div></section><section class="card" id="settingsCard" data-section-page="settings"><div class="section-title" data-i18n="settings">تنظیمات اتصال</div><div class="small" data-i18n="settingsHelp">پروفایل‌های قابل ارائه در اشتراک و Xray را فعال یا غیرفعال کن.</div><div class="small" style="margin-top:8px">پروفایل‌های XHTTP با حالت‌های stream-up/stream-one و مسیرهای جایگزین آزمایشی‌اند؛ چون در آزمون تونل از درگاه HTTP/1.1 تایم‌اوت داشتند، پیش‌فرض خاموش‌اند. فقط برای آزمون دستی فعال‌شان کن.</div><div id="profileSettings" class="profile-grid"></div></section><section class="card" id="diagnosticsCard" data-section-page="diagnostics"><div class="section-title">عیب‌یابی هوشمند و پیشنهاد اتصال</div><div class="small">اعتبارسنجی Xray و Nginx، بررسی مسیرهای داخلی و پیشنهاد پروفایل بر پایهٔ گزارش واقعی کاربران هر اپراتور. این بررسی داخلی به‌تنهایی پینگ واقعی تونل را ثابت نمی‌کند.</div><div class="tools" style="margin-top:12px"><label class="small" for="diagnosticCarrier">اپراتور</label><select id="diagnosticCarrier"><option value="auto">نامشخص / انتخاب خودکار</option><option value="mci">همراه اول</option><option value="irancell">ایرانسل</option><option value="rightel">رایتل</option><option value="wifi">وای‌فای</option></select><button class="primary" onclick="runDiagnostics()">بررسی همه پروفایل‌ها</button><button data-owner-only class="danger" onclick="repairDiagnostics()">تعمیر امن و راه‌اندازی مجدد</button></div><div id="diagnosticSummary" class="small" style="margin-top:12px">هنوز بررسی اجرا نشده است.</div><div id="diagnosticResults" class="diag-grid"></div><div class="small" style="margin-top:12px">گزارش‌های تست از صفحهٔ اشتراک بر اساس اپراتور جمع می‌شوند؛ پیشنهادها پس از رسیدن به حداقل ۳ گزارش نمایش داده می‌شوند.</div></section><section class="card" id="metricsCard" data-section-page="metrics"><div class="section-title">پایش زنده سرویس</div><div class="small">آمار منابع همین کانتینر و ترافیک ثبت‌شده؛ سرعت و پینگ واقعی اینترنت کاربر نیست.</div><div class="stats"><div class="card"><span>CPU</span><div class="num" id="metricCpu">—</div></div><div class="card"><span>RAM</span><div class="num" id="metricRam">—</div></div><div class="card"><span>دیسک</span><div class="num" id="metricDisk">—</div></div><div class="card"><span>سرعت ثبت‌شده</span><div class="num" id="metricSpeed">—</div></div><div class="card"><span>Load</span><div class="num" id="metricLoad">—</div></div><div class="card"><span>مصرف ثبت‌شده</span><div class="num" id="metricTraffic">—</div></div></div><div class="tools"><button onclick="loadMetrics()">به‌روزرسانی آمار</button></div><div id="profileChecks" class="small" style="margin-top:12px">بررسی هنوز اجرا نشده است. وضعیت مسیر HTTP با اتصال واقعی تونل متفاوت است.</div></section>
 <section class="card" id="adminUsersCard" data-section-page="admins" data-owner-only><div class="section-title">مدیریت حساب‌های مدیر</div><div class="small">برای همکاران حساب جدا بساز. مشاهده‌گر فقط می‌تواند اطلاعات را ببیند.</div><div class="fields"><input id="adminUsername" maxlength="32" placeholder="نام کاربری"><input id="adminPassword" type="password" placeholder="رمز قوی، حداقل ۱۴ نویسه"><select id="adminRole"><option value="admin">مدیر</option><option value="viewer">مشاهده‌گر</option></select><button class="primary" onclick="createPanelAdmin()">ساخت حساب</button></div><div id="adminUsersList" style="margin-top:12px"></div></section>
 <section class="card" id="apiKeysCard" data-section-page="apikeys" data-owner-only><div class="section-title">API و اتصال ربات</div><div class="small">کلید کامل فقط یک بار نمایش داده می‌شود؛ آن را در متغیر امن ربات نگه دار و داخل GitHub نگذار.</div><div class="fields"><input id="apiKeyName" maxlength="48" placeholder="نام کلید API"><select id="apiKeyExpiry"><option value="">بدون انقضا</option><option value="30">۳۰ روز</option><option value="90">۹۰ روز</option><option value="365">یک سال</option></select><button class="primary" onclick="createApiKey()">ساخت کلید API</button></div><div class="small" style="margin-top:8px">مجوزها: <label><input type="checkbox" class="apiScope" value="clients:read" checked> مشاهده کاربران</label> <label><input type="checkbox" class="apiScope" value="clients:write" checked> مدیریت کاربران</label> <label><input type="checkbox" class="apiScope" value="subscriptions:read" checked> لینک اشتراک</label> <label><input type="checkbox" class="apiScope" value="metrics:read" checked> آمار</label></div><div id="apiKeysList" style="margin-top:12px"></div><a class="button-link" href="/api-docs" target="_blank" rel="noopener">مستندات تعاملی API ↗</a><div class="small">GET/POST /api/v1/clients · PATCH/DELETE /api/v1/clients/{id} · GET /api/v1/system/metrics</div></section>
-<section id="panelHealthCard" class="card" data-section-page="dashboard"><div class="section-title">وضعیت سرویس‌ها</div><div id="status" class="small">در حال بررسی اتصال داشبورد…</div><div class="dashboard-component-list" id="dashboardComponentStatus"><div class="small">در حال دریافت وضعیت Nginx، Xray، Database و Panel…</div></div><div class="section-title" style="margin-top:18px">آخرین سرویس‌ها</div><div id="recentActivityList" class="report-events"><div class="small">در انتظار دریافت اطلاعات…</div></div></section>
+<section id="panelHealthCard" class="card" data-section-page="dashboard"><div class="section-title">وضعیت سرویس‌ها</div><div id="status" class="small">در حال بررسی اتصال داشبورد…</div><div class="dashboard-component-list" id="dashboardComponentStatus"><div class="small">در حال دریافت وضعیت Nginx، Xray، Database و Panel…</div></div></section><section id="dashboardQuickCard" class="card" data-section-page="dashboard"><div class="section-title">جزئیات سریع</div><div id="dashboardQuickDetails" class="quick-detail-list"><div class="quick-detail-row"><span class="small">وضعیت پنل</span><strong>در حال بررسی</strong></div><div class="quick-detail-row"><span class="small">کاربران فعال</span><strong>در انتظار اطلاعات</strong></div></div><div class="section-title" style="margin-top:16px">آخرین رویدادها</div><div id="recentActivityList" class="report-events"><div class="small">در انتظار دریافت اطلاعات…</div></div></section>
 <section class="card" data-section-page="events"><div class="section-title" data-i18n="events">رویدادهای اخیر</div><div id="events"></div></section></div></main><dialog id="subDialog"><div class="modal-top"><div><h2 data-i18n="subTitle">مدیریت لینک اشتراک</h2><div id="subClientName" class="small"></div></div><button onclick="closeSub()" aria-label="بستن">✕</button></div><div class="sub-layout"><div><div class="sub-field"><label for="pageUrl">لینک واحد اشتراک (مرورگر + برنامهٔ سازگار)</label><input id="pageUrl" readonly></div><div class="sub-buttons"><button class="primary" onclick="copyField('pageUrl',this)" aria-label="کپی لینک واحد">⧉</button><span id="copyStatus" class="small" aria-live="polite"></span><a class="button-link" id="openPage" target="_blank" rel="noopener">باز کردن صفحه اشتراک</a></div><p class="small">برای برنامهٔ سازگار هم همین لینک را وارد کن؛ حجم و زمان از هدر استاندارد اشتراک به برنامه‌های سازگار ارسال می‌شود.</p></div><div><img id="subQr" class="qr-preview" alt="QR code" width="170" height="170"><div class="small" style="text-align:center" data-i18n="qrHint">برای واردکردن سریع، QR را اسکن کن.</div></div></div></dialog><dialog id="profilesDialog"><div class="modal-top"><div><h2>پروفایل‌های این سرویس</h2><div id="profilesClientName" class="small"></div></div><button onclick="document.getElementById('profilesDialog').close()" aria-label="بستن">✕</button></div><div class="small">چند پروفایل را هم‌زمان فعال کن. پروفایل خاموش در تنظیمات اصلی قابل انتخاب نیست.</div><div id="editClientProfileChoices" class="profile-grid"></div><div class="tools" style="margin-top:16px"><button class="primary" onclick="saveClientProfiles()">ذخیرهٔ پروفایل‌ها</button><button onclick="document.getElementById('profilesDialog').close()">انصراف</button></div></dialog><dialog id="panelHelpDialog"><div class="modal-top"><div><h2>راهنمای پنل</h2><div class="small">راهنمای سریع بخش‌های اصلی</div></div><button type="button" onclick="document.getElementById('panelHelpDialog').close()" aria-label="بستن">✕</button></div><div class="help-dialog-grid"><article><b>کاربران</b><p class="small">مشاهده و جست‌وجوی سرویس‌ها، وضعیت مصرف و لینک اشتراک.</p></article><article><b>ساخت سرویس</b><p class="small">نام، مدت، حجم و پروفایل‌های فعال را انتخاب کن.</p></article><article><b>سرورها و پروتکل‌ها</b><p class="small">وضعیت واقعی همین استقرار و پروفایل‌های موجود را ببین.</p></article><article><b>گزارش‌ها</b><p class="small">خطاهای پیکربندی و مسیرهای داخلی را بررسی کن. پاسخ مسیر وب به‌تنهایی اتصال واقعی کاربر را ثابت نمی‌کند.</p></article><article><b>اشتراک</b><p class="small">از جزئیات هر سرویس، لینک اشتراک و QR Code را باز یا کپی کن.</p></article></div></dialog><script src="/dashboard.js?v=20261016-layoutfix1" defer></script></body></html>'''
 
 DASH_JS=r'''let csrf='',allClients=[],lang=localStorage.getItem('abyss-lang')||'fa';
@@ -513,7 +511,7 @@ function renderSettings(profiles){const labels={ws:'profileWs',httpupgrade:'prof
 
 function renderProtocolCatalog(profiles){const el=document.getElementById('protocolCatalog');if(!el)return;const rows=profiles||[];el.innerHTML=rows.map(p=>'<article class="protocol-state"><div class="state-title"><span>'+esc(p.label)+'</span><span class="state-chip '+(p.enabled?'good':'neutral')+'">'+(p.enabled?'فعال':'خاموش')+'</span></div><strong>'+esc(p.protocol||'VLESS')+'</strong><div class="protocol-meta"><span>'+esc(p.network||'—')+'</span><span>'+esc(p.path||'—')+'</span>'+(p.port?'<span>Port '+esc(p.port)+'</span>':'')+(p.mode?'<span>'+esc(p.mode)+'</span>':'')+'</div>'+(p.experimental?'<div class="experimental-label">حالت آزمایشی · پیش‌فرض خاموش</div>':'')+'<label class="protocol-switch"><span>فعال در تنظیمات Xray</span><input type="checkbox" '+(p.enabled?'checked':'')+' onchange="setProfile(\''+esc(p.key)+'\',this.checked)" aria-label="فعال یا خاموش کردن '+esc(p.label)+'"></label></article>').join('')||'<div class="small">پروفایلی در دسترس نیست.</div>'}
 async function loadProtocolCatalog(){try{const d=await api('/api/settings');renderProtocolCatalog(d.profiles||[])}catch(e){const el=document.getElementById('protocolCatalog');if(el)el.innerHTML='<div class="report-issue bad">دریافت پروفایل‌ها ناموفق بود: '+esc(e.message)+'</div>'}}
-async function loadServerStatus(){const host=document.getElementById('serverHost'),grid=document.getElementById('serverStatusGrid'),overall=document.getElementById('serverOverall'),note=document.getElementById('serverStatusNote');if(host)host.textContent=location.host||'—';if(grid)grid.innerHTML='<article class="server-state"><div class="small">در حال بررسی اجزا…</div></article>';try{const [d,m]=await Promise.all([api('/api/system/diagnostics'),api('/api/system/metrics')]);const items=[{title:'پنل مدیریت',value:'در دسترس',ok:true,note:'درخواست احراز هویت‌شده پاسخ داد.'},{title:'Xray',value:d.xray_running?'در حال اجرا':d.xray_installed?'متوقف':'نصب‌نشده',ok:d.xray_running,note:d.xray_installed?'وضعیت پردازش Xray همین سرویس.':'باینری Xray در این کانتینر پیدا نشد.'},{title:'پیکربندی Xray',value:d.config_test?.ok?'معتبر':'نیازمند بررسی',ok:!!d.config_test?.ok,note:d.config_test?.detail||'نتیجهٔ اعتبارسنجی در دسترس نیست.'},{title:'Nginx',value:d.nginx_installed?(d.nginx_ok?'پیکربندی معتبر':'دارای خطا'):'مشخص نیست',ok:d.nginx_installed?!!d.nginx_ok:null,note:d.nginx_installed?(d.nginx_error||'نتیجهٔ آزمون nginx -t.'):'Nginx از مسیر بررسی این کانتینر شناسایی نشد.'},{title:'پایگاه‌داده',value:'قابل‌دسترسی',ok:true,note:'داده‌های وضعیت از API احراز هویت‌شده خوانده شدند.'},{title:'فضای ذخیره‌سازی',value:m.current?.disk_used_percent==null?'نامشخص':'دیسک قابل‌اندازه‌گیری',ok:m.current?.disk_used_percent!=null,note:m.current?.disk_used_percent==null?'آمار دیسک ارائه نشد.':'مصرف دیسک کانتینر: '+m.current.disk_used_percent+'%'}];if(grid)grid.innerHTML=items.map(x=>'<article class="server-state"><div class="state-title"><span>'+esc(x.title)+'</span><span class="state-chip '+(x.ok===true?'good':x.ok===false?'bad':'neutral')+'">'+(x.ok===true?'سالم':x.ok===false?'بررسی لازم':'نامشخص')+'</span></div><strong>'+esc(x.value)+'</strong><div class="small">'+esc(x.note)+'</div></article>').join('');const table=document.getElementById('serverTableBody');if(table)table.innerHTML='<tr><td>سرور جاری</td><td>'+esc(location.host||'—')+'</td><td><span class="state-chip '+(d.xray_running?'good':'bad')+'">'+(d.xray_running?'فعال':'متوقف')+'</span></td><td><span class="state-chip '+(d.ok?'good':'bad')+'">'+(d.ok?'سالم':'بررسی لازم')+'</span></td><td><button type="button" onclick="loadServerStatus()">بررسی مجدد</button></td></tr>';const pass=items.filter(x=>x.ok===true).length;if(overall){overall.className='state-chip '+(items.some(x=>x.ok===false)?'bad':'good');overall.textContent=pass+' از '+items.length+' بررسی موفق'}if(note)note.textContent=(d.note||'')+' · این گزارش وضعیت محلی همین استقرار است و اتصال واقعی از شبکهٔ کاربر را تأیید نمی‌کند.'}catch(e){if(grid)grid.innerHTML='<div class="report-issue bad">گرفتن وضعیت سرور ناموفق بود: '+esc(e.message)+'</div>';if(overall){overall.className='state-chip bad';overall.textContent='بررسی ناموفق'}if(note)note.textContent='پاسخ وضعیت سرور در دسترس نیست: '+e.message}}
+async function loadServerStatus(){const host=document.getElementById('serverHost'),grid=document.getElementById('serverStatusGrid'),overall=document.getElementById('serverOverall'),note=document.getElementById('serverStatusNote');if(host)host.textContent=location.host||'—';if(grid)grid.innerHTML='<article class="server-state"><div class="small">در حال بررسی اجزا…</div></article>';try{const [d,m]=await Promise.all([api('/api/system/diagnostics'),api('/api/system/metrics')]);const items=[{title:'پنل مدیریت',value:'در دسترس',ok:true,note:'درخواست احراز هویت‌شده پاسخ داد.'},{title:'Xray',value:d.xray_running?'در حال اجرا':d.xray_installed?'متوقف':'نصب‌نشده',ok:d.xray_running,note:d.xray_installed?'وضعیت پردازش Xray همین سرویس.':'باینری Xray در این کانتینر پیدا نشد.'},{title:'پیکربندی Xray',value:d.config_test?.ok?'معتبر':'نیازمند بررسی',ok:!!d.config_test?.ok,note:d.config_test?.ok?'پیکربندی Xray با موفقیت اعتبارسنجی شد.':String(d.config_test?.detail||'نتیجهٔ اعتبارسنجی در دسترس نیست.').slice(0,180)},{title:'Nginx',value:d.nginx_installed?(d.nginx_ok?'پیکربندی معتبر':'دارای خطا'):'مشخص نیست',ok:d.nginx_installed?!!d.nginx_ok:null,note:d.nginx_installed?(d.nginx_error||'نتیجهٔ آزمون nginx -t.'):'Nginx از مسیر بررسی این کانتینر شناسایی نشد.'},{title:'پایگاه‌داده',value:'قابل‌دسترسی',ok:true,note:'داده‌های وضعیت از API احراز هویت‌شده خوانده شدند.'},{title:'فضای ذخیره‌سازی',value:m.current?.disk_used_percent==null?'نامشخص':'دیسک قابل‌اندازه‌گیری',ok:m.current?.disk_used_percent!=null,note:m.current?.disk_used_percent==null?'آمار دیسک ارائه نشد.':'مصرف دیسک کانتینر: '+m.current.disk_used_percent+'%'}];if(grid)grid.innerHTML=items.map(x=>'<article class="server-state"><div class="state-title"><span>'+esc(x.title)+'</span><span class="state-chip '+(x.ok===true?'good':x.ok===false?'bad':'neutral')+'">'+(x.ok===true?'سالم':x.ok===false?'بررسی لازم':'نامشخص')+'</span></div><strong>'+esc(x.value)+'</strong><div class="small">'+esc(x.note)+'</div></article>').join('');const table=document.getElementById('serverTableBody');if(table)table.innerHTML='<tr><td>سرور جاری</td><td>'+esc(location.host||'—')+'</td><td><span class="state-chip '+(d.xray_running?'good':'bad')+'">'+(d.xray_running?'فعال':'متوقف')+'</span></td><td><span class="state-chip '+(d.ok?'good':'bad')+'">'+(d.ok?'سالم':'بررسی لازم')+'</span></td><td><button type="button" onclick="loadServerStatus()">بررسی مجدد</button></td></tr>';const pass=items.filter(x=>x.ok===true).length;if(overall){overall.className='state-chip '+(items.some(x=>x.ok===false)?'bad':'good');overall.textContent=pass+' از '+items.length+' بررسی موفق'}if(note)note.textContent=(d.note||'')+' · این گزارش وضعیت محلی همین استقرار است و اتصال واقعی از شبکهٔ کاربر را تأیید نمی‌کند.'}catch(e){if(grid)grid.innerHTML='<div class="report-issue bad">گرفتن وضعیت سرور ناموفق بود: '+esc(e.message)+'</div>';if(overall){overall.className='state-chip bad';overall.textContent='بررسی ناموفق'}if(note)note.textContent='پاسخ وضعیت سرور در دسترس نیست: '+e.message}}
 async function loadDashboardHealth(){const el=document.getElementById('dashboardComponentStatus');if(!el)return;try{const d=await api('/api/system/diagnostics');const items=[{label:'Nginx',ok:d.nginx_installed?!!d.nginx_ok:null,value:d.nginx_installed?(d.nginx_ok?'فعال':'خطا'):'نامشخص'},{label:'Xray',ok:!!d.xray_running,value:d.xray_running?'فعال':d.xray_installed?'متوقف':'نصب‌نشده'},{label:'Database',ok:true,value:'قابل‌دسترسی'},{label:'Panel',ok:true,value:'فعال'}];el.innerHTML=items.map(x=>'<div class="dashboard-component"><span>'+esc(x.label)+'</span><span class="component-state '+(x.ok===true?'good':x.ok===false?'bad':'')+'">'+esc(x.value)+'</span></div>').join('')}catch(e){el.innerHTML='<div class="report-issue bad">دریافت وضعیت سرویس‌ها ناموفق بود: '+esc(e.message)+'</div>'}}
 async function loadReports(){const summary=document.getElementById('reportSummary'),issues=document.getElementById('reportIssues'),profiles=document.getElementById('reportProfiles'),events=document.getElementById('reportEvents');if(summary)summary.textContent='در حال اجرای بررسی‌های واقعی…';try{const [d,o]=await Promise.all([api('/api/system/diagnostics'),api('/api/overview')]);if(summary)summary.textContent=(d.summary||'بررسی انجام شد.')+' · اتصال واقعی تونل از این صفحه تست نمی‌شود.';if(issues)issues.innerHTML=(d.issues||[]).map(x=>'<div class="report-issue '+(String(x).includes('خطا')||String(x).includes('متوقف')||String(x).includes('بسته')?'bad':'')+'">'+esc(x)+'</div>').join('')||'<div class="report-issue good">موردی برای گزارش وجود ندارد.</div>';if(profiles)profiles.innerHTML=(d.profiles||[]).map(p=>'<article class="report-state"><div class="state-title"><span>'+esc(p.label)+'</span><span class="state-chip '+(p.enabled&&p.listener_ok&&p.route_ok?'good':p.enabled?'bad':'neutral')+'">'+(p.enabled?(p.listener_ok&&p.route_ok?'مسیر پاسخ‌گو':'بررسی لازم'):'خاموش')+'</span></div><strong>'+esc(p.status_text||p.status||'—')+'</strong><div class="small">Listener: '+(p.listener_ok?'فعال':'غیرفعال')+' · HTTP '+esc(p.http_status??'—')+' · '+esc(p.latency_ms??'—')+' ms</div><div class="small" style="margin-top:6px">'+esc(p.hint||'')+'</div></article>').join('')||'<div class="small">پروفایلی ثبت نشده است.</div>';if(events)events.innerHTML=(o.events||[]).slice(0,12).map(e=>'<article class="report-event"><span class="event-message">'+esc(e.message)+'</span><span class="event-meta">'+esc(e.at)+' · '+esc(e.level)+'</span></article>').join('')||'<div class="small">رویدادی ثبت نشده است.</div>'}catch(e){if(summary)summary.textContent='گزارش‌گیری ناموفق بود: '+e.message;if(issues)issues.innerHTML='<div class="report-issue bad">'+esc(e.message)+'</div>'}}
 
@@ -524,7 +522,7 @@ let editingProfileClientId='';
 async function editClientProfiles(id){const c=allClients.find(x=>x.id===id);if(!c)return;editingProfileClientId=id;document.getElementById('profilesClientName').textContent=c.name;try{const d=await api('/api/settings');let selected=null;try{selected=c.profile_keys?JSON.parse(c.profile_keys):null}catch(e){}document.getElementById('editClientProfileChoices').innerHTML=(d.profiles||[]).map(p=>'<label class="profile-setting"><input type="checkbox" name="editClientProfile" value="'+esc(p.key)+'" '+((selected===null?p.enabled:selected.includes(p.key))&&p.enabled?'checked':'')+(p.enabled?'':' disabled')+'><span>'+esc(p.label)+(p.enabled?'':' · غیرفعال')+'</span><span class="help-dot" title="این پروفایل برای همین سرویس فعال یا غیرفعال می‌شود.">؟</span></label>').join('');document.getElementById('profilesDialog').showModal()}catch(e){alert('دریافت پروفایل‌ها ناموفق بود: '+e.message)}}
 async function saveClientProfiles(){const profiles=[...document.querySelectorAll('input[name="editClientProfile"]:checked')].map(x=>x.value);if(!profiles.length){alert('حداقل یک پروفایل فعال را انتخاب کن.');return}try{await api('/api/clients/'+editingProfileClientId,{method:'PATCH',body:JSON.stringify({profiles})});document.getElementById('profilesDialog').close();await load()}catch(e){alert('ذخیرهٔ پروفایل‌ها ناموفق بود: '+e.message)}}
 function improveFieldLabels(){document.querySelectorAll('.workspace .fields > input[placeholder],.workspace .fields > select').forEach(el=>{if(el.closest('.field'))return;const title=el.getAttribute('placeholder')||el.getAttribute('aria-label')||el.options?.[el.selectedIndex]?.text||'تنظیم';const wrap=document.createElement('label');wrap.className='field';const caption=document.createElement('span');caption.textContent=title;if(el.dataset.i18nPlaceholder)caption.dataset.i18n=el.dataset.i18nPlaceholder;el.parentNode.insertBefore(wrap,el);wrap.append(caption,el);el.removeAttribute('placeholder')})}
-async function load(){try{improveFieldLabels();applyLanguage();let d=await api('/api/overview');csrf=d.csrf;window.abyssRole=d.role;allClients=d.clients||[];const accountName=document.getElementById('accountUsername');if(accountName)accountName.textContent=d.user?.username||'مدیر پنل';const accountRole=document.getElementById('accountRole');if(accountRole)accountRole.textContent=d.user?.role==='owner'?'مدیر کل':d.user?.role==='reseller'?'نماینده':'مدیر';const backupCard=document.getElementById('backupCard'),settingsCard=document.getElementById('settingsCard');if(backupCard)backupCard.classList.toggle('hidden',d.role!=='root');if(settingsCard)settingsCard.classList.toggle('hidden',d.role!=='root');rootOnly(d.role==='root');const allocation=document.getElementById('allocationStatus');if(allocation)allocation.textContent=d.role==='root'?'مدیریت سهمیه و حساب‌های نمایندگی':('حجم باقی‌مانده برای تخصیص: '+(Number(d.remaining_bytes||0)/1073741824).toFixed(2)+' GB');renderResellers(d.resellers||[]);const total=document.getElementById('total'),active=document.getElementById('active'),xray=document.getElementById('xray'),events=document.getElementById('events');if(total)total.textContent=d.total;if(active)active.textContent=d.active;if(xray)xray.textContent=d.xray.running?tr('online'):d.xray.installed?tr('starting'):tr('notInstalled');if(events)events.innerHTML=(d.events||[]).map(e=>'<div class="small">'+esc(e.at)+' · '+esc(e.level)+' · '+esc(e.message)+'</div>').join('')||'—';const recent=document.getElementById('recentActivityList');if(recent)recent.innerHTML=(d.clients||[]).slice(0,4).map(c=>'<article class="report-event"><span class="event-message"><b>'+esc(c.name)+'</b><br><span class="small">'+esc(String(c.id||'').slice(0,8))+'</span></span><span class="event-meta">'+(c.enabled?'فعال':'متوقف')+'</span></article>').join('')||'<div class="small">هنوز سرویسی ساخته نشده است.</div>';renderClients();const settings=await api('/api/settings');renderSettings(settings.profiles);renderProtocolCatalog(settings.profiles);renderClientProfileChoices(settings.profiles);const status=document.getElementById('status');if(status)status.textContent=tr('connected');if(d.role==='root'){await Promise.all([loadAdminUsers(),loadApiKeys()])}await loadMetrics();loadDashboardHealth()}catch(e){const status=document.getElementById('status');if(status)status.textContent=tr('apiError')+e.message;else console.error('Abyss dashboard load failed:',e)}}
+async function load(){try{improveFieldLabels();applyLanguage();let d=await api('/api/overview');csrf=d.csrf;window.abyssRole=d.role;allClients=d.clients||[];const accountName=document.getElementById('accountUsername');if(accountName)accountName.textContent=d.user?.username||'مدیر پنل';const accountRole=document.getElementById('accountRole');if(accountRole)accountRole.textContent=d.user?.role==='owner'?'مدیر کل':d.user?.role==='reseller'?'نماینده':'مدیر';const backupCard=document.getElementById('backupCard'),settingsCard=document.getElementById('settingsCard');if(backupCard)backupCard.classList.toggle('hidden',d.role!=='root');if(settingsCard)settingsCard.classList.toggle('hidden',d.role!=='root');rootOnly(d.role==='root');const allocation=document.getElementById('allocationStatus');if(allocation)allocation.textContent=d.role==='root'?'مدیریت سهمیه و حساب‌های نمایندگی':('حجم باقی‌مانده برای تخصیص: '+(Number(d.remaining_bytes||0)/1073741824).toFixed(2)+' GB');renderResellers(d.resellers||[]);const total=document.getElementById('total'),active=document.getElementById('active'),xray=document.getElementById('xray'),events=document.getElementById('events');if(total)total.textContent=d.total;if(active)active.textContent=d.active;if(xray)xray.textContent=d.xray.running?tr('online'):d.xray.installed?tr('starting'):tr('notInstalled');if(events)events.innerHTML=(d.events||[]).map(e=>'<div class="small">'+esc(e.at)+' · '+esc(e.level)+' · '+esc(e.message)+'</div>').join('')||'—';const eventText=message=>{const value=String(message||'');let match=value.match(/^Administrator signed in as (.+) \\(owner\\)$/);if(match)return 'ورود مدیر کل: '+match[1];match=value.match(/^Visual preview: service created for (.+)$/);if(match)return 'سرویس آزمایشی برای '+match[1]+' ساخته شد';return value};const recent=document.getElementById('recentActivityList');if(recent)recent.innerHTML=(d.events||[]).slice(0,2).map(e=>'<article class="report-event"><span class="event-message"><b>'+esc(eventText(e.message))+'</b></span><span class="event-meta">'+esc(String(e.at||'').replace('T',' ').slice(0,16))+' · '+esc(e.level)+'</span></article>').join('')||'<div class="small">هنوز رویدادی ثبت نشده است.</div>';const quickRows=document.querySelectorAll('#dashboardQuickDetails .quick-detail-row strong');if(quickRows[0])quickRows[0].textContent='متصل';if(quickRows[1])quickRows[1].textContent=String(d.active??0)+' / '+String(d.total??0);renderClients();const settings=await api('/api/settings');renderSettings(settings.profiles);renderProtocolCatalog(settings.profiles);renderClientProfileChoices(settings.profiles);const status=document.getElementById('status');if(status)status.textContent=tr('connected');if(d.role==='root'){await Promise.all([loadAdminUsers(),loadApiKeys()])}await loadMetrics();loadDashboardHealth()}catch(e){const status=document.getElementById('status');if(status)status.textContent=tr('apiError')+e.message;else console.error('Abyss dashboard load failed:',e)}}
 async function add(){const input=document.getElementById('name'),days=document.getElementById('days'),quota=document.getElementById('quota'),note=document.getElementById('note');if(!input||!days||!quota||!note){alert('فرم ساخت کاربر با اسکریپت داشبورد هماهنگ نیست. صفحه را یک‌بار کامل تازه‌سازی کن.');return}if(!input.value.trim()){input.focus();alert('برای ساخت سرویس، نام کاربر را وارد کن.');return}const profiles=[...document.querySelectorAll('input[name="clientProfile"]:checked')].map(x=>x.value);if(!profiles.length){alert('حداقل یک پروفایل فعال را انتخاب کن.');return}try{await api('/api/clients',{method:'POST',body:JSON.stringify({name:input.value.trim(),duration_days:days.value?Number(days.value):null,quota_gb:quota.value?Number(quota.value):null,note:note.value,profiles})});input.value='';days.value='';quota.value='';note.value='';await load()}catch(e){alert(tr('createError')+e.message)}}
 async function toggle(id,enabled){try{await api('/api/clients/'+id,{method:'PATCH',body:JSON.stringify({enabled})});await load()}catch(e){alert(e.message)}}
 async function revoke(id){if(!confirm(tr('confirmRevoke')))return;try{await api('/api/clients/'+id,{method:'DELETE'});await load()}catch(e){alert(e.message)}}
@@ -542,7 +540,7 @@ async function removeReseller(id){if(!confirm('نماینده حذف شود؟ ا
 async function restoreBackup(){const f=document.getElementById('restoreFile').files[0];if(!f){alert('ابتدا فایل پشتیبان را انتخاب کن.');return}if(!confirm('بازیابی، پایگاه داده فعلی را جایگزین می‌کند. قبل از ادامه مطمئن شو فایل درست است.'))return;try{const fd=new FormData();fd.append('backup',f);const r=await fetch('/api/backup/restore',{method:'POST',headers:{'X-CSRF-Token':csrf},body:fd});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||'Restore failed');alert(d.message||'بازیابی انجام شد.');await load()}catch(e){alert('بازیابی ناموفق بود: '+e.message)}}
 function runGlobalSearch(){const box=document.getElementById('globalSearch'),target=document.getElementById('search');if(!target)return;showSection('clients');target.value=box?box.value.trim():'';renderClients();target.focus()}
 function showPanelHelp(){const dialog=document.getElementById('panelHelpDialog');if(dialog&&!dialog.open)dialog.showModal()}
-function showSection(name){document.querySelectorAll('[data-section-page]').forEach(el=>el.classList.toggle('nav-hidden',el.dataset.sectionPage!==name));document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===name));const titles={dashboard:'نمای کلی',clients:'مدیریت کاربران',create:'ساخت سرویس',servers:'مدیریت سرورها',protocols:'پروتکل‌ها',reports:'گزارش‌ها',reseller:'حساب‌های نمایندگی و سهمیه',settings:'تنظیمات اتصال',diagnostics:'عیب‌یابی هوشمند',backup:'پشتیبان‌گیری و بازیابی',metrics:'پایش زنده سرویس',admins:'مدیریت مدیران داشبورد',apikeys:'API و اتصال ربات',events:'رویدادهای اخیر'};const title=document.getElementById('sectionTitle');if(title)title.textContent=titles[name]||'Abyss Tunnel';const side=document.getElementById('sidebar');if(side&&innerWidth<=850)side.classList.remove('open');if(name==='servers')loadServerStatus();if(name==='reports')loadReports();if(name==='protocols')loadProtocolCatalog()}
+function showSection(name){document.querySelectorAll('[data-section-page]').forEach(el=>{const inactive=el.dataset.sectionPage!==name;el.classList.toggle('nav-hidden',inactive);if(inactive)el.style.setProperty('display','none','important');else el.style.removeProperty('display')});document.querySelectorAll('[data-nav]').forEach(el=>el.classList.toggle('active',el.dataset.nav===name));const titles={dashboard:'نمای کلی',clients:'مدیریت کاربران',create:'ساخت سرویس',servers:'مدیریت سرورها',protocols:'پروتکل‌ها',reports:'گزارش‌ها',reseller:'حساب‌های نمایندگی و سهمیه',settings:'تنظیمات اتصال',diagnostics:'عیب‌یابی هوشمند',backup:'پشتیبان‌گیری و بازیابی',metrics:'پایش زنده سرویس',admins:'مدیریت مدیران داشبورد',apikeys:'API و اتصال ربات',events:'رویدادهای اخیر'};const title=document.getElementById('sectionTitle');if(title)title.textContent=titles[name]||'Abyss Tunnel';const side=document.getElementById('sidebar');if(side&&innerWidth<=850)side.classList.remove('open');if(name==='servers')loadServerStatus();if(name==='reports')loadReports();if(name==='protocols')loadProtocolCatalog()}
 function toggleSidebar(){const side=document.getElementById('sidebar');if(side)side.classList.toggle('open')}
 function rootOnly(show){document.querySelectorAll('[data-owner-only]').forEach(el=>el.classList.toggle('hidden',!show))}
 async function loadMetrics(){try{const d=await api('/api/system/metrics'),m=d.current||{};const set=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value};set('metricCpu',m.cpu_percent==null?'—':m.cpu_percent+'%');set('metricRam',m.memory_used_percent==null?'—':m.memory_used_percent+'%');set('metricDisk',m.disk_used_percent==null?'—':m.disk_used_percent+'%');set('metricSpeed',((Number(m.traffic_bytes_per_second)||0)/1048576).toFixed(3)+' MB/s');set('metricLoad',Array.isArray(m.load_average)?m.load_average.join(' / '):'—');set('metricTraffic',((Number(m.recorded_traffic_bytes)||0)/1073741824).toFixed(3)+' GB');set('dashCpu',m.cpu_percent==null?'—':m.cpu_percent+'%');set('dashRam',m.memory_used_percent==null?'—':m.memory_used_percent+'%');set('dashDisk',m.disk_used_percent==null?'—':m.disk_used_percent+'%');set('dashboardTraffic',((Number(m.recorded_traffic_bytes)||0)/1073741824).toFixed(3)+' GB');drawUsageSparkline(m)}catch(e){const el=document.getElementById('profileChecks');if(el)el.textContent='خطای پایش: '+e.message}}
@@ -573,16 +571,20 @@ function drawUsageSparkline(metrics){
  const series=[['cpu',cpuColor,100],['ram',ramColor,100],['net',netColor,netMax]];
  for(const [key,color,max] of series){
   if(!usageHistory.length)continue;
-  ctx.beginPath();
-  usageHistory.forEach((sample,i)=>{
-   const px=usageHistory.length===1?right:left+i*(right-left)/(usageHistory.length-1);
-   const value=Math.min(1,Math.max(0,(Number(sample[key])||0)/max));
-   const py=bottom-value*plotH;
-   if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  const point=(sample,i)=>({
+   x:usageHistory.length===1?right:left+i*(right-left)/(usageHistory.length-1),
+   y:bottom-Math.min(1,Math.max(0,(Number(sample[key])||0)/max))*plotH
   });
+  if(usageHistory.length>1){
+   ctx.beginPath();
+   usageHistory.forEach((sample,i)=>{const p=point(sample,i);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});
+   ctx.lineTo(right,bottom);ctx.lineTo(left,bottom);ctx.closePath();
+   ctx.globalAlpha=.10;ctx.fillStyle=color;ctx.fill();ctx.globalAlpha=1;
+  }
+  ctx.beginPath();
+  usageHistory.forEach((sample,i)=>{const p=point(sample,i);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});
   ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-  const newest=usageHistory[usageHistory.length-1];
-  const ny=bottom-Math.min(1,Math.max(0,(Number(newest[key])||0)/max))*plotH;
+  const newest=usageHistory[usageHistory.length-1],ny=point(newest,usageHistory.length-1).y;
   ctx.beginPath();ctx.arc(right,ny,2.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
  }
  const note=document.getElementById('chartNote');
@@ -642,7 +644,7 @@ html[data-abyss-theme="angel"] .card,html[data-abyss-theme="angel"] .panel,html[
 .abyss-logo-mark:before{content:"";position:absolute;inset:-2px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(210,213,218,.6) 0deg .55deg,transparent .7deg 3.2deg);mask:radial-gradient(circle,transparent 0 27%,#000 30% 63%,transparent 76%);opacity:.62}
 .abyss-brand-row{display:flex;align-items:center;gap:9px;letter-spacing:.14em}.abyss-brand-row .brand-name{display:grid;gap:2px}.abyss-brand-row small{font-size:9px;letter-spacing:.22em;opacity:.75}.login-brand{justify-content:center;margin:8px 0 22px;font-size:14px}.login-brand .abyss-logo-mark{width:48px;height:48px;flex-basis:48px}.login-brand .abyss-logo-mark:before{inset:-4px}
 #abyssThemeDock{box-shadow:none!important;backdrop-filter:none!important;background:var(--ab-panel)!important}
-#abyssParticleCanvas{position:fixed!important;inset:0;width:100%;height:100%;pointer-events:none;z-index:0!important;opacity:.52}
+#abyssParticleCanvas{position:fixed!important;inset:0;width:100%;height:100%;pointer-events:none;z-index:0!important;opacity:.68}
 .abyss-utility-links{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:16px}
 .abyss-utility-links a{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 10px;min-height:34px;border:1px solid var(--ab-line);border-radius:10px;background:var(--ab-glass);color:var(--ab-muted);font-size:11px;text-decoration:none;transition:border-color .16s ease,color .16s ease}
 .abyss-utility-links a:hover{border-color:var(--ab-accent);color:var(--ab-text)}
@@ -779,7 +781,7 @@ html[data-abyss-theme="angel"] body:has(.login-brand) button{
  .card,.panel,.hero,.metric,.profile,.client{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 }
 </style>"""
-ABYSS_THEME_JS = r"""<script id="abyss-theme-controller">(()=>{const presets={abyss:'Abyss · مشکی و خاکستری',angel:'Angel · سفید و طلایی کمرنگ',graphite:'Graphite · خاکستری ساده',slate:'Slate · ذغالی ساده',ocean:'Ocean · آبی ساده',emerald:'Emerald · سبز ساده',paper:'Paper · روشن ساده'};let saved='abyss';try{saved=localStorage.getItem('abyss-visual-theme')||'abyss'}catch(e){}if(!presets[saved])saved='abyss';const apply=t=>{if(!presets[t])t='abyss';document.documentElement.dataset.abyssTheme=t;try{localStorage.setItem('abyss-visual-theme',t)}catch(e){}const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=(t==='angel'||t==='paper')?(t==='angel'?'#f4f3ef':'#f3f4f5'):t==='slate'?'#121820':t==='graphite'?'#111214':t==='ocean'?'#071216':t==='emerald'?'#0c130e':'#050505'};apply(saved);const init=()=>{if(document.getElementById('abyssThemeDock'))return;const dock=document.createElement('label');dock.id='abyssThemeDock';dock.innerHTML='<span class="theme-mark" aria-hidden="true">◉</span><span>تم</span><select id="abyssThemeSelect" aria-label="انتخاب تم">'+Object.entries(presets).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>';const target=document.querySelector('.top .tools')||document.querySelector('.top');if(target)target.appendChild(dock);else{dock.classList.add('floating');document.body.appendChild(dock)}const select=dock.querySelector('select');select.value=document.documentElement.dataset.abyssTheme;select.addEventListener('change',()=>apply(select.value));if(!document.getElementById('abyssParticleCanvas')&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const canvas=document.createElement('canvas');canvas.id='abyssParticleCanvas';canvas.setAttribute('aria-hidden','true');document.body.prepend(canvas);const ctx=canvas.getContext('2d',{alpha:true});if(ctx){let w=0,h=0,points=[],raf=0,dirty=true;const resize=()=>{const coarse=matchMedia('(pointer:coarse), (max-width:700px)').matches;const dpr=Math.min(devicePixelRatio||1,coarse?1:1.25);w=innerWidth;h=innerHeight;canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);const count=coarse?9:Math.min(28,Math.max(12,Math.round(w*h/52000)));points=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,r:.45+Math.random()*.7,a:.12+Math.random()*.22,dx:(Math.random()-.5)*.08,dy:(Math.random()-.5)*.08}));dirty=true};let ripple=null;const paint=()=>{raf=0;ctx.clearRect(0,0,w,h);const theme=document.documentElement.dataset.abyssTheme;const light=theme==='angel'||theme==='paper';for(const p of points){p.x+=p.dx;p.y+=p.dy;if(p.x<0||p.x>w)p.dx*=-1;if(p.y<0||p.y>h)p.dy*=-1;ctx.beginPath();ctx.fillStyle=light?'rgba(145,130,99,'+p.a*.38+')':'rgba(195,199,207,'+p.a+')';ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}if(ripple){ripple.r+=2.2;ripple.a*=.965;ctx.beginPath();ctx.strokeStyle=light?'rgba(166,148,108,'+ripple.a+')':'rgba(195,199,207,'+ripple.a+')';ctx.lineWidth=1;ctx.arc(ripple.x,ripple.y,ripple.r,0,Math.PI*2);ctx.stroke();if(ripple.a<.025)ripple=null}if(document.visibilityState==='visible')raf=requestAnimationFrame(paint)};resize();addEventListener('resize',()=>{cancelAnimationFrame(raf);resize()},{passive:true});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!raf)raf=requestAnimationFrame(paint);else if(document.visibilityState!=='visible'&&raf){cancelAnimationFrame(raf);raf=0}},{passive:true});document.addEventListener('click',e=>{if(e.target.closest('button,a,select,input,label')){ripple={x:e.clientX,y:e.clientY,r:2,a:.24}}},{passive:true});raf=requestAnimationFrame(paint)}}};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();</script>"""
+ABYSS_THEME_JS = r"""<script id="abyss-theme-controller">(()=>{const presets={abyss:'Abyss · مشکی و خاکستری',angel:'Angel · سفید و طلایی کمرنگ',graphite:'Graphite · خاکستری ساده',slate:'Slate · ذغالی ساده',ocean:'Ocean · آبی ساده',emerald:'Emerald · سبز ساده',paper:'Paper · روشن ساده'};let saved='abyss';try{saved=localStorage.getItem('abyss-visual-theme')||'abyss'}catch(e){}if(!presets[saved])saved='abyss';const apply=t=>{if(!presets[t])t='abyss';document.documentElement.dataset.abyssTheme=t;try{localStorage.setItem('abyss-visual-theme',t)}catch(e){}const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.content=(t==='angel'||t==='paper')?(t==='angel'?'#f4f3ef':'#f3f4f5'):t==='slate'?'#121820':t==='graphite'?'#111214':t==='ocean'?'#071216':t==='emerald'?'#0c130e':'#050505'};apply(saved);const init=()=>{if(document.getElementById('abyssThemeDock'))return;const dock=document.createElement('label');dock.id='abyssThemeDock';dock.innerHTML='<span class="theme-mark" aria-hidden="true">◉</span><span>تم</span><select id="abyssThemeSelect" aria-label="انتخاب تم">'+Object.entries(presets).map(([k,v])=>'<option value="'+k+'">'+v+'</option>').join('')+'</select>';const target=document.querySelector('.top .tools')||document.querySelector('.top');if(target)target.appendChild(dock);else{dock.classList.add('floating');document.body.appendChild(dock)}const select=dock.querySelector('select');select.value=document.documentElement.dataset.abyssTheme;select.addEventListener('change',()=>apply(select.value));if(!document.getElementById('abyssParticleCanvas')&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const canvas=document.createElement('canvas');canvas.id='abyssParticleCanvas';canvas.setAttribute('aria-hidden','true');document.body.prepend(canvas);const ctx=canvas.getContext('2d',{alpha:true});if(ctx){let w=0,h=0,points=[],raf=0,dirty=true;const resize=()=>{const coarse=matchMedia('(pointer:coarse), (max-width:700px)').matches;const dpr=Math.min(devicePixelRatio||1,coarse?1:1.25);w=innerWidth;h=innerHeight;canvas.width=Math.floor(w*dpr);canvas.height=Math.floor(h*dpr);canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);const count=coarse?12:Math.min(72,Math.max(28,Math.round(w*h/22000)));points=Array.from({length:count},()=>({x:Math.random()*w,y:Math.random()*h,r:.45+Math.random()*.7,a:.14+Math.random()*.22,dx:(Math.random()-.5)*.08,dy:(Math.random()-.5)*.08}));dirty=true};let ripple=null;const paint=()=>{raf=0;ctx.clearRect(0,0,w,h);const theme=document.documentElement.dataset.abyssTheme;const light=theme==='angel'||theme==='paper';for(const p of points){p.x+=p.dx;p.y+=p.dy;if(p.x<0||p.x>w)p.dx*=-1;if(p.y<0||p.y>h)p.dy*=-1;ctx.beginPath();ctx.fillStyle=light?'rgba(145,130,99,'+p.a*.38+')':'rgba(195,199,207,'+p.a+')';ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill()}if(ripple){ripple.r+=2.2;ripple.a*=.965;ctx.beginPath();ctx.strokeStyle=light?'rgba(166,148,108,'+ripple.a+')':'rgba(195,199,207,'+ripple.a+')';ctx.lineWidth=1;ctx.arc(ripple.x,ripple.y,ripple.r,0,Math.PI*2);ctx.stroke();if(ripple.a<.025)ripple=null}if(document.visibilityState==='visible')raf=requestAnimationFrame(paint)};resize();addEventListener('resize',()=>{cancelAnimationFrame(raf);resize()},{passive:true});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!raf)raf=requestAnimationFrame(paint);else if(document.visibilityState!=='visible'&&raf){cancelAnimationFrame(raf);raf=0}},{passive:true});document.addEventListener('click',e=>{if(e.target.closest('button,a,select,input,label')){ripple={x:e.clientX,y:e.clientY,r:2,a:.24}}},{passive:true});raf=requestAnimationFrame(paint)}}};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init()})();</script>"""
 ABYSS_LAYOUT_REPAIR_CSS = r"""<style id="abyss-layout-repair">
 /* Abyss reference-led layout: absolute black, quiet contrast, one section at a time. */
 :root{--chart-cpu:#c8cad0;--chart-ram:#8e85b8;--chart-net:#a2b0ba;--ab-bg:#020202;--ab-panel:rgba(13,13,14,.94);--ab-line:rgba(178,181,187,.18);--ab-accent:#b9bbc1;--ab-accent-hi:#f0f0f2;--ab-text:#eeeef0;--ab-muted:#a2a2a7;--ab-glass:rgba(230,230,235,.035);--ab-glow:rgba(180,182,189,.055);--ab-input:rgba(5,5,6,.95)}
@@ -1022,6 +1024,32 @@ html[data-abyss-theme="angel"] .top-tools-search,html[data-abyss-theme="angel"] 
 .login-visual .visual-orbit:after{inset:13%!important;border:1px solid rgba(220,222,226,.14)!important;border-radius:50%!important;transform:none!important;box-shadow:0 0 26px rgba(225,226,230,.08),inset 0 0 22px rgba(220,222,226,.035)!important;background:transparent!important;}
 .login-visual .visual-eyebrow{letter-spacing:.25em}
 @media(max-width:700px){.login-visual{display:none!important}}
+
+/* Desktop reference layout: persistent left rail; drawer only on mobile. */
+@media(min-width:851px){
+ #menuToggle{display:none!important} #abyssMenuShade{display:none!important}
+ .app-shell{display:block!important;min-height:100vh!important}
+ .sidebar{position:fixed!important;left:0!important;right:auto!important;top:0!important;bottom:0!important;width:248px!important;height:100dvh!important;max-height:100dvh!important;transform:translateX(0)!important;visibility:visible!important;overflow-y:auto!important;border-right:1px solid rgba(185,188,194,.18)!important;padding:22px 14px!important;z-index:100!important}
+ .workspace{width:calc(100% - 248px)!important;max-width:none!important;margin:0 0 0 248px!important;padding:28px clamp(18px,2vw,34px) 42px!important;min-width:0!important}
+ .workspace .top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-top:0!important;margin-bottom:22px}
+ .workspace .top .abyss-brand-row{margin-right:auto}
+ .workspace .top .section-heading{flex:1 0 100%;margin:8px 0 0}
+ .workspace .top .tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+ .stats{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important}
+ .workspace [data-section-page],.workspace .card,.workspace .panel,.workspace .box{min-width:0}
+}
+@media(min-width:851px) and (max-width:1150px){
+ .sidebar{width:220px!important}
+ .workspace{width:calc(100% - 220px)!important;margin-left:220px!important;padding-inline:18px!important}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:850px){
+ #menuToggle{display:inline-flex!important}
+ .sidebar{transform:translateX(-105%)!important;visibility:visible!important}
+ .sidebar.open{transform:translateX(0)!important}
+ .workspace{width:100%!important;max-width:none!important;margin:0!important}
+}
+@media(prefers-reduced-motion:reduce){.sidebar,#menuToggle,#abyssMenuShade{transition:none!important}}
 </style>"""
 ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
 (()=> {
@@ -1030,7 +1058,7 @@ ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
     const menu=document.getElementById('menuToggle');
     if(!sidebar || !menu) return;
     let shade=document.getElementById('abyssMenuShade');
-    if(!shade){shade=document.createElement('div');shade.id='abyssMenuShade';shade.setAttribute('aria-hidden','true');document.body.appendChild(shade);}
+    if(!shade){shade=document.createElement('div');shade.id='abyssMenuShade';shade.setAttribute('aria-hidden','true');const shell=document.querySelector('.app-shell');(shell||document.body).appendChild(shade);}
     const setOpen=(open)=>{
       sidebar.classList.toggle('open',open);
       document.body.classList.toggle('abyss-menu-open',open);
@@ -1039,7 +1067,7 @@ ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
       menu.innerHTML=open?'✕ <span>بستن</span>':'☰ <span>منو</span>';
     };
     window.toggleSidebar=()=>setOpen(!sidebar.classList.contains('open'));
-    menu.onclick=null;menu.removeAttribute('onclick');menu.addEventListener('click',e=>{e.preventDefault();setOpen(!sidebar.classList.contains('open'));});
+    menu.removeAttribute('onclick');menu.addEventListener('click',e=>{e.preventDefault();setOpen(!sidebar.classList.contains('open'));});
     shade.addEventListener('click',()=>setOpen(false));
     sidebar.querySelectorAll('[data-nav]').forEach(item=>item.addEventListener('click',()=>setOpen(false)));
     document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
@@ -1056,8 +1084,790 @@ ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
 })();
 </script>"""
 LOGIN = LOGIN.replace('<body><main class="card">','<body><div class="login-layout"><aside class="login-visual" aria-label="Abyss Tunnel"><div class="visual-orbit" aria-hidden="true"></div><div class="visual-eyebrow">ABYSS TUNNEL</div><h2>• I T A •</h2><p>Secure · Private · Unlimited</p></aside><main class="card">').replace('</form></main></body>','</form></main><dialog id="loginHelpDialog"><div class="modal-top"><div><h2>بازیابی رمز عبور</h2><div class="small">راهنمای دسترسی امن</div></div><button type="button" onclick="document.getElementById(\'loginHelpDialog\').close()" aria-label="بستن">✕</button></div><p class="small">بازیابی از طریق ایمیل در این استقرار پیکربندی نشده است. اگر رمز عبور را تغییر داده‌ای و فراموش کرده‌ای، از مالک پنل برای بازنشانی امن کمک بگیر.</p></dialog></div></body>')
-LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + "</body>")
-DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + "</body>")
+ABYSS_FINAL_LAYOUT_CSS = r"""<style id="abyss-final-layout">
+/* Final cascade layer: deliberately last so the reference layout wins over legacy inline templates. */
+.login-layout{position:relative!important;isolation:isolate!important;display:grid!important;grid-template-columns:minmax(0,1fr)!important;place-items:center!important;align-content:center!important;gap:0!important;width:100%!important;max-width:none!important;min-height:100dvh!important;margin:0!important;padding:28px 14px!important;direction:rtl!important}
+.login-visual{position:fixed!important;inset:0!important;z-index:0!important;display:block!important;pointer-events:none!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:hidden!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.login-visual .visual-eyebrow,.login-visual h2,.login-visual p{display:none!important}
+.login-visual .visual-orbit{position:absolute!important;top:4%!important;left:4%!important;width:min(56vw,610px)!important;max-width:none!important;aspect-ratio:1!important;margin:0!important;opacity:.21!important;pointer-events:none!important}
+.login-layout>.card{position:relative!important;z-index:2!important;width:min(100%,430px)!important;max-width:430px!important;margin:0 auto!important;justify-self:center!important;align-self:center!important}
+.login-layout:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 50% 42%,rgba(205,207,213,.075),transparent 38%),radial-gradient(circle at 50% 50%,#050505 0,#020202 72%)}
+[data-section-page].nav-hidden{display:none!important}
+[data-section-page]:not(.nav-hidden){display:block}
+#abyssMenuShade{position:fixed;inset:0;z-index:49;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;transition:opacity .2s ease}
+body.abyss-menu-open #abyssMenuShade{opacity:1;pointer-events:auto}
+@media(max-width:850px){.login-layout{padding:20px 14px!important}.login-layout>.card{width:min(100%,420px)!important}.login-visual .visual-orbit{width:90vw!important;left:-20vw!important;top:-8%!important;opacity:.15!important}}
+/* Ensure the section state wins over legacy display:grid!important rules. */
+html body .workspace [data-section-page].nav-hidden,
+html body .workspace .stats[data-section-page].nav-hidden,
+html body .workspace section.card[data-section-page].nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace [data-section-page]:not(.nav-hidden){visibility:visible}
+html body .workspace #overviewStats[data-section-page="dashboard"]{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html body .workspace #dashboardUsageCard[data-section-page="dashboard"]{display:block!important;width:100%;max-width:100%;margin-top:16px}
+html body .workspace #dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html body .workspace #dashboardUsageCard>.stats>.card{min-width:0!important}
+html body .workspace #dashboardUsageCard canvas{display:block;width:100%!important;max-width:100%!important}
+@media(max-width:850px){
+ html body .workspace #overviewStats[data-section-page="dashboard"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace #dashboardUsageCard>.stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(min-width:851px) and (max-width:1150px){html body .workspace #overviewStats[data-section-page="dashboard"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ID-specific hiding is required because legacy #id rules have higher specificity than generic section selectors. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>section#clientsCard.nav-hidden,
+html body .workspace>section#userManagement.nav-hidden,
+html body .workspace>section#protocolsCard.nav-hidden,
+html body .workspace>section#serversCard.nav-hidden,
+html body .workspace>section#reportsCard.nav-hidden,
+html body .workspace>section#settingsCard.nav-hidden{display:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden){display:block!important}
+html body .workspace>#panelHealthCard:not(.nav-hidden){display:block!important}
+
+/* High-specificity section state overrides legacy ID-based display:grid rules. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>section.card.nav-hidden,
+html body .workspace>section.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden),
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden){visibility:visible!important}
+
+/* Navigation visibility must outrank legacy ID selectors carrying display:grid!important. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>#createServiceCard.nav-hidden,
+html body .workspace>section[id].nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden){display:block!important}
+
+/* Reference match pass: restore the two-column eclipse login composition from the supplied screenshots. */
+@media(min-width:851px){
+ .login-layout{direction:ltr!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;place-items:center!important;align-content:stretch!important;gap:clamp(24px,4vw,72px)!important;padding:5vh clamp(26px,5vw,86px)!important;min-height:100vh!important}
+ .login-layout>.login-visual{position:relative!important;inset:auto!important;grid-column:1!important;grid-row:1!important;width:100%!important;height:100%!important;min-height:620px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;overflow:visible!important;pointer-events:none!important}
+ .login-layout>.login-visual .visual-orbit{position:absolute!important;top:50%!important;left:50%!important;transform:translate(-50%,-50%)!important;width:min(43vw,610px)!important;opacity:.75!important}
+ .login-layout>.card{grid-column:2!important;grid-row:1!important;justify-self:center!important;align-self:center!important;width:min(100%,430px)!important}
+ .login-layout:before{background:radial-gradient(ellipse at 24% 50%,rgba(160,163,171,.04),transparent 34%),#020202!important}
+}
+@media(max-width:850px){
+ .login-layout{direction:rtl!important;grid-template-columns:minmax(0,1fr)!important}
+ .login-layout>.login-visual{position:fixed!important;inset:0!important;min-height:0!important}
+ .login-layout>.login-visual .visual-orbit{top:8%!important;left:50%!important;transform:translateX(-50%)!important;width:82vw!important;opacity:.28!important}
+ .login-layout>.card{grid-column:1!important;grid-row:1!important}
+}
+/* Dashboard components follow the compact reference dashboard proportions. */
+@media(min-width:1151px){
+ .workspace>#dashboardUsageCard{grid-column:span 7!important}
+ .workspace>#panelHealthCard{grid-column:span 5!important}
+}
+.workspace>#panelHealthCard{padding:18px!important}
+.workspace>#panelHealthCard #status{gap:7px!important}
+.workspace>#panelHealthCard #status>*{padding:9px 11px!important;border-radius:11px!important}
+.sidebar{width:218px!important}
+.workspace{max-width:calc(100% - 218px)!important}
+@media(max-width:850px){
+ .sidebar{width:min(290px,84vw)!important}
+ .workspace{max-width:100%!important}
+}
+
+
+/* Explicit ID-level section hiding: legacy ID selectors with !important otherwise keep hidden sections in the grid. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>#createServiceCard.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden),
+html body .workspace>#createServiceCard:not(.nav-hidden){display:block!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden){grid-column:span 8!important}
+html body .workspace>#panelHealthCard:not(.nav-hidden){grid-column:span 4!important}
+@media(max-width:980px){
+ html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+ html body .workspace>#panelHealthCard:not(.nav-hidden){grid-column:1/-1!important}
+}
+/* Hide ID-targeted dashboard sections even against legacy ID selectors using display:grid!important. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden){display:block!important}
+/* Critical section visibility fix: ID-level dashboard display rules must not override navigation state. */
+html body .workspace #overviewStats.nav-hidden,
+html body .workspace #dashboardUsageCard.nav-hidden,
+html body .workspace #panelHealthCard.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace #overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace #dashboardUsageCard:not(.nav-hidden),
+html body .workspace #panelHealthCard:not(.nav-hidden){display:block!important}
+
+/* ID selectors from the legacy dashboard had higher specificity than the generic hidden-state rule. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>#createServiceCard.nav-hidden,
+html body .workspace>section.card.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden){display:block!important}
+/* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
+/* Keep the theme selector inside the dashboard toolbar; it is not part of the login composition. */
+body:has(.login-layout) #abyssThemeDock{display:none!important}
+body:has(.login-layout) .login-layout>.card{border-top:1px solid rgba(205,208,214,.2)!important}
+body:has(.login-layout) .login-layout>.card:before{background:linear-gradient(90deg,transparent,rgba(200,202,207,.18),transparent)!important}
+.workspace>#dashboardUsageCard>.section-title{color:#d4d5d8!important}
+.workspace>#panelHealthCard>.section-title{color:#e4e5e7!important}
+
+:root{--ab-mint:#a9b9b0!important;--abyss-mint:#a9b9b0!important}
+html,body{max-width:100%;overflow-x:clip!important}
+input[type=checkbox],input[type=radio],.profile-option input{accent-color:#a9b9b0!important}
+.login-layout>.card{border-top-color:rgba(205,208,214,.22)!important}
+.login-layout>.card button{background:linear-gradient(145deg,#c8c9cc,#96989e)!important;color:#09090a!important}
+.workspace>#dashboardUsageCard{grid-column:1/-1!important;width:100%!important}
+.workspace>#panelHealthCard{grid-column:1/-1!important;width:100%!important;display:block!important;min-width:0!important;overflow:hidden!important}
+.workspace>#panelHealthCard #status{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;width:100%!important;min-width:0!important}
+.workspace>#panelHealthCard #status>*{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important;white-space:normal!important}
+.workspace>#panelHealthCard .section-title,.workspace>#panelHealthCard .small{max-width:100%!important;overflow-wrap:anywhere!important}
+.workspace>#dashboardUsageCard>.stats{margin-top:14px!important}
+.workspace>#dashboardUsageCard>.stats>.card{border-radius:16px!important}
+@media(max-width:850px){
+ body:not(.abyss-menu-open) .sidebar{transform:translateX(-110%)!important;visibility:hidden!important;pointer-events:none!important}
+ body.abyss-menu-open .sidebar{transform:translateX(0)!important;visibility:visible!important;pointer-events:auto!important}
+ .workspace{width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;overflow-x:clip!important}
+ .workspace .top,.workspace .top>*{max-width:100%!important;min-width:0!important}
+ .workspace .abyss-brand-row{max-width:100%!important;overflow:hidden!important}
+ .workspace .brand-name{min-width:0!important;max-width:100%!important}
+ .workspace .top .tools{min-width:0!important}
+ .workspace .top .tools>*{min-width:0!important;max-width:100%!important}
+ .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+/* Final compact section placement and neutral palette cleanup. */
+.workspace{grid-auto-flow:row!important;grid-auto-rows:max-content!important;align-content:start!important}
+.workspace>section[data-section-page]{align-self:start!important;min-height:0!important}
+html body .workspace>#createServiceCard:not(.nav-hidden){margin-block-start:0!important;grid-column:1/-1!important}
+html body .workspace>#createServiceCard .reference-page-head{margin-block-start:0!important}
+.login-layout>.card{border-top:1px solid rgba(210,212,216,.19)!important;box-shadow:0 22px 70px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.025)!important}
+.login-layout>.card:before{display:none!important}
+.login-layout .login-brand .abyss-logo-svg{filter:grayscale(1)!important}
+@media(max-width:850px){
+ .workspace>section[data-section-page]{grid-column:1/-1!important}
+ html body .workspace>#createServiceCard:not(.nav-hidden){width:100%!important}
+}
+@media(max-width:390px){
+ .workspace{padding-left:10px!important;padding-right:10px!important}
+ .workspace .brand-name b{font-size:14px!important;letter-spacing:.08em!important}
+ .workspace .top .tools button{flex:1 1 calc(33.333% - 7px)!important}
+ .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
+
+/* Recent activity cards keep long event messages readable inside the narrower status column. */
+.workspace #recentActivityList .report-event{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:5px!important;align-items:start!important;min-width:0!important;padding:10px 12px!important}
+.workspace #recentActivityList .event-message{display:block!important;min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.55!important}
+.workspace #recentActivityList .event-meta{display:block!important;min-width:0!important;max-width:100%!important;direction:ltr!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important;font-size:10px!important;line-height:1.45!important;color:var(--ab-muted)!important}
+
+/* Compact mobile toolbar: keep essential controls usable without pushing the dashboard far below the fold. */
+@media(max-width:700px){
+ html body .workspace .top{gap:7px!important;padding-bottom:10px!important}
+ html body .workspace .top .tools{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-flow:row!important;gap:5px!important;width:100%!important;align-items:stretch!important}
+ html body .workspace .top .tools #globalSearch,
+ html body .workspace .top .tools .top-tools-search{grid-column:1/-1!important;width:100%!important;min-height:36px!important}
+ html body .workspace .top .tools button{flex:none!important;width:100%!important;min-width:0!important;min-height:34px!important;padding:6px 4px!important;font-size:11px!important;white-space:normal!important}
+ html body .workspace .top .tools .account-badge{grid-column:span 2!important;min-width:0!important;max-width:100%!important;padding:4px 7px!important;justify-content:center!important}
+ html body .workspace .top .tools .account-copy{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important}
+ html body .workspace .top .tools #abyssThemeDock{grid-column:span 2!important;width:100%!important;max-width:100%!important;min-width:0!important;display:flex!important;justify-content:center!important;gap:5px!important;padding:5px 7px!important}
+ html body .workspace .top .tools #abyssThemeDock select{min-width:0!important;width:auto!important;max-width:calc(100% - 34px)!important;font-size:10px!important}
+}
+
+/* Visual review fix: non-dashboard sections must occupy the first available workspace row.
+   Older layout rules left their actual forms/tables below a large empty dashboard-sized grid area. */
+@media(min-width:851px){
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard){
+   grid-row:auto!important;
+   grid-column:1/-1!important;
+   align-self:start!important;
+   min-height:0!important;
+   height:auto!important;
+   margin-block:0 14px!important;
+ }
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard)>.reference-page-head{
+   margin-block-start:0!important;
+ }
+}
+@media(max-width:850px){
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard){
+   grid-row:auto!important;
+   grid-column:1/-1!important;
+   align-self:start!important;
+   min-height:0!important;
+   height:auto!important;
+   margin-block:0 12px!important;
+ }
+}
+
+/* Screenshot-review follow-up: restore the reference dashboard's side-by-side monitoring
+   and service-health cards; keep recent activity from stretching the entire page. */
+@media(min-width:1151px){
+ html body .workspace>#dashboardUsageCard[data-section-page="dashboard"]{
+   grid-column:span 7!important;width:auto!important;min-width:0!important;margin-top:0!important;
+ }
+ html body .workspace>#panelHealthCard[data-section-page="dashboard"]{
+   grid-column:span 5!important;width:auto!important;min-width:0!important;align-self:start!important;
+ }
+}
+html body .workspace>#panelHealthCard #recentActivityList{
+ max-height:260px!important;overflow-y:auto!important;overscroll-behavior:contain!important;
+ scrollbar-width:thin!important;
+}
+html body .workspace>#panelHealthCard #dashboardComponentStatus{width:100%!important;min-width:0!important}
+html body .workspace>#panelHealthCard .section-title{line-height:1.45!important}
+@media(min-width:851px) and (max-width:1150px){
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{
+   grid-column:1/-1!important;width:100%!important;
+ }
+}
+@media(max-width:850px){
+ html body .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#panelHealthCard #recentActivityList{max-height:220px!important}
+}
+
+/* Visual pass 3: compact reference-like dashboard and avoid oversized toolbar on narrow screens. */
+@media(min-width:1151px){
+ html body .workspace>#dashboardUsageCard[data-section-page="dashboard"]{
+   grid-column:6 / span 7!important;
+   grid-row:2!important;
+ }
+ html body .workspace>#panelHealthCard[data-section-page="dashboard"]{
+   grid-column:1 / span 5!important;
+   grid-row:2!important;
+ }
+ html body .workspace>#overviewStats[data-section-page="dashboard"]{
+   grid-column:1/-1!important;
+ }
+}
+html body .workspace>#dashboardUsageCard .chart-wrap,
+html body .workspace>#dashboardUsageCard canvas,
+html body .workspace>#dashboardUsageCard svg{max-width:100%!important}
+html body .workspace>#panelHealthCard #recentActivityList{
+ max-height:190px!important;overflow:auto!important;
+}
+@media(min-width:851px){
+ html body .workspace{align-content:start!important;align-items:start!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
+   min-height:0!important;
+ }
+}
+@media(max-width:850px){
+ html body .topbar,html body .header-actions,html body .toolbar-actions{
+   max-width:100%!important;flex-wrap:wrap!important;gap:6px!important;
+ }
+ html body .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard,
+ html body .workspace>#panelHealthCard{min-width:0!important;max-width:100%!important}
+ html body .workspace>#dashboardUsageCard .chart-wrap{overflow:hidden!important}
+}
+
+/* Reference fidelity pass: establish an intentional dashboard grid rather than relying on
+   auto-placement; keep the overview metrics above the chart and service health panels. */
+@media(min-width:851px){
+ html body .app-shell{grid-template-columns:196px minmax(0,1fr)!important;max-width:none!important}
+ html body .sidebar{width:196px!important;box-sizing:border-box!important;padding:18px 10px!important}
+ html body .workspace{
+   display:grid!important;
+   grid-template-columns:repeat(12,minmax(0,1fr))!important;
+   grid-auto-flow:row!important;
+   align-content:start!important;
+   align-items:start!important;
+   gap:12px!important;
+   width:100%!important;max-width:none!important;
+   min-width:0!important;
+   padding:14px 18px 26px!important;
+ }
+ html body .workspace>.top{grid-column:1/-1!important;grid-row:1!important;min-width:0!important;display:flex!important;align-items:center!important;gap:12px!important;padding:2px 0 12px!important}
+ html body .workspace>#overviewStats{grid-column:1/-1!important;grid-row:2!important;margin:0!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;min-width:0!important}
+ html body .workspace>#dashboardUsageCard{grid-column:6/span 7!important;grid-row:3!important;align-self:start!important;margin:0!important;min-width:0!important}
+ html body .workspace>#panelHealthCard{grid-column:1/span 5!important;grid-row:3!important;align-self:start!important;margin:0!important;min-width:0!important}
+ html body .workspace>.top .abyss-brand-row{flex:0 0 auto!important}
+ html body .workspace>.top .mint{margin-inline-start:auto!important;white-space:nowrap!important}
+ html body .workspace>.top .section-heading{margin:0!important;font-size:18px!important;white-space:nowrap!important}
+ html body .workspace>.top .tools{flex:1 1 auto!important;min-width:0!important;display:flex!important;justify-content:flex-end!important;flex-wrap:wrap!important;gap:6px!important}
+ html body .workspace>.top .tools input{width:190px!important;min-width:100px!important}
+ html body .workspace>#overviewStats>.card{min-width:0!important;margin:0!important;padding:15px 16px!important}
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{padding:16px!important}
+ html body .workspace>#dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin:12px 0!important}
+ html body .workspace>#dashboardUsageCard>.stats>.card{min-width:0!important;margin:0!important;padding:10px!important}
+ html body .workspace>#dashboardUsageCard canvas{display:block!important;width:100%!important;height:150px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
+ html body .workspace>#panelHealthCard .report-events{display:grid!important;gap:7px!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
+   grid-column:1/-1!important;grid-row:auto!important;align-self:start!important;margin:0!important;min-width:0!important;
+ }
+}
+html body .sidebar{background:linear-gradient(180deg,rgba(9,9,10,.98),rgba(3,3,4,.99))!important;border-right:1px solid rgba(180,182,188,.16)!important;border-left:1px solid rgba(180,182,188,.12)!important}
+html body .side-brand{padding:7px 8px 18px!important}
+html body .side-nav{gap:4px!important}
+html body .nav-item{min-height:37px!important;padding:9px 10px!important;border-radius:10px!important;font-size:12px!important}
+html body .nav-item:hover,html body .nav-item.active{background:linear-gradient(120deg,rgba(220,222,228,.13),rgba(220,222,228,.035))!important;border-color:rgba(205,207,213,.18)!important;color:#f0f0f2!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+html body .workspace .card{background:linear-gradient(145deg,rgba(16,16,18,.97),rgba(6,6,7,.98))!important;border-color:rgba(176,179,187,.17)!important;box-shadow:0 10px 28px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.035)!important;border-radius:13px!important}
+html body .workspace #overviewStats>.card .num{font-size:clamp(20px,2vw,29px)!important}
+html body .workspace .section-title{font-size:14px!important;letter-spacing:0!important}
+html body .workspace .small{line-height:1.5!important}
+@media(min-width:851px) and (max-width:1150px){
+ html body .workspace{grid-template-columns:repeat(6,minmax(0,1fr))!important;padding:12px!important}
+ html body .workspace>.top,html body .workspace>#overviewStats{grid-column:1/-1!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/-1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1/-1!important;grid-row:4!important}
+ html body .workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:850px){
+ html body .app-shell{display:block!important}
+ html body .sidebar{width:min(290px,84vw)!important;max-width:84vw!important;padding:18px 12px!important}
+ html body .workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:10px!important;padding:8px 12px 24px!important}
+ html body .workspace>.top{grid-column:1!important;grid-row:auto!important;display:flex!important;flex-wrap:wrap!important;gap:8px!important;padding:8px 0 12px!important}
+ html body .workspace>#overviewStats{grid-column:1!important;grid-row:auto!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:0!important}
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0!important;width:100%!important}
+ html body .workspace>#dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+ html body .workspace>#dashboardUsageCard canvas{max-width:100%!important;height:120px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0!important;width:100%!important}
+}
+
+/* Reference-layout correction: let the grid size rows from actual content.
+   Fixed row numbers caused the stats and monitoring panels to overlap on rendered screenshots. */
+@media(min-width:851px){
+ html body .workspace{
+   display:grid!important;
+   grid-template-columns:repeat(12,minmax(0,1fr))!important;
+   grid-auto-flow:row dense!important;
+   grid-auto-rows:min-content!important;
+   align-content:start!important;
+   align-items:start!important;
+   gap:12px!important;
+ }
+ html body .workspace>.top{
+   grid-column:1/-1!important;grid-row:auto!important;
+   display:flex!important;flex-wrap:wrap!important;
+   min-height:0!important;height:auto!important;
+   align-items:center!important;gap:10px!important;
+   margin:0!important;padding:8px 0 12px!important;
+ }
+ html body .workspace>#overviewStats{
+   grid-column:1/-1!important;grid-row:auto!important;
+   display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+   align-self:start!important;position:relative!important;
+   height:auto!important;min-height:0!important;margin:0!important;
+ }
+ html body .workspace>#dashboardUsageCard{
+   grid-column:span 7!important;grid-row:auto!important;
+   position:relative!important;inset:auto!important;
+   height:auto!important;min-height:0!important;margin:0!important;
+ }
+ html body .workspace>#panelHealthCard{
+   grid-column:span 5!important;grid-row:auto!important;
+   position:relative!important;inset:auto!important;
+   height:auto!important;min-height:0!important;margin:0!important;
+ }
+ html body .workspace>#overviewStats>.card{
+   position:relative!important;inset:auto!important;
+   height:auto!important;min-height:94px!important;
+   margin:0!important;min-width:0!important;
+ }
+ html body .workspace>#dashboardUsageCard .stats{
+   display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+   gap:8px!important;margin:12px 0!important;
+ }
+ html body .workspace>#dashboardUsageCard .stats>.card{margin:0!important;min-width:0!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{
+   display:block!important;width:100%!important;max-width:100%!important;height:150px!important;
+ }
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
+   grid-column:1/-1!important;grid-row:auto!important;position:relative!important;
+   inset:auto!important;height:auto!important;min-height:0!important;margin:0 0 12px!important;
+ }
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body .workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{grid-column:1/-1!important}
+}
+@media(max-width:850px){
+ html body .workspace{
+   display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+   grid-auto-flow:row!important;grid-auto-rows:min-content!important;
+   align-content:start!important;gap:10px!important;
+ }
+ html body .workspace>.top,html body .workspace>#overviewStats,
+ html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard,
+ html body .workspace>[data-section-page]:not(.nav-hidden){
+   grid-column:1!important;grid-row:auto!important;
+   position:relative!important;inset:auto!important;
+   width:100%!important;max-width:100%!important;
+   height:auto!important;min-height:0!important;margin:0 0 10px!important;
+   box-sizing:border-box!important;
+ }
+ html body .workspace>.top{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+ html body .workspace>#overviewStats{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ html body .workspace>#overviewStats>.card{min-width:0!important;margin:0!important}
+ html body .workspace>#dashboardUsageCard .stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:120px!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+ html body .workspace>#panelHealthCard #recentActivityList{max-height:220px!important;overflow:auto!important}
+}
+
+/* Screenshot-driven correction: keep the overview metrics in DOM order and keep the
+   RTL sidebar on the right; dense auto-placement had pulled cards out of reference order. */
+html body .app-shell{direction:rtl!important}
+@media(min-width:851px){
+ html body .app-shell{
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr) 224px!important;
+   max-width:1800px!important;
+   margin-inline:auto!important;
+   align-items:start!important;
+ }
+ html body .sidebar{
+   grid-column:2!important;grid-row:1!important;
+   position:sticky!important;right:0!important;left:auto!important;
+   width:172px!important;height:100dvh!important;max-height:100dvh!important;
+   overflow-y:auto!important;overflow-x:hidden!important;
+ }
+ html body .workspace{
+   grid-column:1!important;grid-row:1!important;
+   display:grid!important;
+   grid-template-columns:repeat(12,minmax(0,1fr))!important;
+   grid-auto-flow:row!important;grid-auto-rows:min-content!important;
+   align-content:start!important;align-items:start!important;
+   min-width:0!important;width:100%!important;max-width:none!important;
+   padding:18px 22px 30px!important;gap:12px!important;
+ }
+ html body .workspace>.top{grid-column:1/-1!important;grid-row:1!important;min-width:0!important}
+ html body .workspace>#overviewStats{grid-column:1/-1!important;grid-row:2!important;order:0!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/span 7!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:8/span 5!important;grid-row:3!important}
+ html body .workspace>#overviewStats,
+ html body .workspace>#dashboardUsageCard,
+ html body .workspace>#panelHealthCard{align-self:start!important;position:relative!important;inset:auto!important;height:auto!important}
+ html body .workspace>#overviewStats{margin:0!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}
+ html body .workspace>#dashboardUsageCard .stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{height:155px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+ html body .workspace>#panelHealthCard #recentActivityList{max-height:190px!important;overflow:auto!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body .app-shell{grid-template-columns:minmax(0,1fr) 190px!important}
+ html body .sidebar{width:190px!important}
+ html body .workspace{padding:14px!important}
+ html body .workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/-1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1/-1!important;grid-row:4!important}
+}
+@media(max-width:850px){
+ html body .app-shell{display:block!important;direction:rtl!important}
+ html body .sidebar{position:fixed!important;right:0!important;left:auto!important;top:0!important;width:min(290px,84vw)!important;max-width:84vw!important;height:100dvh!important;transform:translateX(105%)!important;z-index:60!important}
+ html body .sidebar.open{transform:translateX(0)!important}
+ html body .workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-auto-flow:row!important;grid-auto-rows:min-content!important;gap:10px!important;padding:8px 12px 24px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+ html body .workspace>.top{grid-column:1!important;grid-row:1!important}
+ html body .workspace>#overviewStats{grid-column:1!important;grid-row:2!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1!important;grid-row:4!important}
+ html body .workspace>#overviewStats>.card,html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{min-width:0!important;max-width:100%!important;margin:0!important;box-sizing:border-box!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:125px!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>.top .tools{display:flex!important;flex-wrap:wrap!important;max-width:100%!important;gap:6px!important}
+ html body .workspace>.top .tools input{width:min(100%,220px)!important;flex:1 1 140px!important}
+}
+
+/* Screenshot audit v2: use explicit named grid rows so the overview can never be painted
+   underneath the resource/status cards. The approved references place navigation on the left. */
+@media(min-width:851px){
+ html body .app-shell{
+   display:grid!important;
+   grid-template-columns:172px minmax(0,1fr)!important;
+   grid-template-rows:minmax(100vh,auto)!important;
+   direction:ltr!important;
+   align-items:stretch!important;
+ }
+ html body .app-shell>.sidebar{
+   grid-column:1!important;grid-row:1!important;
+   position:sticky!important;top:0!important;left:0!important;right:auto!important;
+   width:172px!important;height:100vh!important;max-height:100vh!important;
+   align-self:start!important;overflow-y:auto!important;
+ }
+ html body .app-shell>.workspace{
+   grid-column:2!important;grid-row:1!important;direction:rtl!important;
+   display:grid!important;
+   grid-template-columns:repeat(12,minmax(0,1fr))!important;
+   grid-template-rows:auto auto auto auto!important;
+   grid-auto-flow:row!important;grid-auto-rows:min-content!important;
+   align-content:start!important;align-items:start!important;
+   min-width:0!important;width:100%!important;max-width:none!important;
+   padding:16px 20px 28px!important;gap:12px!important;
+ }
+ html body .workspace>.top{
+   grid-column:1/-1!important;grid-row:1!important;
+   position:relative!important;inset:auto!important;transform:none!important;
+   height:auto!important;min-height:0!important;margin:0!important;
+ }
+ html body .workspace>#overviewStats{
+   grid-column:1/-1!important;grid-row:2!important;
+   position:relative!important;inset:auto!important;transform:none!important;float:none!important;
+   height:auto!important;min-height:0!important;margin:0!important;
+   display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;
+   gap:10px!important;align-self:start!important;
+ }
+ html body .workspace>#dashboardUsageCard{
+   grid-column:6/-1!important;grid-row:3!important;
+   position:relative!important;inset:auto!important;transform:none!important;float:none!important;
+   height:auto!important;min-height:0!important;margin:0!important;align-self:start!important;
+ }
+ html body .workspace>#panelHealthCard{
+   grid-column:1/span 5!important;grid-row:3!important;
+   position:relative!important;inset:auto!important;transform:none!important;float:none!important;
+   height:auto!important;min-height:0!important;margin:0!important;align-self:start!important;
+ }
+ html body .workspace>#overviewStats>.card{min-width:0!important;min-height:100px!important;margin:0!important}
+ html body .workspace>#dashboardUsageCard .stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin:12px 0!important}
+ html body .workspace>#dashboardUsageCard .stats>.card{margin:0!important;min-width:0!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{display:block!important;width:100%!important;height:150px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+ html body .workspace>#panelHealthCard #recentActivityList{max-height:190px!important;overflow:auto!important}
+ html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
+   grid-column:1/-1!important;grid-row:auto!important;position:relative!important;inset:auto!important;
+   transform:none!important;float:none!important;height:auto!important;min-height:0!important;margin:0 0 12px!important;
+ }
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body .app-shell{grid-template-columns:190px minmax(0,1fr)!important}
+ html body .app-shell>.sidebar{width:190px!important}
+ html body .workspace{padding:12px!important}
+ html body .workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/-1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1/-1!important;grid-row:4!important}
+}
+@media(max-width:850px){
+ html body .app-shell{display:block!important;direction:ltr!important}
+ html body .app-shell>.sidebar{position:fixed!important;top:0!important;right:0!important;left:auto!important;width:min(290px,84vw)!important;max-width:84vw!important;height:100dvh!important;transform:translateX(105%)!important;z-index:60!important}
+ html body .app-shell>.sidebar.open{transform:translateX(0)!important}
+ html body .app-shell>.workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto auto auto!important;grid-auto-flow:row!important;grid-auto-rows:min-content!important;gap:10px!important;padding:8px 12px 24px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;direction:rtl!important}
+ html body .workspace>.top{grid-column:1!important;grid-row:1!important}
+ html body .workspace>#overviewStats{grid-column:1!important;grid-row:2!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1!important;grid-row:4!important}
+ html body .workspace>#overviewStats,html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important;box-sizing:border-box!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:125px!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
+}
+
+/* Reference fidelity pass: compact left rail and tighter glass dashboard surfaces. */
+@media(min-width:1151px){
+ html body main.app-shell{grid-template-columns:172px minmax(0,1fr)!important}
+ html body main.app-shell>aside.sidebar{width:172px!important;padding:14px 8px!important}
+ html body main.app-shell>.workspace{padding:14px 18px 28px!important;gap:10px!important}
+ html body main.app-shell>.workspace>#overviewStats{gap:8px!important}
+ html body main.app-shell>.workspace>#overviewStats>.card{padding:12px 10px!important}
+}
+html body main.app-shell>aside.sidebar .side-brand{gap:7px!important;justify-content:center!important}
+html body main.app-shell>aside.sidebar .brand-name{font-size:11px!important;letter-spacing:.08em!important}
+html body main.app-shell>aside.sidebar .side-caption{font-size:10px!important;margin:8px 0 6px!important}
+html body main.app-shell>aside.sidebar .side-nav{gap:4px!important}
+html body main.app-shell>aside.sidebar .nav-item{min-height:34px!important;padding:8px 7px!important;gap:7px!important;font-size:11px!important;line-height:1.35!important;border-radius:9px!important}
+html body main.app-shell>aside.sidebar .nav-icon{width:18px!important;min-width:18px!important;font-size:14px!important}
+html body main.app-shell>aside.sidebar .side-footer{font-size:10px!important}
+html body main.app-shell>.workspace>.top{padding-bottom:10px!important}
+html body main.app-shell>.workspace>.top .tools{gap:6px!important}
+html body main.app-shell>.workspace>.top .tools button,
+html body main.app-shell>.workspace>.top .tools input{min-height:34px!important;padding:7px 10px!important;font-size:11px!important}
+html body main.app-shell>.workspace .card{border-color:rgba(190,198,211,.18)!important;background:linear-gradient(145deg,rgba(24,26,31,.88),rgba(8,9,12,.94))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 12px 30px rgba(0,0,0,.2)!important}
+html body main.app-shell>.workspace #overviewStats .num{font-size:clamp(20px,1.8vw,30px)!important}
+/* Last-cascade layout fix: the older repair layer set .workspace to display:block!important,
+   which silently disabled all grid-row assignments and stacked dashboard cards at y=173. */
+@media(min-width:851px){
+ html body main.app-shell{display:grid!important;grid-template-columns:172px minmax(0,1fr)!important;grid-template-rows:minmax(100vh,auto)!important;direction:ltr!important;align-items:stretch!important}
+ html body main.app-shell>aside.sidebar{grid-column:1!important;grid-row:1!important;position:sticky!important;top:0!important;left:0!important;right:auto!important;width:172px!important;height:100vh!important;max-height:100vh!important;transform:none!important;align-self:start!important}
+ html body main.app-shell>.workspace{grid-column:2!important;grid-row:1!important;direction:rtl!important;display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:auto auto auto!important;grid-auto-flow:row!important;grid-auto-rows:min-content!important;align-content:start!important;align-items:start!important;min-width:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:18px 22px 30px!important;gap:12px!important}
+ html body main.app-shell>.workspace>.top{grid-column:1/-1!important;grid-row:1!important;position:relative!important;inset:auto!important;height:auto!important;margin:0!important;min-width:0!important}
+ html body main.app-shell>.workspace>#overviewStats{grid-column:1/-1!important;grid-row:2!important;position:relative!important;inset:auto!important;transform:none!important;float:none!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;align-self:start!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard{grid-column:6/-1!important;grid-row:3!important;position:relative!important;inset:auto!important;transform:none!important;float:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0!important;align-self:start!important}
+ html body main.app-shell>.workspace>#panelHealthCard{grid-column:1/span 5!important;grid-row:3!important;position:relative!important;inset:auto!important;transform:none!important;float:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0!important;align-self:start!important}
+ html body main.app-shell>.workspace>#overviewStats>.card{min-width:0!important;margin:0!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard>.stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard #usageSparkline{display:block!important;width:100%!important;height:150px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #status{display:none!important}
+ html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+ html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1/-1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;float:none!important;height:auto!important;min-height:0!important;margin:0 0 12px!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body main.app-shell{grid-template-columns:190px minmax(0,1fr)!important}
+ html body main.app-shell>aside.sidebar{width:190px!important}
+ html body main.app-shell>.workspace{padding:12px!important}
+ html body main.app-shell>.workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard{grid-column:1/-1!important;grid-row:3!important}
+ html body main.app-shell>.workspace>#panelHealthCard{grid-column:1/-1!important;grid-row:4!important}
+}
+@media(max-width:850px){
+ html body main.app-shell{display:block!important;direction:ltr!important}
+ html body main.app-shell>aside.sidebar{position:fixed!important;top:0!important;right:0!important;left:auto!important;width:min(290px,84vw)!important;max-width:84vw!important;height:100dvh!important;transform:translateX(105%)!important;z-index:10011!important}
+ html body main.app-shell>aside.sidebar.open{transform:translateX(0)!important}
+ html body main.app-shell>.workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto auto auto!important;grid-auto-flow:row!important;grid-auto-rows:min-content!important;gap:10px!important;padding:8px 12px 24px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important;direction:rtl!important}
+ html body main.app-shell>.workspace>.top{grid-column:1!important;grid-row:1!important}
+ html body main.app-shell>.workspace>#overviewStats{grid-column:1!important;grid-row:2!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard{grid-column:1!important;grid-row:3!important}
+ html body main.app-shell>.workspace>#panelHealthCard{grid-column:1!important;grid-row:4!important}
+ html body main.app-shell>.workspace>#overviewStats,html body main.app-shell>.workspace>#dashboardUsageCard,html body main.app-shell>.workspace>#panelHealthCard{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important;box-sizing:border-box!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:125px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
+}
+
+/* Final reference polish: black starfield, restrained orbit, readable Persian navigation. */
+html body:has(.login-layout){background:#050506!important;background-image:radial-gradient(1px 1px at 8% 17%,rgba(230,232,237,.62) 98%,transparent),radial-gradient(1px 1px at 21% 72%,rgba(230,232,237,.4) 98%,transparent),radial-gradient(1px 1px at 36% 33%,rgba(230,232,237,.48) 98%,transparent),radial-gradient(1px 1px at 57% 16%,rgba(230,232,237,.38) 98%,transparent),radial-gradient(1px 1px at 73% 62%,rgba(230,232,237,.42) 98%,transparent),radial-gradient(1px 1px at 89% 29%,rgba(230,232,237,.52) 98%,transparent),radial-gradient(1px 1px at 94% 83%,rgba(230,232,237,.35) 98%,transparent),linear-gradient(128deg,transparent 0 24%,rgba(190,193,200,.035) 24.08%,transparent 24.22% 68%,rgba(190,193,200,.025) 68.08%,transparent 68.24%),#050506!important;background-size:100% 100%!important}
+html body:has(.login-layout) .login-visual .visual-orbit{top:15%!important;left:7%!important;width:min(39vw,440px)!important;opacity:.17!important;border-color:rgba(190,193,200,.16)!important;box-shadow:0 0 80px rgba(190,193,200,.025),inset 0 0 55px rgba(190,193,200,.02)!important}
+html body:has(.login-layout) .login-visual .visual-orbit:before{border-color:rgba(205,207,213,.17)!important}
+html body:has(.login-layout) .login-visual .visual-orbit:after{border-color:rgba(218,220,225,.24)!important}
+html body main.app-shell>aside.sidebar .nav-item{font-size:12px!important;line-height:1.45!important;padding:8px 9px!important;gap:7px!important}
+html body main.app-shell>aside.sidebar .nav-icon{width:21px!important;flex:0 0 21px!important;font-size:14px!important}
+html body main.app-shell>.workspace>.top .tools button,
+html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
+@media(max-width:700px){html body:has(.login-layout) .login-visual .visual-orbit{top:4%!important;left:-10%!important;width:72vw!important;opacity:.13!important}}
+
+/* Compact desktop dashboard: match the reference's dense, three-zone overview. */
+@media(min-width:1151px){
+ html body main.app-shell>.workspace{gap:12px!important}
+ html body main.app-shell>.workspace>#overviewStats>.card{padding:15px!important;min-height:96px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard{padding:15px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard #usageSparkline{height:108px!important;max-height:108px!important;margin-top:5px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard>.stats{gap:8px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard>.stats>.card{padding:10px!important}
+ html body main.app-shell>.workspace>#panelHealthCard{padding:15px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{gap:7px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus>*{min-height:36px!important;padding:7px 10px!important}
+ html body main.app-shell>.workspace>#panelHealthCard .event-item,
+ html body main.app-shell>.workspace>#panelHealthCard .activity-item{padding:9px 11px!important;margin-top:7px!important}
+}
+
+/* Compact protocol choices and event rows without reducing tap targets on mobile. */
+@media(min-width:1151px){
+ html body main.app-shell>.workspace>#createServiceCard #clientProfileChoices.profile-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px!important}
+ html body main.app-shell>.workspace>#createServiceCard #clientProfileChoices .profile-setting{min-height:46px!important;padding:10px 12px!important;border-radius:13px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #recentActivityList>div{padding:9px 11px!important;margin:6px 0 0!important;min-height:0!important;border-radius:12px!important}
+ html body main.app-shell>.workspace>#panelHealthCard .section-title[style*="margin-top"]{margin-top:12px!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body main.app-shell>.workspace>#createServiceCard #clientProfileChoices.profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:700px){
+ html body main.app-shell>.workspace>#createServiceCard #clientProfileChoices.profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ html body main.app-shell>.workspace>#createServiceCard #clientProfileChoices .profile-setting{min-height:44px!important;padding:9px!important}
+}
+
+/* Three-card dashboard row mirrors the approved overview composition. */
+@media(min-width:1151px){
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){grid-column:span 5!important;min-width:0!important}
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){grid-column:span 3!important;min-width:0!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){grid-column:span 4!important;min-width:0!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard{padding:15px!important;min-height:320px!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard .quick-detail-list{display:grid!important;gap:8px!important;margin-top:10px!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard .quick-detail-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;padding:10px 11px!important;min-width:0!important;border:1px solid var(--ab-line)!important;border-radius:12px!important;background:rgba(255,255,255,.018)!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard .quick-detail-row strong{font-size:12px!important;font-weight:600!important;text-align:left!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard #recentActivityList{max-height:245px!important;overflow:auto!important;padding-inline-end:2px!important}
+ html body:has(.login-layout) .login-visual .visual-orbit{top:18%!important;left:9%!important;transform:none!important;width:min(31vw,400px)!important;opacity:.22!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){grid-column:span 7!important}
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){grid-column:span 5!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){grid-column:1/-1!important}
+}
+@media(max-width:850px){
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){grid-column:1/-1!important}
+ html body:has(.login-layout) .login-visual .visual-orbit{transform:translateX(-50%)!important}
+}
+
+/* Reference layout: explicit RTL grid lines prevent legacy auto-placement rules
+   from pushing the quick-details card onto a second row. */
+@media(min-width:1151px){
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){
+   order:0!important;grid-column:1 / span 4!important;grid-row:3!important;
+   min-width:0!important;min-height:0!important;width:auto!important;
+ }
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){
+   order:0!important;grid-column:5 / span 3!important;grid-row:3!important;
+   min-width:0!important;width:auto!important;
+ }
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){
+   order:0!important;grid-column:8 / span 5!important;grid-row:3!important;
+   min-width:0!important;width:auto!important;
+ }
+ html body main.app-shell>.workspace>#dashboardQuickCard #recentActivityList{max-height:205px!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard .quick-detail-row strong{max-width:68%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+}
+/* Keep sidebar navigation and creator links in normal flow; never let the footer overlap the last menu item. */
+html body main.app-shell>aside.sidebar{
+ display:flex!important;flex-direction:column!important;align-items:stretch!important;
+ overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;
+ scrollbar-gutter:stable!important;box-sizing:border-box!important;
+}
+html body main.app-shell>aside.sidebar>.side-nav{
+ display:grid!important;grid-template-columns:minmax(0,1fr)!important;
+ gap:4px!important;flex:0 0 auto!important;position:relative!important;
+}
+html body main.app-shell>aside.sidebar>.side-nav>.nav-item{
+ position:relative!important;flex:0 0 auto!important;box-sizing:border-box!important;
+ margin:0!important;transform:none!important;min-width:0!important;
+}
+html body main.app-shell>aside.sidebar>.side-caption:nth-last-child(2){
+ flex:0 0 auto!important;margin:14px 0 4px!important;padding-top:10px!important;
+ border-top:1px solid var(--ab-line)!important;
+}
+html body main.app-shell>aside.sidebar>.abyss-utility-links{
+ position:relative!important;inset:auto!important;flex:0 0 auto!important;
+ margin:10px 0 12px!important;padding-bottom:6px!important;
+}
+@media(max-width:850px){
+ html body main.app-shell>aside.sidebar{padding-bottom:max(16px,env(safe-area-inset-bottom))!important}
+ html body main.app-shell>aside.sidebar>.abyss-utility-links{gap:6px!important}
+ html body main.app-shell>aside.sidebar>.abyss-utility-links a{max-width:100%!important}
+}
+/* Keep mobile controls usable without turning each toolbar action into a full-width row. */
+@media(max-width:850px){
+ html body main.app-shell>.workspace>.top{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0!important}
+ html body main.app-shell>.workspace>.top>.mint{display:none!important}
+ html body main.app-shell>.workspace>.top>.tools{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;align-items:center!important;gap:6px!important;width:100%!important;min-width:0!important}
+ html body main.app-shell>.workspace>.top>.tools>*{min-width:0!important;max-width:100%!important;box-sizing:border-box!important;font-size:11px!important;padding:8px 4px!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.25!important;min-height:32px!important}
+ html body main.app-shell>.workspace>.top>.tools>.top-tools-search{grid-column:1/-1!important;width:100%!important}
+ html body main.app-shell>.workspace>.top>.tools>.account-badge{grid-column:span 2!important;justify-content:center!important}
+ html body main.app-shell>.workspace>.top>.tools>button{flex:none!important}
+ html body main.app-shell>.workspace>.top>.tools>button[data-i18n="changePassword"],
+ html body main.app-shell>.workspace>.top>.tools>button[data-i18n="refresh"],
+ html body main.app-shell>.workspace>.top>.tools>button[data-i18n="logout"]{padding-inline:2px!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ /* Tablet: put chart and service health on one row; details occupy the next row. */
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){
+   order:0!important;grid-column:6 / span 7!important;grid-row:3!important;
+   width:auto!important;min-width:0!important;
+ }
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){
+   order:0!important;grid-column:1 / span 5!important;grid-row:3!important;
+   width:auto!important;min-width:0!important;
+ }
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){
+   order:0!important;grid-column:1 / -1!important;grid-row:4!important;
+   width:auto!important;min-width:0!important;
+ }
+}
+</style>"""
+LOGIN = LOGIN.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
+DASH = DASH.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 
 @app.get("/dashboard.js",response_class=PlainTextResponse)
 async def dashboard_js():
@@ -1354,7 +2164,7 @@ def render_subscription_page(client, links, sub_url, qr_url):
         '<div class="profile-choice" data-profile-choice="'+html_escape(item["key"],quote=True)+'"><a class="profile" href="'+html_escape(item["url"],quote=True)+'"><span class="profile-icon">↗</span><span><b>'+html_escape(item["label"])+'</b><small>TLS · '+html_escape(item["label"])+'</small></span><span class="profile-open">باز کردن</span></a><div class="profile-marks"><button type="button" data-mark="ok" data-profile="'+html_escape(item["key"],quote=True)+'">✓ کار کرد</button><button type="button" data-mark="fail" data-profile="'+html_escape(item["key"],quote=True)+'">× کار نکرد</button><small data-result="'+html_escape(item["key"],quote=True)+'"></small></div></div>'
         for item in links
     )
-    template="""<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#080b12"><title>Abyss Tunnel · اشتراک خصوصی</title><style>
+    template="""<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#080b12"><title>Abyss Tunnel · اشتراک خصوصی</title><style>
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#163a43 0,transparent 48%),#080b12;color:#edf5f7;font:15px system-ui,-apple-system,sans-serif}.shell{width:min(820px,100%);margin:auto;padding:28px 16px 44px}.top,.row,.profile{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{font-size:12px;letter-spacing:.18em;color:#8de8d6;font-weight:800}.badge{font-size:11px;color:#8de8d6;border:1px solid #275c58;padding:7px 10px;border-radius:99px}.hero{margin:25px 0 16px;padding:25px;border:1px solid #25434b;border-radius:24px;background:linear-gradient(135deg,rgba(18,39,49,.96),rgba(13,20,32,.97));box-shadow:0 22px 70px #0005}.eyebrow{font-size:11px;color:#8de8d6;letter-spacing:.12em}.hero h1{font-size:clamp(25px,6vw,38px);line-height:1.2;margin:12px 0 8px;overflow-wrap:anywhere}.muted,small{color:#91a3b4;line-height:1.8}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}.metric,.panel{background:#101722;border:1px solid #222f3f;border-radius:16px;padding:16px;min-width:0}.metric small{display:block;font-size:11px}.metric b{display:block;font-size:16px;margin-top:7px;overflow-wrap:anywhere}.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}.section-head h2{font-size:16px;margin:0}.profiles{display:grid;gap:9px}.profile{padding:13px;text-decoration:none;color:#edf5f7;border:1px solid #263447;border-radius:13px;background:#0b111b;min-width:0}.profile:hover{border-color:#76e4d1;background:#101e27}.profile-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#173b3c;color:#8de8d6;flex-shrink:0}.profile>span:nth-child(2){flex:1;min-width:0}.profile b,.profile small{display:block;overflow-wrap:anywhere}.profile-open{font-size:12px;color:#8de8d6;white-space:nowrap}.profile-marks{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 2px 2px}.profile-marks button{border:1px solid #2a3a4c;background:#101923;color:#b9c9d7;border-radius:8px;padding:6px 9px;font:inherit;font-size:11px;cursor:pointer}.profile-marks button[data-selected="true"][data-mark="ok"]{border-color:#4f9e87;color:#8de8d6;background:#102b26}.profile-marks button[data-selected="true"][data-mark="fail"]{border-color:#9c5a60;color:#ffb4b4;background:#2b151a}.profile-marks small{font-size:10px}.carrier-tools{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:12px;align-items:center;margin-bottom:13px;padding:13px;border:1px solid #263748;border-radius:12px;background:#0b111b}.carrier-tools label{font-size:12px;color:#9aabbd}.carrier-tools select{width:100%;margin-top:6px;padding:10px;border:1px solid #2a3b4d;border-radius:9px;background:#080d15;color:#edf5f7}.share{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:16px;align-items:center}.linkbox{direction:ltr;text-align:left;width:100%;background:#080d15;color:#c6d6df;border:1px solid #2a3b4d;border-radius:10px;padding:12px;font:12px ui-monospace,monospace;overflow-wrap:anywhere}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:9px;padding:11px 14px;border-radius:10px;border:1px solid #2b4651;background:#152630;color:#eaf8f6;font:inherit;cursor:pointer;text-decoration:none}.btn.primary{background:#8de8d6;color:#061412;border-color:#8de8d6;font-weight:800}.qr{display:block;width:160px;max-width:100%;padding:9px;border-radius:13px;background:#fff;aspect-ratio:1}.footer{text-align:center;font-size:11px;color:#65778a;margin-top:24px;line-height:1.9}.warning{color:#d8c58a;font-size:12px;margin-top:12px;line-height:1.8}.usage-panel{margin:0 0 14px}.usage-track{height:7px;margin:12px 0;border-radius:99px;background:var(--ab-line);overflow:hidden}.usage-track span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--ab-accent),var(--ab-accent-hi));transition:width .2s ease}.usage-visual{display:grid;grid-template-columns:150px minmax(0,1fr);gap:20px;align-items:center}.usage-gauge{width:142px;max-width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--ab-accent) calc(var(--usage)*1%),var(--ab-line) 0);box-shadow:0 8px 22px rgba(0,0,0,.09),inset 0 1px rgba(255,255,255,.06);position:relative}.usage-gauge:before{content:"";position:absolute;inset:10px;border-radius:50%;background:var(--ab-panel);border:1px solid var(--ab-line)}.usage-gauge>span{position:relative;z-index:1;font-size:21px;font-weight:800;text-align:center}.usage-gauge small{display:block;font-size:10px;font-weight:500}.usage-detail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.usage-detail>div{padding:14px;border:1px solid var(--ab-line);border-radius:13px;background:var(--ab-glass)}.usage-detail small,.usage-detail b{display:block}.usage-detail b{margin-top:7px;font-size:17px;overflow-wrap:anywhere}@media(max-width:500px){.usage-visual{grid-template-columns:105px minmax(0,1fr);gap:12px}.usage-gauge{width:104px}.usage-gauge:before{inset:7px}.usage-gauge>span{font-size:17px}.usage-detail{grid-template-columns:1fr}.usage-detail>div{padding:10px}}@media(max-width:560px){.shell{padding:18px 11px 30px}.hero{padding:19px;border-radius:19px}.grid{grid-template-columns:1fr 1fr}.share{grid-template-columns:1fr}.qr{width:145px;margin:8px auto 0}.profile{gap:9px;padding:11px}.profile-open{font-size:11px}.metric,.panel{padding:13px}}@media(max-width:360px){.grid{grid-template-columns:1fr}.profile-open{display:none}}
 </style><style id="abyss-premium-upgrade">
 :root{color-scheme:dark;--abyss-bg:#070a10;--abyss-panel:#101722;--abyss-line:#263748;--abyss-mint:#8de8d6;--abyss-text:#edf3fb;--abyss-muted:#9aabbd}
@@ -1365,7 +2175,40 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}main,.container,.wrap{min-width:0}
 @media(max-width:600px){body{font-size:14px}main,.container,.wrap{padding-left:12px!important;padding-right:12px!important}.card,.panel,.box{border-radius:15px!important}.row{flex-wrap:wrap}.row>*{max-width:100%}button,.btn{min-height:42px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
-</style></head><body data-sub-url="__SUB_URL__"><main class="shell"><header class="top"><div class="abyss-brand-row"><span class="abyss-logo-mark" aria-hidden="true"></span><span class="brand-name">ABYSS TUNNEL<small>• I T A •</small></span></div><span class="badge">PRIVATE SUBSCRIPTION</span></header><section class="hero"><div class="eyebrow">YOUR CONNECTION · YOUR CONTROL</div><h1>اشتراک خصوصی شما</h1><p class="muted">پروفایل موردنظرت را انتخاب کن یا لینک اشتراک را در کلاینت سازگار وارد کن.</p><div class="row"><div><small>نام سرویس</small><div style="font-size:19px;font-weight:800;overflow-wrap:anywhere">__CLIENT_NAME__</div></div><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button></div></section><section class="grid"><div class="metric"><small>مصرف‌شده</small><b>__USED__ GB</b></div><div class="metric"><small>حجم کل</small><b>__QUOTA__</b></div><div class="metric"><small>باقی‌مانده</small><b>__REMAINING__</b></div><div class="metric"><small>اعتبار تا</small><b>__EXPIRY__</b></div></section><section class="panel usage-panel"><div class="row"><b>مصرف ترافیک <span class="help-dot" title="نمودار درصد حجم مصرف‌شده از سقف مجاز سرویس را نشان می‌دهد.">؟</span></b><span>__USAGE_PERCENT__٪</span></div><div class="usage-visual"><div class="usage-gauge" style="--usage:__USAGE_PERCENT__" role="img" aria-label="مصرف __USAGE_PERCENT__ درصد"><span>__USAGE_PERCENT__٪<small>مصرف‌شده</small></span></div><div class="usage-detail"><div><small>حجم مصرف‌شده</small><b>__USED__ GB</b></div><div><small>حجم باقی‌مانده</small><b>__REMAINING__</b></div></div></div><div class="usage-track" role="progressbar" aria-label="مصرف ترافیک" aria-valuemin="0" aria-valuemax="100" aria-valuenow="__USAGE_PERCENT__"><span style="width:__USAGE_PERCENT__%"></span></div><small class="muted">حجم مصرفی از آمار ثبت‌شدهٔ Xray محاسبه می‌شود؛ ممکن است با تأخیر کوتاهی به‌روز شود.</small></section><section class="panel"><div class="section-head"><h2>پروفایل‌های اتصال</h2><span class="badge">__COUNT__ PROFILES</span></div><div class="carrier-tools"><div><label for="carrierSelect">شبکه‌ای که الان با آن تست می‌کنی</label><select id="carrierSelect"><option value="auto">انتخاب خودکار</option><option value="mci">همراه اول</option><option value="irancell">ایرانسل</option><option value="rightel">رایتل</option><option value="wifi">وای‌فای / سایر</option></select></div><div><small>نتیجهٔ هر پروفایل را روی همین دستگاه ثبت کن تا پروفایل‌های موفق برای همین شبکه بالاتر نمایش داده شوند.</small><br><small>نتیجه روی همین دستگاه ذخیره و به‌صورت آماری برای پیشنهادهای اپراتور ثبت می‌شود.</small></div></div><div class="profiles" id="profileChoices">__PROFILES__</div><p class="warning">اگر کلاینت شما از لینک اشتراک پشتیبانی می‌کند، لینک اصلی را وارد کنید تا همه پروفایل‌ها یکجا اضافه شوند.</p></section><section class="panel" style="margin-top:14px"><div class="section-head"><h2>لینک واحد اشتراک</h2><span class="badge">ONE LINK</span></div><p class="muted">همین یک لینک را هم در مرورگر باز کن و هم در برنامهٔ سازگار وارد کن؛ مرورگر صفحه مدیریت اشتراک را می‌بیند و برنامه، فهرست پروفایل‌ها و اطلاعات حجم را دریافت می‌کند.</p><div class="share"><div><input class="linkbox" readonly value="__SUB_URL__" aria-label="Subscription URL"><button class="btn primary" onclick="copySub()">کپی لینک واحد</button></div><img class="qr" src="__QR_URL__" alt="QR code for subscription link" width="160" height="160"></div></section><footer class="footer">ABYSS TUNNEL · PRIVATE BY DESIGN<br>این صفحه را فقط با صاحب سرویس به اشتراک بگذار؛ لینک اشتراک مانند رمز دسترسی عمل می‌کند.<div class="abyss-utility-links" style="justify-content:center"><a href="https://github.com/bodisbos-cmd/Void" target="_blank" rel="noopener">⌘ GitHub</a><a href="https://github.com/bodisbos-cmd/Void/stargazers" target="_blank" rel="noopener">☆ ستاره دادن</a><a href="#support-link-not-configured" onclick="if(this.getAttribute('href')==='#support-link-not-configured'){alert('لینک حمایت مالی هنوز در تنظیمات سرویس ثبت نشده است.');return false}">◇ حمایت از پروژه</a></div></footer></main><script>async function copySub(){const u=document.body.dataset.subUrl;try{await navigator.clipboard.writeText(u);alert('لینک اشتراک کپی شد')}catch(e){const x=document.querySelector('.linkbox');x.focus();x.select();alert('لینک را به‌صورت دستی کپی کن')}}</script><script id="abyss-profile-results">(()=>{const select=document.getElementById('carrierSelect'),list=document.getElementById('profileChoices');if(!select||!list)return;const prefix='abyss-profile-results:';const storageKey=()=>prefix+select.value;const read=()=>{try{return JSON.parse(localStorage.getItem(storageKey())||'{}')}catch(e){return {}}};function paint(){const data=read();list.querySelectorAll('[data-profile-choice]').forEach(card=>{const key=card.dataset.profileChoice,value=data[key]||'';card.querySelectorAll('[data-mark]').forEach(b=>b.dataset.selected=String(b.dataset.mark===value));const out=card.querySelector('[data-result]');if(out)out.textContent=value==='ok'?'برای این شبکه موفق بود':value==='fail'?'برای این شبکه ناموفق بود':''});const cards=[...list.querySelectorAll('[data-profile-choice]')];cards.sort((a,b)=>{const rank=x=>({ok:0,'':1,fail:2})[data[x.dataset.profileChoice]||''];return rank(a)-rank(b)});cards.forEach(x=>list.appendChild(x))}select.value=localStorage.getItem(prefix+'carrier')||'auto';select.addEventListener('change',()=>{localStorage.setItem(prefix+'carrier',select.value);paint()});list.querySelectorAll('[data-mark]').forEach(b=>b.addEventListener('click',async()=>{const d=read();d[b.dataset.profile]=b.dataset.mark;localStorage.setItem(storageKey(),JSON.stringify(d));paint();try{await fetch(location.pathname+'/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({carrier:select.value,profile_key:b.dataset.profile,result:b.dataset.mark})})}catch(e){}}));paint()})();</script></body></html>"""
+</style><style id="abyss-subscription-reference">
+:root{color-scheme:dark;--ab-bg:#020202;--ab-panel:rgba(13,13,14,.96);--ab-line:rgba(178,181,187,.18);--ab-accent:#b9bbc1;--ab-accent-hi:#f0f0f2;--ab-text:#eeeef0;--ab-muted:#a2a2a7;--ab-glass:rgba(230,230,235,.035);--abyss-mint:#a9b9ac}
+html,body{background-color:#020202!important;color:#eeeef0!important}
+body{background-image:radial-gradient(1px 1px at 8% 14%,rgba(220,222,226,.45) 0,transparent 1.4px),radial-gradient(1px 1px at 72% 36%,rgba(220,222,226,.32) 0,transparent 1.4px),radial-gradient(1px 1px at 35% 81%,rgba(220,222,226,.38) 0,transparent 1.4px),radial-gradient(ellipse at 82% 14%,rgba(185,187,193,.055),transparent 38%),linear-gradient(145deg,#020202,#070707 58%,#030303)!important}
+body:before{z-index:0!important;opacity:.28!important;background:linear-gradient(118deg,transparent 0 16%,rgba(200,202,208,.045) 16.08%,transparent 16.24% 43%,rgba(185,188,194,.025) 43.08%,transparent 43.24% 72%,rgba(220,221,225,.035) 72.08%,transparent 72.22%)!important}
+.shell{position:relative;z-index:1}
+.brand{color:#d3d5da!important;letter-spacing:.18em}
+.abyss-brand-row{display:flex;align-items:center;gap:9px;letter-spacing:.14em;direction:ltr}
+.abyss-logo-mark{display:inline-block;width:27px;height:27px;flex:0 0 27px;border-radius:50%;position:relative;background:radial-gradient(circle at center,#050505 0 27%,transparent 29%);isolation:isolate}
+.abyss-logo-mark:before{content:"";position:absolute;inset:-2px;border-radius:50%;background:repeating-conic-gradient(from 0deg,rgba(210,213,218,.6) 0deg .55deg,transparent .7deg 3.2deg);mask:radial-gradient(circle,transparent 0 27%,#000 30% 63%,transparent 76%);opacity:.62}
+.brand-name{display:grid;gap:2px;color:#e4e5e8;font-size:12px;font-weight:800;letter-spacing:.16em}
+.brand-name small{display:block;font-size:9px;letter-spacing:.22em;opacity:.75;text-align:center}
+.badge,.eyebrow,.profile-open{color:#c1c4ca!important}
+.badge{border-color:rgba(178,181,187,.22)!important;background:rgba(230,230,235,.035)!important}
+.hero{border-color:rgba(178,181,187,.20)!important;background:linear-gradient(150deg,rgba(19,19,21,.98),rgba(5,5,6,.98))!important;box-shadow:0 22px 70px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.035)!important}
+.metric,.panel{background:linear-gradient(145deg,rgba(17,17,19,.97),rgba(8,8,9,.97))!important;border-color:rgba(178,181,187,.18)!important;box-shadow:0 14px 36px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.025)!important}
+.profile,.carrier-tools{background:rgba(10,10,11,.94)!important;border-color:rgba(178,181,187,.18)!important;color:#eeeef0!important}
+.profile:hover{border-color:rgba(195,198,205,.42)!important;background:rgba(22,22,24,.98)!important}
+.profile-icon{background:rgba(195,198,205,.09)!important;color:#d2d4d8!important}
+.profile-marks button{border-color:rgba(178,181,187,.20)!important;background:rgba(230,230,235,.035)!important;color:#c3c5ca!important}
+.profile-marks button[data-selected="true"][data-mark="ok"]{border-color:#6e9b7a!important;color:#b7d6bb!important;background:#101810!important}
+.profile-marks button[data-selected="true"][data-mark="fail"]{border-color:#9c5a60!important;color:#ffb4b4!important;background:#241316!important}
+.carrier-tools select,.linkbox{background:#070708!important;border-color:rgba(178,181,187,.2)!important;color:#dddfe3!important}
+.btn{border-color:rgba(178,181,187,.25)!important;background:rgba(230,230,235,.045)!important;color:#ececef!important}
+.btn.primary{background:linear-gradient(145deg,#c8c9cc,#96989e)!important;color:#09090a!important;border-color:rgba(225,226,230,.42)!important;font-weight:800}
+.usage-track{background:rgba(178,181,187,.12)!important}
+.usage-track span{background:linear-gradient(90deg,#9eafa2,#d2d4d8)!important}
+.usage-gauge{background:conic-gradient(var(--ab-accent) calc(var(--usage)*1%),var(--ab-line) 0)!important}
+.usage-gauge:before{background:#0c0c0d!important;border-color:rgba(178,181,187,.18)!important}
+.footer{color:#888a90!important}
+.abyss-utility-links a{border-color:rgba(178,181,187,.18)!important;background:rgba(230,230,235,.035)!important;color:#aeb0b6!important}
+.warning{color:#bdbfc5!important}
+@media(max-width:700px){body:before{display:none!important}.shell{padding-top:18px!important}.brand-name{font-size:11px!important}}
+</style><style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head><body data-sub-url="__SUB_URL__"><main class="shell"><header class="top"><div class="abyss-brand-row"><span class="abyss-logo-mark" aria-hidden="true"></span><span class="brand-name">ABYSS TUNNEL<small>• I T A •</small></span></div><span class="badge">PRIVATE SUBSCRIPTION</span></header><section class="hero"><div class="eyebrow">YOUR CONNECTION · YOUR CONTROL</div><h1>اشتراک خصوصی شما</h1><p class="muted">پروفایل موردنظرت را انتخاب کن یا لینک اشتراک را در کلاینت سازگار وارد کن.</p><div class="row"><div><small>نام سرویس</small><div style="font-size:19px;font-weight:800;overflow-wrap:anywhere">__CLIENT_NAME__</div></div><button class="btn primary" onclick="copySub()">کپی لینک اشتراک</button></div></section><section class="grid"><div class="metric"><small>مصرف‌شده</small><b>__USED__ GB</b></div><div class="metric"><small>حجم کل</small><b>__QUOTA__</b></div><div class="metric"><small>باقی‌مانده</small><b>__REMAINING__</b></div><div class="metric"><small>اعتبار تا</small><b>__EXPIRY__</b></div></section><section class="panel usage-panel"><div class="row"><b>مصرف ترافیک <span class="help-dot" title="نمودار درصد حجم مصرف‌شده از سقف مجاز سرویس را نشان می‌دهد.">؟</span></b><span>__USAGE_PERCENT__٪</span></div><div class="usage-visual"><div class="usage-gauge" style="--usage:__USAGE_PERCENT__" role="img" aria-label="مصرف __USAGE_PERCENT__ درصد"><span>__USAGE_PERCENT__٪<small>مصرف‌شده</small></span></div><div class="usage-detail"><div><small>حجم مصرف‌شده</small><b>__USED__ GB</b></div><div><small>حجم باقی‌مانده</small><b>__REMAINING__</b></div></div></div><div class="usage-track" role="progressbar" aria-label="مصرف ترافیک" aria-valuemin="0" aria-valuemax="100" aria-valuenow="__USAGE_PERCENT__"><span style="width:__USAGE_PERCENT__%"></span></div><small class="muted">حجم مصرفی از آمار ثبت‌شدهٔ Xray محاسبه می‌شود؛ ممکن است با تأخیر کوتاهی به‌روز شود.</small></section><section class="panel"><div class="section-head"><h2>پروفایل‌های اتصال</h2><span class="badge">__COUNT__ PROFILES</span></div><div class="carrier-tools"><div><label for="carrierSelect">شبکه‌ای که الان با آن تست می‌کنی</label><select id="carrierSelect"><option value="auto">انتخاب خودکار</option><option value="mci">همراه اول</option><option value="irancell">ایرانسل</option><option value="rightel">رایتل</option><option value="wifi">وای‌فای / سایر</option></select></div><div><small>نتیجهٔ هر پروفایل را روی همین دستگاه ثبت کن تا پروفایل‌های موفق برای همین شبکه بالاتر نمایش داده شوند.</small><br><small>نتیجه روی همین دستگاه ذخیره و به‌صورت آماری برای پیشنهادهای اپراتور ثبت می‌شود.</small></div></div><div class="profiles" id="profileChoices">__PROFILES__</div><p class="warning">اگر کلاینت شما از لینک اشتراک پشتیبانی می‌کند، لینک اصلی را وارد کنید تا همه پروفایل‌ها یکجا اضافه شوند.</p></section><section class="panel" style="margin-top:14px"><div class="section-head"><h2>لینک واحد اشتراک</h2><span class="badge">ONE LINK</span></div><p class="muted">همین یک لینک را هم در مرورگر باز کن و هم در برنامهٔ سازگار وارد کن؛ مرورگر صفحه مدیریت اشتراک را می‌بیند و برنامه، فهرست پروفایل‌ها و اطلاعات حجم را دریافت می‌کند.</p><div class="share"><div><input class="linkbox" readonly value="__SUB_URL__" aria-label="Subscription URL"><button class="btn primary" onclick="copySub()">کپی لینک واحد</button></div><img class="qr" src="__QR_URL__" alt="QR code for subscription link" width="160" height="160"></div></section><footer class="footer">ABYSS TUNNEL · PRIVATE BY DESIGN<br>این صفحه را فقط با صاحب سرویس به اشتراک بگذار؛ لینک اشتراک مانند رمز دسترسی عمل می‌کند.<div class="abyss-utility-links" style="justify-content:center"><a href="https://github.com/bodisbos-cmd/Void" target="_blank" rel="noopener">⌘ GitHub</a><a href="https://github.com/bodisbos-cmd/Void/stargazers" target="_blank" rel="noopener">☆ ستاره دادن</a><a href="#support-link-not-configured" onclick="if(this.getAttribute('href')==='#support-link-not-configured'){alert('لینک حمایت مالی هنوز در تنظیمات سرویس ثبت نشده است.');return false}">◇ حمایت از پروژه</a></div></footer></main><script>async function copySub(){const u=document.body.dataset.subUrl;try{await navigator.clipboard.writeText(u);alert('لینک اشتراک کپی شد')}catch(e){const x=document.querySelector('.linkbox');x.focus();x.select();alert('لینک را به‌صورت دستی کپی کن')}}</script><script id="abyss-profile-results">(()=>{const select=document.getElementById('carrierSelect'),list=document.getElementById('profileChoices');if(!select||!list)return;const prefix='abyss-profile-results:';const storageKey=()=>prefix+select.value;const read=()=>{try{return JSON.parse(localStorage.getItem(storageKey())||'{}')}catch(e){return {}}};function paint(){const data=read();list.querySelectorAll('[data-profile-choice]').forEach(card=>{const key=card.dataset.profileChoice,value=data[key]||'';card.querySelectorAll('[data-mark]').forEach(b=>b.dataset.selected=String(b.dataset.mark===value));const out=card.querySelector('[data-result]');if(out)out.textContent=value==='ok'?'برای این شبکه موفق بود':value==='fail'?'برای این شبکه ناموفق بود':''});const cards=[...list.querySelectorAll('[data-profile-choice]')];cards.sort((a,b)=>{const rank=x=>({ok:0,'':1,fail:2})[data[x.dataset.profileChoice]||''];return rank(a)-rank(b)});cards.forEach(x=>list.appendChild(x))}select.value=localStorage.getItem(prefix+'carrier')||'auto';select.addEventListener('change',()=>{localStorage.setItem(prefix+'carrier',select.value);paint()});list.querySelectorAll('[data-mark]').forEach(b=>b.addEventListener('click',async()=>{const d=read();d[b.dataset.profile]=b.dataset.mark;localStorage.setItem(storageKey(),JSON.stringify(d));paint();try{await fetch(location.pathname+'/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({carrier:select.value,profile_key:b.dataset.profile,result:b.dataset.mark})})}catch(e){}}));paint()})();</script></body></html>"""
     return (template.replace("__SUB_URL__",html_escape(sub_url,quote=True))
         .replace("__CLIENT_NAME__",html_escape(client["name"]))
         .replace("__USED__",f"{usage:.3f}")
@@ -1376,7 +2219,7 @@ input,select,textarea{max-width:100%;min-width:0}table{display:block;max-width:1
         .replace("__PROFILES__",cards)
         .replace("__COUNT__",str(len(links)))
         .replace("__QR_URL__",html_escape(qr_url,quote=True))
-        .replace("__SUB_JSON__",json.dumps(sub_url))).replace("</head>",ABYSS_THEME_CSS+ABYSS_THEME_POLISH_CSS+"</head>").replace("</body>",ABYSS_THEME_JS+"</body>")
+        .replace("__SUB_JSON__",json.dumps(sub_url))).replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>",ABYSS_THEME_CSS+ABYSS_THEME_POLISH_CSS+"<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>",ABYSS_THEME_JS+"</body>")
 
 @app.get("/api/clients/{cid}/subscription")
 async def subscription_link(cid:str,r:Request):
@@ -1667,12 +2510,12 @@ install_extended(app, globals())
 @app.get("/api-docs",response_class=HTMLResponse)
 async def protected_api_docs(r:Request):
     require_admin(r)
-    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Void API Docs</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"></head><body style="margin:0;background:#080b12"><div id="swagger-ui"></div><script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api-docs/openapi.json',dom_id:'#swagger-ui',deepLinking:true,persistAuthorization:false})</script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Void API Docs</title><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"><style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head><body style="margin:0;background:#080b12"><div id="swagger-ui"></div><script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script><script>SwaggerUIBundle({url:'/api-docs/openapi.json',dom_id:'#swagger-ui',deepLinking:true,persistAuthorization:false})</script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
 @app.get("/api-docs/redoc",response_class=HTMLResponse)
 async def protected_redoc_docs(r:Request):
     require_admin(r)
-    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Void API Reference</title></head><body style="margin:0;background:#080b12"><redoc spec-url="/api-docs/openapi.json"></redoc><script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
+    return HTMLResponse("""<!doctype html><html><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Void API Reference</title><style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head><body style="margin:0;background:#080b12"><redoc spec-url="/api-docs/openapi.json"></redoc><script src="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js"></script></body></html>""",headers={"Cache-Control":"no-store","X-Robots-Tag":"noindex, nofollow"})
 
 @app.get("/api-docs/openapi.json")
 async def protected_openapi_schema(r:Request):
