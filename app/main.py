@@ -1664,6 +1664,27 @@ html body .app-shell{direction:rtl!important}
  html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
 }
 
+/* Reference fidelity pass: compact left rail and tighter glass dashboard surfaces. */
+@media(min-width:1151px){
+ html body main.app-shell{grid-template-columns:172px minmax(0,1fr)!important}
+ html body main.app-shell>aside.sidebar{width:172px!important;padding:14px 8px!important}
+ html body main.app-shell>.workspace{padding:14px 18px 28px!important;gap:10px!important}
+ html body main.app-shell>.workspace>#overviewStats{gap:8px!important}
+ html body main.app-shell>.workspace>#overviewStats>.card{padding:12px 10px!important}
+}
+html body main.app-shell>aside.sidebar .side-brand{gap:7px!important;justify-content:center!important}
+html body main.app-shell>aside.sidebar .brand-name{font-size:11px!important;letter-spacing:.08em!important}
+html body main.app-shell>aside.sidebar .side-caption{font-size:10px!important;margin:8px 0 6px!important}
+html body main.app-shell>aside.sidebar .side-nav{gap:4px!important}
+html body main.app-shell>aside.sidebar .nav-item{min-height:34px!important;padding:8px 7px!important;gap:7px!important;font-size:11px!important;line-height:1.35!important;border-radius:9px!important}
+html body main.app-shell>aside.sidebar .nav-icon{width:18px!important;min-width:18px!important;font-size:14px!important}
+html body main.app-shell>aside.sidebar .side-footer{font-size:10px!important}
+html body main.app-shell>.workspace>.top{padding-bottom:10px!important}
+html body main.app-shell>.workspace>.top .tools{gap:6px!important}
+html body main.app-shell>.workspace>.top .tools button,
+html body main.app-shell>.workspace>.top .tools input{min-height:34px!important;padding:7px 10px!important;font-size:11px!important}
+html body main.app-shell>.workspace .card{border-color:rgba(190,198,211,.18)!important;background:linear-gradient(145deg,rgba(24,26,31,.88),rgba(8,9,12,.94))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 12px 30px rgba(0,0,0,.2)!important}
+html body main.app-shell>.workspace #overviewStats .num{font-size:clamp(20px,1.8vw,30px)!important}
 /* Last-cascade layout fix: the older repair layer set .workspace to display:block!important,
    which silently disabled all grid-row assignments and stacked dashboard cards at y=173. */
 @media(min-width:851px){
