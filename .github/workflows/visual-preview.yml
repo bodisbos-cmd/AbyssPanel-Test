@@ -167,6 +167,24 @@ jobs:
                         return e && !e.innerText.includes('در حال اجرای بررسی‌های واقعی');
                       }""", timeout=45000)
                   page.screenshot(path=str(out / filename), full_page=False, animations="disabled")
+              page.locator('[data-nav="dashboard"]').first.click()
+              assert_active_section("dashboard")
+              page.set_viewport_size({"width":1024,"height":768})
+              page.wait_for_timeout(300)
+              tablet_layout = page.evaluate("""() => {
+                const rect=id=>{const e=document.getElementById(id);const b=e.getBoundingClientRect();return {x:b.x,y:b.y,width:b.width,height:b.height}};
+                const overlaps=(a,b)=>!(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y);
+                const stats=rect('overviewStats'),chart=rect('dashboardUsageCard'),health=rect('panelHealthCard'),quick=rect('dashboardQuickCard');
+                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,stats,chart,health,quick,
+                  statsOverlap:overlaps(stats,chart)||overlaps(stats,health)||overlaps(stats,quick),
+                  cardsOverlap:overlaps(chart,health)||overlaps(chart,quick)||overlaps(health,quick)};
+              }""")
+              print("TABLET_LAYOUT=" + repr(tablet_layout))
+              if tablet_layout["documentWidth"] > tablet_layout["viewport"] + 1:
+                  raise SystemExit("Tablet layout has horizontal overflow: " + repr(tablet_layout))
+              if tablet_layout["statsOverlap"] or tablet_layout["cardsOverlap"]:
+                  raise SystemExit("Tablet dashboard cards overlap: " + repr(tablet_layout))
+              page.screenshot(path=str(out / "13-dashboard-tablet.png"), full_page=False, animations="disabled")
               subscription = browser.new_page(viewport={"width":1440,"height":1000}, device_scale_factor=1)
               subscription.on("pageerror", lambda e: errors.append("subscription: " + str(e) + " | " + str(getattr(e, "stack", ""))))
               response = subscription.goto(base + "/sub/preview-visual-token-0001", wait_until="domcontentloaded")
