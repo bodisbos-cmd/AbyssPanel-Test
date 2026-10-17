@@ -1847,9 +1847,19 @@ html body main.app-shell>aside.sidebar>.abyss-utility-links{
  html body main.app-shell>.workspace>.top>.tools>button[data-i18n="logout"]{padding-inline:2px!important}
 }
 @media(min-width:851px) and (max-width:1150px){
- html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){order:0!important}
- html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){order:0!important}
- html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){order:0!important}
+ /* Tablet: put chart and service health on one row; details occupy the next row. */
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){
+   order:0!important;grid-column:6 / span 7!important;grid-row:3!important;
+   width:auto!important;min-width:0!important;
+ }
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){
+   order:0!important;grid-column:1 / span 5!important;grid-row:3!important;
+   width:auto!important;min-width:0!important;
+ }
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){
+   order:0!important;grid-column:1 / -1!important;grid-row:4!important;
+   width:auto!important;min-width:0!important;
+ }
 }
 </style>"""
 LOGIN = LOGIN.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
