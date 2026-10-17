@@ -133,6 +133,22 @@ jobs:
               subscription.wait_for_selector(".profile-choice", timeout=5000)
               if subscription.locator(".profile-choice").count() < 3 or not subscription.locator(".hero h1").count():
                   raise SystemExit("Subscription page is missing its service overview or connection profiles")
+              qr = subscription.locator("img.qr")
+              qr_result = qr.evaluate("""img => ({
+                src: img.currentSrc || img.src,
+                complete: img.complete,
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight
+              })""")
+              print("SUBSCRIPTION_QR=" + repr(qr_result))
+              if not qr_result["complete"] or qr_result["naturalWidth"] < 1 or qr_result["naturalHeight"] < 1:
+                  qr_response = subscription.request.get(qr_result["src"])
+                  print("SUBSCRIPTION_QR_RESPONSE=" + repr({
+                    "status": qr_response.status,
+                    "contentType": qr_response.headers.get("content-type"),
+                    "bodyPrefix": qr_response.body()[:180]
+                  }))
+                  raise SystemExit("Subscription QR failed to render: " + repr(qr_result))
               subscription.screenshot(path=str(out / "11-subscription-desktop.png"), full_page=True, animations="disabled")
               subscription_mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
               subscription_mobile.on("pageerror", lambda e: errors.append("subscription mobile: " + str(e) + " | " + str(getattr(e, "stack", ""))))
