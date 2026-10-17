@@ -21,7 +21,7 @@ jobs:
       - name: Start isolated preview
         run: |
           mkdir -p "$RUNNER_TEMP/void-visual-data"
-          docker run -d --name void-visual -p 18080:8080 -e COOKIE_SECURE=0 -e ABYSS_TEST_MODE=1 -v "$RUNNER_TEMP/void-visual-data:/data" void-visual:ci
+          docker run -d --name void-visual -p 18080:8080 -e COOKIE_SECURE=0 -e ABYSS_TEST_MODE=1 -e BASE_URL=http://127.0.0.1:18080 -v "$RUNNER_TEMP/void-visual-data:/data" void-visual:ci
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:18080/health | grep -q '"xray":"running"'; then exit 0; fi
             sleep 1
