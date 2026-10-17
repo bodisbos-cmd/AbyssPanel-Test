@@ -161,6 +161,10 @@ jobs:
                       }))
                       if diagnosis["httpStatus"] != 200 or not diagnostic_data.get("nginx_ok") or failures:
                           raise SystemExit("Live server diagnostics found configuration or route failures")
+                      note_lengths = page.locator("#serverStatusGrid .server-state .small").evaluate_all("(els) => els.map(e => (e.textContent || '').trim().length)")
+                      print("SERVER_STATUS_NOTE_LENGTHS=" + repr(note_lengths))
+                      if note_lengths and max(note_lengths) > 240:
+                          raise SystemExit("Server status cards contain unbounded diagnostic/debug output: " + repr(note_lengths))
                   elif nav == "reports":
                       page.wait_for_function("""() => {
                         const e=document.getElementById('reportSummary');
