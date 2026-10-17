@@ -1056,7 +1056,7 @@ ABYSS_LAYOUT_REPAIR_JS = r"""<script id="abyss-layout-repair-js">
     const menu=document.getElementById('menuToggle');
     if(!sidebar || !menu) return;
     let shade=document.getElementById('abyssMenuShade');
-    if(!shade){shade=document.createElement('div');shade.id='abyssMenuShade';shade.setAttribute('aria-hidden','true');document.body.appendChild(shade);}
+    if(!shade){shade=document.createElement('div');shade.id='abyssMenuShade';shade.setAttribute('aria-hidden','true');const shell=document.querySelector('.app-shell');(shell||document.body).appendChild(shade);}
     const setOpen=(open)=>{
       sidebar.classList.toggle('open',open);
       document.body.classList.toggle('abyss-menu-open',open);
