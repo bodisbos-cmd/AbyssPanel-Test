@@ -1811,7 +1811,7 @@ html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
  html body main.app-shell>.workspace>.top{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0!important}
  html body main.app-shell>.workspace>.top>.mint{display:none!important}
  html body main.app-shell>.workspace>.top>.tools{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;align-items:center!important;gap:6px!important;width:100%!important;min-width:0!important}
- html body main.app-shell>.workspace>.top>.tools>*{min-width:0!important;max-width:100%!important;box-sizing:border-box!important;font-size:11px!important;padding:8px 4px!important;white-space:nowrap!important}
+ html body main.app-shell>.workspace>.top>.tools>*{min-width:0!important;max-width:100%!important;box-sizing:border-box!important;font-size:11px!important;padding:8px 4px!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.25!important;min-height:32px!important}
  html body main.app-shell>.workspace>.top>.tools>.top-tools-search{grid-column:1/-1!important;width:100%!important}
  html body main.app-shell>.workspace>.top>.tools>.account-badge{grid-column:span 2!important;justify-content:center!important}
  html body main.app-shell>.workspace>.top>.tools>button{flex:none!important}
