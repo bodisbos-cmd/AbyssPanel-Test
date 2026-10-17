@@ -1788,22 +1788,35 @@ html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
  html body:has(.login-layout) .login-visual .visual-orbit{transform:translateX(-50%)!important}
 }
 
-/* Explicitly place all three dashboard zones on the same desktop grid row.
-   Older layout patches assigned separate grid rows and overrode auto-placement. */
+/* Reference layout: explicit RTL grid lines prevent legacy auto-placement rules
+   from pushing the quick-details card onto a second row. */
 @media(min-width:1151px){
  html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){
-   order:-1!important;grid-column:span 4!important;grid-row:3!important;
+   order:0!important;grid-column:1 / span 4!important;grid-row:3!important;
    min-width:0!important;min-height:0!important;width:auto!important;
  }
  html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){
-   order:0!important;grid-column:span 3!important;grid-row:3!important;
+   order:0!important;grid-column:5 / span 3!important;grid-row:3!important;
    min-width:0!important;width:auto!important;
  }
  html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){
-   order:1!important;grid-column:span 5!important;grid-row:3!important;
+   order:0!important;grid-column:8 / span 5!important;grid-row:3!important;
    min-width:0!important;width:auto!important;
  }
  html body main.app-shell>.workspace>#dashboardQuickCard #recentActivityList{max-height:205px!important}
+}
+/* Keep mobile controls usable without turning each toolbar action into a full-width row. */
+@media(max-width:850px){
+ html body main.app-shell>.workspace>.top{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important;min-width:0!important}
+ html body main.app-shell>.workspace>.top>.mint{display:none!important}
+ html body main.app-shell>.workspace>.top>.tools{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;align-items:center!important;gap:6px!important;width:100%!important;min-width:0!important}
+ html body main.app-shell>.workspace>.top>.tools>*{min-width:0!important;max-width:100%!important;box-sizing:border-box!important;font-size:11px!important;padding:8px 4px!important;white-space:nowrap!important}
+ html body main.app-shell>.workspace>.top>.tools>.top-tools-search{grid-column:1/-1!important;width:100%!important}
+ html body main.app-shell>.workspace>.top>.tools>.account-badge{grid-column:span 2!important;justify-content:center!important}
+ html body main.app-shell>.workspace>.top>.tools>button{flex:none!important}
+ html body main.app-shell>.workspace>.top>.tools>button[data-i18n="changePassword"],
+ html body main.app-shell>.workspace>.top>.tools>button[data-i18n="refresh"],
+ html body main.app-shell>.workspace>.top>.tools>button[data-i18n="logout"]{padding-inline:2px!important}
 }
 @media(min-width:851px) and (max-width:1150px){
  html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){order:0!important}
