@@ -1688,7 +1688,7 @@ html body main.app-shell>.workspace #overviewStats .num{font-size:clamp(20px,1.8
 /* Last-cascade layout fix: the older repair layer set .workspace to display:block!important,
    which silently disabled all grid-row assignments and stacked dashboard cards at y=173. */
 @media(min-width:851px){
- html body main.app-shell{display:grid!important;grid-template-columns:224px minmax(0,1fr)!important;grid-template-rows:minmax(100vh,auto)!important;direction:ltr!important;align-items:stretch!important}
+ html body main.app-shell{display:grid!important;grid-template-columns:172px minmax(0,1fr)!important;grid-template-rows:minmax(100vh,auto)!important;direction:ltr!important;align-items:stretch!important}
  html body main.app-shell>aside.sidebar{grid-column:1!important;grid-row:1!important;position:sticky!important;top:0!important;left:0!important;right:auto!important;width:172px!important;height:100vh!important;max-height:100vh!important;transform:none!important;align-self:start!important}
  html body main.app-shell>.workspace{grid-column:2!important;grid-row:1!important;direction:rtl!important;display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:auto auto auto!important;grid-auto-flow:row!important;grid-auto-rows:min-content!important;align-content:start!important;align-items:start!important;min-width:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:18px 22px 30px!important;gap:12px!important}
  html body main.app-shell>.workspace>.top{grid-column:1/-1!important;grid-row:1!important;position:relative!important;inset:auto!important;height:auto!important;margin:0!important;min-width:0!important}
