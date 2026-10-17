@@ -119,6 +119,21 @@ jobs:
                         const e=document.getElementById('serverStatusGrid');
                         return e && !e.innerText.includes('در حال بررسی اجزا');
                       }""", timeout=45000)
+                      diagnosis = page.evaluate("""async () => {
+                        const r = await fetch('/api/system/diagnostics', {cache:'no-store'});
+                        return {httpStatus:r.status, data:await r.json()};
+                      }""")
+                      diagnostic_data = diagnosis["data"]
+                      failures = [x for x in diagnostic_data.get("profiles", [])
+                                  if x.get("enabled") and (not x.get("listener_ok") or not x.get("route_ok"))]
+                      print("SERVER_DIAGNOSTICS=" + repr({
+                        "httpStatus":diagnosis["httpStatus"],
+                        "summary":diagnostic_data.get("summary"),
+                        "nginx_ok":diagnostic_data.get("nginx_ok"),
+                        "failedRoutes":[{"key":x.get("key"),"status":x.get("status"),"http":x.get("http_status"),"error":x.get("error"),"hint":x.get("hint")} for x in failures]
+                      }))
+                      if diagnosis["httpStatus"] != 200 or not diagnostic_data.get("nginx_ok") or failures:
+                          raise SystemExit("Live server diagnostics found configuration or route failures")
                   elif nav == "reports":
                       page.wait_for_function("""() => {
                         const e=document.getElementById('reportSummary');
