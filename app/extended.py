@@ -176,6 +176,36 @@ def _xray_config_test(panel):
     except (OSError,subprocess.SubprocessError) as exc:
         return {"ok":False,"status":"test_failed","detail":str(exc)[:300]}
 
+def _nginx_config_test():
+    """Validate Nginx without writing to the live root-owned pid file."""
+    if not shutil.which("nginx"):
+        return {"installed":False,"ok":None,"error":None}
+    try:
+        live_config=Path("/etc/nginx/nginx.conf")
+        if not live_config.is_file():
+            raise OSError("Nginx configuration file /etc/nginx/nginx.conf was not found")
+        with tempfile.TemporaryDirectory(prefix="void-nginx-check-") as temp_dir:
+            temp_path=Path(temp_dir)
+            lines=[]
+            for line in live_config.read_text(encoding="utf-8").splitlines():
+                directive=line.strip()
+                if directive.startswith("user ") or directive.startswith("pid "):
+                    continue
+                lines.append(line)
+            probe_config=temp_path/"nginx.conf"
+            probe_config.write_text(
+                "pid "+str(temp_path/"nginx-diagnostics.pid")+";\n"+"\n".join(lines)+"\n",
+                encoding="utf-8")
+            result=subprocess.run(
+                ["nginx","-t","-c",str(probe_config)],
+                capture_output=True,text=True,timeout=8)
+            output="\n".join(part.strip() for part in (result.stdout,result.stderr) if part and part.strip())
+            ok=result.returncode==0
+            return {"installed":True,"ok":ok,
+                    "error":None if ok else (output[-600:] or f"Nginx config test exited with code {result.returncode}")}
+    except (OSError,subprocess.SubprocessError) as exc:
+        return {"installed":True,"ok":False,"error":str(exc)[:400]}
+
 def _download_items():
     return [
       ("Hiddify · Google Play (Android)","https://play.google.com/store/apps/details?id=app.hiddify.com"),
@@ -282,41 +312,10 @@ def install_extended(app, namespace):
         proc=_global(p,"xray_proc")
         running=bool(proc and proc.poll() is None)
         config_test=await asyncio.to_thread(_xray_config_test,p)
-        nginx_installed=shutil.which("nginx") is not None
-        nginx_ok=True
-        nginx_error=None
-        if nginx_installed:
-            try:
-                # The live Nginx master is started as root by scripts/start.sh, but
-                # this diagnostic runs inside the unprivileged app worker. Testing
-                # against its real /tmp/nginx.pid therefore fails with EACCES even
-                # when the active config is valid. Test an isolated copy with only
-                # the root-only "user" directive removed and a private temporary pid.
-                live_config=Path("/etc/nginx/nginx.conf")
-                if not live_config.is_file():
-                    raise OSError("Nginx configuration file /etc/nginx/nginx.conf was not found")
-                with tempfile.TemporaryDirectory(prefix="void-nginx-check-") as temp_dir:
-                    temp_path=Path(temp_dir)
-                    lines=[]
-                    for line in live_config.read_text(encoding="utf-8").splitlines():
-                        directive=line.strip()
-                        if directive.startswith("user ") or directive.startswith("pid "):
-                            continue
-                        lines.append(line)
-                    probe_config=temp_path/"nginx.conf"
-                    probe_config.write_text(
-                        "pid "+str(temp_path/"nginx-diagnostics.pid")+";\n"+"\n".join(lines)+"\n",
-                        encoding="utf-8")
-                    nginx_check=await asyncio.to_thread(
-                        subprocess.run,["nginx","-t","-c",str(probe_config)],
-                        capture_output=True,text=True,timeout=8)
-                    nginx_output="\n".join(part.strip() for part in (nginx_check.stdout,nginx_check.stderr) if part and part.strip())
-                    nginx_ok=nginx_check.returncode==0
-                    if not nginx_ok:
-                        nginx_error=nginx_output[-600:] or f"Nginx config test exited with code {nginx_check.returncode}"
-            except (OSError,subprocess.SubprocessError) as exc:
-                nginx_ok=False
-                nginx_error=str(exc)[:400]
+        nginx_probe=await asyncio.to_thread(_nginx_config_test)
+        nginx_installed=bool(nginx_probe["installed"])
+        nginx_ok=bool(nginx_probe["ok"]) if nginx_installed else True
+        nginx_error=nginx_probe["error"]
         with p.db() as c:
             rows=c.execute(
                 "SELECT profile_key,COUNT(*) AS reports,SUM(CASE WHEN result='ok' THEN 1 ELSE 0 END) AS successes "
@@ -360,7 +359,7 @@ def install_extended(app, namespace):
                 issues.append(item["label"]+": پورت داخلی بسته است.")
             elif item["enabled"] and not item["route_ok"]:
                 issues.append(item["label"]+": مسیر وب خطا می‌دهد.")
-        if not issues: issues.append("خطای ساختاری آشکاری پیدا نشد؛ اتصال واقعی باید روی کلاینت و اپراتور مقصد آزمایش شود.")
+        if not issues: issues.append("موردی برای گزارش وجود ندارد؛ اتصال واقعی باید روی کلاینت و اپراتور مقصد آزمایش شود.")
         summary=("تنظیمات Xray معتبر است" if config_test["ok"] else "تنظیمات Xray نیاز به بررسی دارد")
         summary+=(" · پیکربندی Nginx معتبر است" if nginx_ok else " · خطا در پیکربندی Nginx")
         summary+=(" · پردازش Xray فعال است" if running else " · پردازش Xray متوقف یا نصب‌نشده است")
@@ -388,10 +387,10 @@ def install_extended(app, namespace):
             if not config_test["ok"]:
                 raise RuntimeError("Xray configuration validation failed: "+config_test["detail"])
             changes.append("اعتبارسنجی تنظیمات Xray")
-            if shutil.which("nginx"):
-                nginx_check=await asyncio.to_thread(subprocess.run,["nginx","-t"],capture_output=True,text=True,timeout=8)
-                if nginx_check.returncode:
-                    raise RuntimeError((nginx_check.stderr or nginx_check.stdout)[-500:])
+            nginx_check=await asyncio.to_thread(_nginx_config_test)
+            if nginx_check["installed"] and not nginx_check["ok"]:
+                raise RuntimeError(nginx_check["error"] or "Nginx configuration validation failed")
+            if nginx_check["installed"]:
                 changes.append("اعتبارسنجی پیکربندی Nginx")
             await p.start_xray()
             proc=_global(p,"xray_proc")
