@@ -296,12 +296,12 @@ def install_extended(app, namespace):
                         lines.append(line)
                     probe_config=temp_path/"nginx.conf"
                     probe_config.write_text(
-                        "pid "+str(temp_path/"nginx-diagnostics.pid")+";\\n"+"\\n".join(lines)+"\\n",
+                        "pid "+str(temp_path/"nginx-diagnostics.pid")+";\n"+"\n".join(lines)+"\n",
                         encoding="utf-8")
                     nginx_check=await asyncio.to_thread(
                         subprocess.run,["nginx","-t","-c",str(probe_config)],
                         capture_output=True,text=True,timeout=8)
-                    nginx_output="\\n".join(part.strip() for part in (nginx_check.stdout,nginx_check.stderr) if part and part.strip())
+                    nginx_output="\n".join(part.strip() for part in (nginx_check.stdout,nginx_check.stderr) if part and part.strip())
                     nginx_ok=nginx_check.returncode==0
                     if not nginx_ok:
                         nginx_error=nginx_output[-600:] or f"Nginx config test exited with code {nginx_check.returncode}"
