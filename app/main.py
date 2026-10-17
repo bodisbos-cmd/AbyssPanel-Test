@@ -1231,6 +1231,19 @@ input[type=checkbox],input[type=radio],.profile-option input{accent-color:#a9b9b
 .workspace #recentActivityList .report-event{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:5px!important;align-items:start!important;min-width:0!important;padding:10px 12px!important}
 .workspace #recentActivityList .event-message{display:block!important;min-width:0!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.55!important}
 .workspace #recentActivityList .event-meta{display:block!important;min-width:0!important;max-width:100%!important;direction:ltr!important;text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important;font-size:10px!important;line-height:1.45!important;color:var(--ab-muted)!important}
+
+/* Compact mobile toolbar: keep essential controls usable without pushing the dashboard far below the fold. */
+@media(max-width:700px){
+ html body .workspace .top{gap:7px!important;padding-bottom:10px!important}
+ html body .workspace .top .tools{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;grid-auto-flow:row!important;gap:5px!important;width:100%!important;align-items:stretch!important}
+ html body .workspace .top .tools #globalSearch,
+ html body .workspace .top .tools .top-tools-search{grid-column:1/-1!important;width:100%!important;min-height:36px!important}
+ html body .workspace .top .tools button{flex:none!important;width:100%!important;min-width:0!important;min-height:34px!important;padding:6px 4px!important;font-size:11px!important;white-space:normal!important}
+ html body .workspace .top .tools .account-badge{grid-column:span 2!important;min-width:0!important;max-width:100%!important;padding:4px 7px!important;justify-content:center!important}
+ html body .workspace .top .tools .account-copy{min-width:0!important;max-width:100%!important;overflow-wrap:anywhere!important}
+ html body .workspace .top .tools #abyssThemeDock{grid-column:span 2!important;width:100%!important;max-width:100%!important;min-width:0!important;display:flex!important;justify-content:center!important;gap:5px!important;padding:5px 7px!important}
+ html body .workspace .top .tools #abyssThemeDock select{min-width:0!important;width:auto!important;max-width:calc(100% - 34px)!important;font-size:10px!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
