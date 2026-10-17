@@ -1516,6 +1516,70 @@ html body .workspace .small{line-height:1.5!important}
  html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
  html body .workspace>#panelHealthCard #recentActivityList{max-height:220px!important;overflow:auto!important}
 }
+
+/* Screenshot-driven correction: keep the overview metrics in DOM order and keep the
+   RTL sidebar on the right; dense auto-placement had pulled cards out of reference order. */
+html body .app-shell{direction:rtl!important}
+@media(min-width:851px){
+ html body .app-shell{
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr) 224px!important;
+   max-width:1800px!important;
+   margin-inline:auto!important;
+   align-items:start!important;
+ }
+ html body .sidebar{
+   grid-column:2!important;grid-row:1!important;
+   position:sticky!important;right:0!important;left:auto!important;
+   width:224px!important;height:100dvh!important;max-height:100dvh!important;
+   overflow-y:auto!important;overflow-x:hidden!important;
+ }
+ html body .workspace{
+   grid-column:1!important;grid-row:1!important;
+   display:grid!important;
+   grid-template-columns:repeat(12,minmax(0,1fr))!important;
+   grid-auto-flow:row!important;grid-auto-rows:min-content!important;
+   align-content:start!important;align-items:start!important;
+   min-width:0!important;width:100%!important;max-width:none!important;
+   padding:18px 22px 30px!important;gap:12px!important;
+ }
+ html body .workspace>.top{grid-column:1/-1!important;grid-row:1!important;min-width:0!important}
+ html body .workspace>#overviewStats{grid-column:1/-1!important;grid-row:2!important;order:0!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/span 7!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:8/span 5!important;grid-row:3!important}
+ html body .workspace>#overviewStats,
+ html body .workspace>#dashboardUsageCard,
+ html body .workspace>#panelHealthCard{align-self:start!important;position:relative!important;inset:auto!important;height:auto!important}
+ html body .workspace>#overviewStats{margin:0!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important}
+ html body .workspace>#dashboardUsageCard .stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{height:155px!important}
+ html body .workspace>#panelHealthCard #status{display:none!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
+ html body .workspace>#panelHealthCard #recentActivityList{max-height:190px!important;overflow:auto!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body .app-shell{grid-template-columns:minmax(0,1fr) 190px!important}
+ html body .sidebar{width:190px!important}
+ html body .workspace{padding:14px!important}
+ html body .workspace>#overviewStats{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1/-1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1/-1!important;grid-row:4!important}
+}
+@media(max-width:850px){
+ html body .app-shell{display:block!important;direction:rtl!important}
+ html body .sidebar{position:fixed!important;right:0!important;left:auto!important;top:0!important;width:min(290px,84vw)!important;max-width:84vw!important;height:100dvh!important;transform:translateX(105%)!important;z-index:60!important}
+ html body .sidebar.open{transform:translateX(0)!important}
+ html body .workspace{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-auto-flow:row!important;grid-auto-rows:min-content!important;gap:10px!important;padding:8px 12px 24px!important;width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+ html body .workspace>.top{grid-column:1!important;grid-row:1!important}
+ html body .workspace>#overviewStats{grid-column:1!important;grid-row:2!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+ html body .workspace>#dashboardUsageCard{grid-column:1!important;grid-row:3!important}
+ html body .workspace>#panelHealthCard{grid-column:1!important;grid-row:4!important}
+ html body .workspace>#overviewStats>.card,html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{min-width:0!important;max-width:100%!important;margin:0!important;box-sizing:border-box!important}
+ html body .workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:125px!important}
+ html body .workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>.top .tools{display:flex!important;flex-wrap:wrap!important;max-width:100%!important;gap:6px!important}
+ html body .workspace>.top .tools input{width:min(100%,220px)!important;flex:1 1 140px!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
