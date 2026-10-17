@@ -104,14 +104,18 @@ jobs:
               assert_active_section("dashboard")
               dashboard_layout = page.evaluate("""() => {
                 const rect = id => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height}; };
-                const a=rect('dashboardUsageCard'), b=rect('panelHealthCard');
-                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,chart:a,health:b,
-                  overlap:!(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y)};
+                const a=rect('dashboardUsageCard'), b=rect('panelHealthCard'), stats=rect('overviewStats'), top=rect('sectionTitle');
+                const overlaps=(x,y)=>!(x.x+x.width<=y.x || y.x+y.width<=x.x || x.y+x.height<=y.y || y.y+y.height<=x.y);
+                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,top,stats,chart:a,health:b,
+                  statsChartOverlap:overlaps(stats,a),statsHealthOverlap:overlaps(stats,b),
+                  chartHealthOverlap:overlaps(a,b),statsAboveCards:stats.y+stats.height<=Math.min(a.y,b.y)+1};
               }""")
               print("DASHBOARD_LAYOUT=" + repr(dashboard_layout))
               if dashboard_layout["documentWidth"] > dashboard_layout["viewport"] + 1:
                   raise SystemExit("Desktop layout has horizontal overflow: " + repr(dashboard_layout))
-              if dashboard_layout["overlap"]:
+              if dashboard_layout["statsChartOverlap"] or dashboard_layout["statsHealthOverlap"] or not dashboard_layout["statsAboveCards"]:
+                  raise SystemExit("Dashboard metrics overlap monitoring cards or appear below them: " + repr(dashboard_layout))
+              if dashboard_layout["chartHealthOverlap"]:
                   raise SystemExit("Dashboard chart and service-status cards overlap: " + repr(dashboard_layout))
               page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
               for nav, filename in [("clients","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
