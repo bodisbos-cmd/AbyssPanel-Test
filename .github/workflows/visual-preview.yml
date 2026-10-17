@@ -104,19 +104,24 @@ jobs:
               assert_active_section("dashboard")
               dashboard_layout = page.evaluate("""() => {
                 const rect = id => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height}; };
-                const a=rect('dashboardUsageCard'), b=rect('panelHealthCard'), stats=rect('overviewStats'), top=rect('sectionTitle');
+                const chart=rect('dashboardUsageCard'), health=rect('panelHealthCard'), quick=rect('dashboardQuickCard'), stats=rect('overviewStats'), top=rect('sectionTitle');
                 const overlaps=(x,y)=>!(x.x+x.width<=y.x || y.x+y.width<=x.x || x.y+x.height<=y.y || y.y+y.height<=x.y);
-                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,top,stats,chart:a,health:b,
-                  statsChartOverlap:overlaps(stats,a),statsHealthOverlap:overlaps(stats,b),
-                  chartHealthOverlap:overlaps(a,b),statsAboveCards:stats.y+stats.height<=Math.min(a.y,b.y)+1};
+                const sameRow=Math.max(chart.y,health.y,quick.y)-Math.min(chart.y,health.y,quick.y)<2;
+                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,top,stats,chart,health,quick,sameRow,
+                  chartXBeforeHealth:chart.x<health.x,healthXBeforeQuick:health.x<quick.x,
+                  statsChartOverlap:overlaps(stats,chart),statsHealthOverlap:overlaps(stats,health),statsQuickOverlap:overlaps(stats,quick),
+                  chartHealthOverlap:overlaps(chart,health),chartQuickOverlap:overlaps(chart,quick),healthQuickOverlap:overlaps(health,quick),
+                  statsAboveCards:stats.y+stats.height<=Math.min(chart.y,health.y,quick.y)+1};
               }""")
               print("DASHBOARD_LAYOUT=" + repr(dashboard_layout))
               if dashboard_layout["documentWidth"] > dashboard_layout["viewport"] + 1:
                   raise SystemExit("Desktop layout has horizontal overflow: " + repr(dashboard_layout))
-              if dashboard_layout["statsChartOverlap"] or dashboard_layout["statsHealthOverlap"] or not dashboard_layout["statsAboveCards"]:
+              if dashboard_layout["statsChartOverlap"] or dashboard_layout["statsHealthOverlap"] or dashboard_layout["statsQuickOverlap"] or not dashboard_layout["statsAboveCards"]:
                   raise SystemExit("Dashboard metrics overlap monitoring cards or appear below them: " + repr(dashboard_layout))
-              if dashboard_layout["chartHealthOverlap"]:
-                  raise SystemExit("Dashboard chart and service-status cards overlap: " + repr(dashboard_layout))
+              if not dashboard_layout["sameRow"] or not dashboard_layout["chartXBeforeHealth"] or not dashboard_layout["healthXBeforeQuick"]:
+                  raise SystemExit("Dashboard cards do not match the reference row order (chart left, health center, quick details right): " + repr(dashboard_layout))
+              if any(dashboard_layout[k] for k in ("chartHealthOverlap","chartQuickOverlap","healthQuickOverlap")):
+                  raise SystemExit("Dashboard cards overlap: " + repr(dashboard_layout))
               page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
               for nav, filename in [("clients","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
                   locator = page.locator('[data-nav="' + nav + '"]').first
@@ -193,10 +198,12 @@ jobs:
               mobile.locator("form button").last.click()
               mobile.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               mobile.wait_for_timeout(500)
-              mobile_overflow = mobile.evaluate("() => ({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth})")
+              mobile_overflow = mobile.evaluate("() => ({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,headerHeight:document.querySelector('.workspace>.top')?.getBoundingClientRect().height})")
               print("MOBILE_OVERFLOW=" + repr(mobile_overflow))
               if max(mobile_overflow["documentWidth"],mobile_overflow["bodyWidth"]) > mobile_overflow["viewport"] + 1:
                   raise SystemExit("Mobile layout has horizontal overflow: " + repr(mobile_overflow))
+              if mobile_overflow["headerHeight"] is None or mobile_overflow["headerHeight"] > 430:
+                  raise SystemExit("Mobile toolbar is excessively tall instead of using compact controls: " + repr(mobile_overflow))
               mobile.screenshot(path=str(out / "09-dashboard-mobile.png"), full_page=False, animations="disabled")
               toggle = mobile.locator("#menuToggle")
               if not toggle.count():
