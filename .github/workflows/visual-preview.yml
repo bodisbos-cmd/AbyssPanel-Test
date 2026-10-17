@@ -82,7 +82,7 @@ jobs:
               page.locator('input[name="password"]').fill("admin")
               page.locator("form button").last.click()
               page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
-              page.wait_for_timeout(1200)
+              # Let the live resource sampler collect multiple real samples so the graph is visibly populated in the screenshot.\n              page.wait_for_timeout(11500)
               def visible_sections(target):
                   return target.locator("[data-section-page]").evaluate_all("(els) => els.filter(e => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0).map(e => e.dataset.sectionPage)")
               def assert_active_section(name):
