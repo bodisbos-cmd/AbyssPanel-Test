@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - ui/desktop-reference-layout
+      - main
   pull_request:
     branches:
       - main
