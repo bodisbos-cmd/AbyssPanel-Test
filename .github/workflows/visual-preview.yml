@@ -48,7 +48,7 @@ jobs:
               expires = (now + timedelta(days=days)).isoformat(timespec="seconds")
               db.execute(
                   "INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,profile_keys,owner_id) VALUES(?,?,?,?,1,?,?,?,?,?,?,NULL)",
-                  (f"visual-{i+1:02d}", name, str(uuid.uuid4()), secrets.token_urlsafe(24), created,
+                  (f"visual-{i+1:02d}", name, str(uuid.uuid4()), ("preview-visual-token-0001" if i == 0 else secrets.token_urlsafe(24)), created,
                    "Visual preview fixture", expires, quota_gb * 1024**3, int(used_gb * 1024**3),
                    json.dumps(["ws","httpupgrade","xhttp_auto"]))
               )
@@ -114,7 +114,36 @@ jobs:
                       raise SystemExit("Missing navigation item: " + nav)
                   locator.click()
                   assert_active_section(nav)
+                  if nav == "servers":
+                      page.wait_for_function("""() => {
+                        const e=document.getElementById('serverStatusGrid');
+                        return e && !e.innerText.includes('در حال بررسی اجزا');
+                      }""", timeout=45000)
+                  elif nav == "reports":
+                      page.wait_for_function("""() => {
+                        const e=document.getElementById('reportSummary');
+                        return e && !e.innerText.includes('در حال اجرای بررسی‌های واقعی');
+                      }""", timeout=45000)
                   page.screenshot(path=str(out / filename), full_page=False, animations="disabled")
+              subscription = browser.new_page(viewport={"width":1440,"height":1000}, device_scale_factor=1)
+              subscription.on("pageerror", lambda e: errors.append("subscription: " + str(e) + " | " + str(getattr(e, "stack", ""))))
+              response = subscription.goto(base + "/sub/preview-visual-token-0001", wait_until="domcontentloaded")
+              if response is None or response.status >= 400:
+                  raise SystemExit("Subscription page did not load successfully: " + str(response.status if response else None))
+              subscription.wait_for_selector(".profile-choice", timeout=5000)
+              if subscription.locator(".profile-choice").count() < 3 or not subscription.locator(".hero h1").count():
+                  raise SystemExit("Subscription page is missing its service overview or connection profiles")
+              subscription.screenshot(path=str(out / "11-subscription-desktop.png"), full_page=True, animations="disabled")
+              subscription_mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
+              subscription_mobile.on("pageerror", lambda e: errors.append("subscription mobile: " + str(e) + " | " + str(getattr(e, "stack", ""))))
+              sub_response = subscription_mobile.goto(base + "/sub/preview-visual-token-0001", wait_until="domcontentloaded")
+              if sub_response is None or sub_response.status >= 400:
+                  raise SystemExit("Mobile subscription page did not load successfully")
+              sub_overflow = subscription_mobile.evaluate("() => ({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth})")
+              print("SUBSCRIPTION_MOBILE_OVERFLOW=" + repr(sub_overflow))
+              if max(sub_overflow["documentWidth"],sub_overflow["bodyWidth"]) > sub_overflow["viewport"] + 1:
+                  raise SystemExit("Subscription page has horizontal overflow: " + repr(sub_overflow))
+              subscription_mobile.screenshot(path=str(out / "12-subscription-mobile.png"), full_page=True, animations="disabled")
               mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
               mobile.on("pageerror", lambda e: errors.append("mobile: " + str(e) + " | " + str(getattr(e, "stack", ""))))
               mobile.goto(base + "/login", wait_until="domcontentloaded")
