@@ -571,16 +571,20 @@ function drawUsageSparkline(metrics){
  const series=[['cpu',cpuColor,100],['ram',ramColor,100],['net',netColor,netMax]];
  for(const [key,color,max] of series){
   if(!usageHistory.length)continue;
-  ctx.beginPath();
-  usageHistory.forEach((sample,i)=>{
-   const px=usageHistory.length===1?right:left+i*(right-left)/(usageHistory.length-1);
-   const value=Math.min(1,Math.max(0,(Number(sample[key])||0)/max));
-   const py=bottom-value*plotH;
-   if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  const point=(sample,i)=>({
+   x:usageHistory.length===1?right:left+i*(right-left)/(usageHistory.length-1),
+   y:bottom-Math.min(1,Math.max(0,(Number(sample[key])||0)/max))*plotH
   });
+  if(usageHistory.length>1){
+   ctx.beginPath();
+   usageHistory.forEach((sample,i)=>{const p=point(sample,i);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});
+   ctx.lineTo(right,bottom);ctx.lineTo(left,bottom);ctx.closePath();
+   ctx.globalAlpha=.10;ctx.fillStyle=color;ctx.fill();ctx.globalAlpha=1;
+  }
+  ctx.beginPath();
+  usageHistory.forEach((sample,i)=>{const p=point(sample,i);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y)});
   ctx.strokeStyle=color;ctx.lineWidth=1.8;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();
-  const newest=usageHistory[usageHistory.length-1];
-  const ny=bottom-Math.min(1,Math.max(0,(Number(newest[key])||0)/max))*plotH;
+  const newest=usageHistory[usageHistory.length-1],ny=point(newest,usageHistory.length-1).y;
   ctx.beginPath();ctx.arc(right,ny,2.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
  }
  const note=document.getElementById('chartNote');
