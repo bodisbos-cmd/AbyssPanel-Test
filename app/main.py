@@ -1233,6 +1233,18 @@ input[type=checkbox],input[type=radio],.profile-option input{accent-color:#a9b9b
  .workspace .top .tools>*{min-width:0!important;max-width:100%!important}
  .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
+/* Final compact section placement and neutral palette cleanup. */
+.workspace{grid-auto-flow:row!important;grid-auto-rows:max-content!important;align-content:start!important}
+.workspace>section[data-section-page]{align-self:start!important;min-height:0!important}
+html body .workspace>#createServiceCard:not(.nav-hidden){margin-block-start:0!important;grid-column:1/-1!important}
+html body .workspace>#createServiceCard .reference-page-head{margin-block-start:0!important}
+.login-layout>.card{border-top:1px solid rgba(210,212,216,.19)!important;box-shadow:0 22px 70px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.025)!important}
+.login-layout>.card:before{display:none!important}
+.login-layout .login-brand .abyss-logo-svg{filter:grayscale(1)!important}
+@media(max-width:850px){
+ .workspace>section[data-section-page]{grid-column:1/-1!important}
+ html body .workspace>#createServiceCard:not(.nav-hidden){width:100%!important}
+}
 @media(max-width:390px){
  .workspace{padding-left:10px!important;padding-right:10px!important}
  .workspace .brand-name b{font-size:14px!important;letter-spacing:.08em!important}
