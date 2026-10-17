@@ -1735,6 +1735,21 @@ html body main.app-shell>aside.sidebar .nav-icon{width:21px!important;flex:0 0 2
 html body main.app-shell>.workspace>.top .tools button,
 html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
 @media(max-width:700px){html body:has(.login-layout) .login-visual .visual-orbit{top:4%!important;left:-10%!important;width:72vw!important;opacity:.13!important}}
+
+/* Compact desktop dashboard: match the reference's dense, three-zone overview. */
+@media(min-width:1151px){
+ html body main.app-shell>.workspace{gap:12px!important}
+ html body main.app-shell>.workspace>#overviewStats>.card{padding:15px!important;min-height:96px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard{padding:15px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard #usageSparkline{height:108px!important;max-height:108px!important;margin-top:5px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard>.stats{gap:8px!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard>.stats>.card{padding:10px!important}
+ html body main.app-shell>.workspace>#panelHealthCard{padding:15px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{gap:7px!important}
+ html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus>*{min-height:36px!important;padding:7px 10px!important}
+ html body main.app-shell>.workspace>#panelHealthCard .event-item,
+ html body main.app-shell>.workspace>#panelHealthCard .activity-item{padding:9px 11px!important;margin-top:7px!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
