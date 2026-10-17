@@ -117,7 +117,7 @@ jobs:
               sidebar_layout = page.evaluate("""() => {
                 const r = e => { const b=e.getBoundingClientRect(); return {top:b.top,bottom:b.bottom,height:b.height}; };
                 const nav=document.querySelector('#sidebar>.side-nav');
-                const caption=document.querySelector('#sidebar>.side-caption:last-of-type');
+                const captions=[...document.querySelectorAll('#sidebar>.side-caption')]; const caption=captions[captions.length-1];
                 const links=document.querySelector('#sidebar>.abyss-utility-links');
                 return {nav:nav?r(nav):null,caption:caption?r(caption):null,links:links?r(links):null,scrollHeight:document.querySelector('#sidebar')?.scrollHeight,clientHeight:document.querySelector('#sidebar')?.clientHeight};
               }""")
