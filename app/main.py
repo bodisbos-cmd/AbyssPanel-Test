@@ -1202,6 +1202,16 @@ html body .workspace #panelHealthCard.nav-hidden{display:none!important;visibili
 html body .workspace #overviewStats:not(.nav-hidden){display:grid!important}
 html body .workspace #dashboardUsageCard:not(.nav-hidden),
 html body .workspace #panelHealthCard:not(.nav-hidden){display:block!important}
+
+/* ID selectors from the legacy dashboard had higher specificity than the generic hidden-state rule. */
+html body .workspace>#overviewStats.nav-hidden,
+html body .workspace>#dashboardUsageCard.nav-hidden,
+html body .workspace>#panelHealthCard.nav-hidden,
+html body .workspace>#createServiceCard.nav-hidden,
+html body .workspace>section.card.nav-hidden{display:none!important;visibility:hidden!important;pointer-events:none!important}
+html body .workspace>#overviewStats:not(.nav-hidden){display:grid!important}
+html body .workspace>#dashboardUsageCard:not(.nav-hidden),
+html body .workspace>#panelHealthCard:not(.nav-hidden){display:block!important}
 /* Final screenshot-driven repairs: keep the dashboard health panel readable and prevent mobile overflow. */
 /* Keep the theme selector inside the dashboard toolbar; it is not part of the login composition. */
 body:has(.login-layout) #abyssThemeDock{display:none!important}
