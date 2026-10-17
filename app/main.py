@@ -1284,7 +1284,7 @@ html body .workspace>#createServiceCard .reference-page-head{margin-block-start:
 /* Visual review fix: non-dashboard sections must occupy the first available workspace row.
    Older layout rules left their actual forms/tables below a large empty dashboard-sized grid area. */
 @media(min-width:851px){
- html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard){
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard){
    grid-row:auto!important;
    grid-column:1/-1!important;
    align-self:start!important;
@@ -1292,12 +1292,12 @@ html body .workspace>#createServiceCard .reference-page-head{margin-block-start:
    height:auto!important;
    margin-block:0 14px!important;
  }
- html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard)>.reference-page-head{
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard)>.reference-page-head{
    margin-block-start:0!important;
  }
 }
 @media(max-width:850px){
- html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard){
+ html body .workspace>[data-section-page]:not(.nav-hidden):not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard){
    grid-row:auto!important;
    grid-column:1/-1!important;
    align-self:start!important;
