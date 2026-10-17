@@ -1355,7 +1355,7 @@ html body .workspace>#panelHealthCard #recentActivityList{
 }
 @media(min-width:851px){
  html body .workspace{align-content:start!important;align-items:start!important}
- html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
    min-height:0!important;
  }
 }
@@ -1402,7 +1402,7 @@ html body .workspace>#panelHealthCard #recentActivityList{
  html body .workspace>#panelHealthCard #status{display:none!important}
  html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}
  html body .workspace>#panelHealthCard .report-events{display:grid!important;gap:7px!important}
- html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
    grid-column:1/-1!important;grid-row:auto!important;align-self:start!important;margin:0!important;min-width:0!important;
  }
 }
@@ -1433,7 +1433,7 @@ html body .workspace .small{line-height:1.5!important}
  html body .workspace>#dashboardUsageCard canvas{max-width:100%!important;height:120px!important}
  html body .workspace>#panelHealthCard #status{display:none!important}
  html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
- html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0!important;width:100%!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;margin:0!important;min-width:0!important;width:100%!important}
 }
 
 /* Reference-layout correction: let the grid size rows from actual content.
@@ -1484,7 +1484,7 @@ html body .workspace .small{line-height:1.5!important}
  html body .workspace>#dashboardUsageCard #usageSparkline{
    display:block!important;width:100%!important;max-width:100%!important;height:150px!important;
  }
- html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
    grid-column:1/-1!important;grid-row:auto!important;position:relative!important;
    inset:auto!important;height:auto!important;min-height:0!important;margin:0 0 12px!important;
  }
@@ -1636,7 +1636,7 @@ html body .app-shell{direction:rtl!important}
  html body .workspace>#panelHealthCard #status{display:none!important}
  html body .workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
  html body .workspace>#panelHealthCard #recentActivityList{max-height:190px!important;overflow:auto!important}
- html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){
+ html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){
    grid-column:1/-1!important;grid-row:auto!important;position:relative!important;inset:auto!important;
    transform:none!important;float:none!important;height:auto!important;min-height:0!important;margin:0 0 12px!important;
  }
@@ -1661,7 +1661,7 @@ html body .app-shell{direction:rtl!important}
  html body .workspace>#overviewStats,html body .workspace>#dashboardUsageCard,html body .workspace>#panelHealthCard{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important;box-sizing:border-box!important}
  html body .workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:125px!important}
  html body .workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
- html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
+ html body .workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
 }
 
 /* Reference fidelity pass: compact left rail and tighter glass dashboard surfaces. */
@@ -1700,7 +1700,7 @@ html body main.app-shell>.workspace #overviewStats .num{font-size:clamp(20px,1.8
  html body main.app-shell>.workspace>#dashboardUsageCard #usageSparkline{display:block!important;width:100%!important;height:150px!important}
  html body main.app-shell>.workspace>#panelHealthCard #status{display:none!important}
  html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{display:grid!important;grid-template-columns:1fr!important;gap:8px!important}
- html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1/-1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;float:none!important;height:auto!important;min-height:0!important;margin:0 0 12px!important}
+ html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1/-1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;float:none!important;height:auto!important;min-height:0!important;margin:0 0 12px!important}
 }
 @media(min-width:851px) and (max-width:1150px){
  html body main.app-shell{grid-template-columns:190px minmax(0,1fr)!important}
@@ -1722,7 +1722,7 @@ html body main.app-shell>.workspace #overviewStats .num{font-size:clamp(20px,1.8
  html body main.app-shell>.workspace>#overviewStats,html body main.app-shell>.workspace>#dashboardUsageCard,html body main.app-shell>.workspace>#panelHealthCard{position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important;box-sizing:border-box!important}
  html body main.app-shell>.workspace>#dashboardUsageCard #usageSparkline{width:100%!important;max-width:100%!important;height:125px!important}
  html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
- html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
+ html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(#dashboardQuickCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
 }
 
 /* Final reference polish: black starfield, restrained orbit, readable Persian navigation. */
