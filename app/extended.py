@@ -125,10 +125,19 @@ def _probe_profile(profile):
     connection=None
     try:
         connection=http.client.HTTPConnection("127.0.0.1",8080,timeout=1.0)
-        connection.request("GET",profile["path"],headers={"Host":"localhost","Connection":"close"})
+        request_headers={"Host":"localhost","Connection":"close"}
+        # WebSocket and HTTPUpgrade inbounds require an Upgrade request to make
+        # a valid route probe. A plain GET can make Xray close early, causing
+        # Nginx to report a false 502 even when the listener and proxy route work.
+        if profile["network"] in {"ws","httpupgrade"}:
+            request_headers.update({"Connection":"Upgrade","Upgrade":"websocket"})
+        connection.request("GET",profile["path"],headers=request_headers)
         response=connection.getresponse()
         result["http_status"]=response.status
-        response.read(1)
+        # After 101 the socket has become an upgraded stream; do not block
+        # while waiting for a body that a healthy tunnel endpoint will not send.
+        if response.status != 101:
+            response.read(1)
         result["route_ok"]=response.status not in {502,503,504}
     except (http.client.HTTPException,TimeoutError,OSError) as exc:
         result["error"]="Gateway/route did not respond: "+str(exc)[:120]
