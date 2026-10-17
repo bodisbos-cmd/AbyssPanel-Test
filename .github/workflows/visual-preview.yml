@@ -243,13 +243,20 @@ jobs:
               mobile.wait_for_timeout(350)
               drawer_layers = mobile.evaluate("""() => {
                 const sidebar=document.getElementById('sidebar'), shade=document.getElementById('abyssMenuShade');
+                const captions=[...sidebar.querySelectorAll(':scope>.side-caption')], nav=sidebar.querySelector(':scope>.side-nav'), links=sidebar.querySelector(':scope>.abyss-utility-links');
+                const box=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height}};
                 return {shadeParent:shade?.parentElement?.className, shadeZ:shade?Number(getComputedStyle(shade).zIndex):null,
                   sidebarZ:Number(getComputedStyle(sidebar).zIndex), sidebarFilter:getComputedStyle(sidebar).filter,
+                  nav:box(nav),caption:box(captions[captions.length-1]),links:box(links),
                   menuOpen:document.body.classList.contains('abyss-menu-open')};
               }""")
               print("MOBILE_DRAWER_LAYERS=" + repr(drawer_layers))
               if drawer_layers["shadeParent"] != "app-shell" or drawer_layers["shadeZ"] >= drawer_layers["sidebarZ"] or drawer_layers["sidebarFilter"] != "none":
                   raise SystemExit("Mobile overlay obscures or blurs the drawer: " + repr(drawer_layers))
+              if not drawer_layers["nav"] or not drawer_layers["caption"] or drawer_layers["nav"]["bottom"] > drawer_layers["caption"]["top"] + 1:
+                  raise SystemExit("Mobile drawer footer overlaps navigation: " + repr(drawer_layers))
+              if drawer_layers["links"] and drawer_layers["caption"]["bottom"] > drawer_layers["links"]["top"] + 1:
+                  raise SystemExit("Mobile drawer utility links overlap creator label: " + repr(drawer_layers))
               mobile.screenshot(path=str(out / "10-mobile-menu.png"), full_page=False, animations="disabled")
               print("BROWSER_ERRORS=" + repr(errors))
               if errors:
