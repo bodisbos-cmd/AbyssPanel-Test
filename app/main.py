@@ -1332,6 +1332,42 @@ html body .workspace>#panelHealthCard .section-title{line-height:1.45!important}
  html body .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
  html body .workspace>#panelHealthCard #recentActivityList{max-height:220px!important}
 }
+
+/* Visual pass 3: compact reference-like dashboard and avoid oversized toolbar on narrow screens. */
+@media(min-width:1151px){
+ html body .workspace>#dashboardUsageCard[data-section-page="dashboard"]{
+   grid-column:6 / span 7!important;
+   grid-row:2!important;
+ }
+ html body .workspace>#panelHealthCard[data-section-page="dashboard"]{
+   grid-column:1 / span 5!important;
+   grid-row:2!important;
+ }
+ html body .workspace>#overviewStats[data-section-page="dashboard"]{
+   grid-column:1/-1!important;
+ }
+}
+html body .workspace>#dashboardUsageCard .chart-wrap,
+html body .workspace>#dashboardUsageCard canvas,
+html body .workspace>#dashboardUsageCard svg{max-width:100%!important}
+html body .workspace>#panelHealthCard #recentActivityList{
+ max-height:190px!important;overflow:auto!important;
+}
+@media(min-width:851px){
+ html body .workspace{align-content:start!important;align-items:start!important}
+ html body .workspace>[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){
+   min-height:0!important;
+ }
+}
+@media(max-width:850px){
+ html body .topbar,html body .header-actions,html body .toolbar-actions{
+   max-width:100%!important;flex-wrap:wrap!important;gap:6px!important;
+ }
+ html body .workspace>#panelHealthCard #status{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ html body .workspace>#dashboardUsageCard,
+ html body .workspace>#panelHealthCard{min-width:0!important;max-width:100%!important}
+ html body .workspace>#dashboardUsageCard .chart-wrap{overflow:hidden!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("</head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "</head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
