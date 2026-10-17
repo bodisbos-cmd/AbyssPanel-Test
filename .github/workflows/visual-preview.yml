@@ -177,13 +177,17 @@ jobs:
                 const stats=rect('overviewStats'),chart=rect('dashboardUsageCard'),health=rect('panelHealthCard'),quick=rect('dashboardQuickCard');
                 return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,stats,chart,health,quick,
                   statsOverlap:overlaps(stats,chart)||overlaps(stats,health)||overlaps(stats,quick),
-                  cardsOverlap:overlaps(chart,health)||overlaps(chart,quick)||overlaps(health,quick)};
+                  cardsOverlap:overlaps(chart,health)||overlaps(chart,quick)||overlaps(health,quick),
+                  chartHealthSameRow:Math.abs(chart.y-health.y)<2,chartLeftOfHealth:chart.x<health.x,
+                  quickBelowCards:quick.y>=Math.max(chart.y+chart.height,health.y+health.height)-1};
               }""")
               print("TABLET_LAYOUT=" + repr(tablet_layout))
               if tablet_layout["documentWidth"] > tablet_layout["viewport"] + 1:
                   raise SystemExit("Tablet layout has horizontal overflow: " + repr(tablet_layout))
               if tablet_layout["statsOverlap"] or tablet_layout["cardsOverlap"]:
                   raise SystemExit("Tablet dashboard cards overlap: " + repr(tablet_layout))
+              if not tablet_layout["chartHealthSameRow"] or not tablet_layout["chartLeftOfHealth"] or not tablet_layout["quickBelowCards"]:
+                  raise SystemExit("Tablet dashboard does not follow the intended chart/status/details order: " + repr(tablet_layout))
               page.screenshot(path=str(out / "13-dashboard-tablet.png"), full_page=False, animations="disabled")
               subscription = browser.new_page(viewport={"width":1440,"height":1000}, device_scale_factor=1)
               subscription.on("pageerror", lambda e: errors.append("subscription: " + str(e) + " | " + str(getattr(e, "stack", ""))))
