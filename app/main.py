@@ -1787,6 +1787,20 @@ html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
  html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){grid-column:1/-1!important}
  html body:has(.login-layout) .login-visual .visual-orbit{transform:translateX(-50%)!important}
 }
+
+/* Explicit visual ordering: usage chart left, service health center, quick details right. */
+@media(min-width:1151px){
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){order:-1!important}
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){order:0!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){order:1!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard{min-height:0!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard #recentActivityList{max-height:205px!important}
+}
+@media(min-width:851px) and (max-width:1150px){
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){order:0!important}
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){order:0!important}
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){order:0!important}
+}
 </style>"""
 LOGIN = LOGIN.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
