@@ -1724,6 +1724,17 @@ html body main.app-shell>.workspace #overviewStats .num{font-size:clamp(20px,1.8
  html body main.app-shell>.workspace>#panelHealthCard #dashboardComponentStatus{grid-template-columns:repeat(2,minmax(0,1fr))!important}
  html body main.app-shell>.workspace>section[data-section-page]:not(#overviewStats):not(#dashboardUsageCard):not(#panelHealthCard):not(.nav-hidden){grid-column:1!important;grid-row:auto!important;position:relative!important;inset:auto!important;transform:none!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;margin:0 0 10px!important}
 }
+
+/* Final reference polish: black starfield, restrained orbit, readable Persian navigation. */
+html body:has(.login-layout){background:#050506!important;background-image:radial-gradient(1px 1px at 8% 17%,rgba(230,232,237,.62) 98%,transparent),radial-gradient(1px 1px at 21% 72%,rgba(230,232,237,.4) 98%,transparent),radial-gradient(1px 1px at 36% 33%,rgba(230,232,237,.48) 98%,transparent),radial-gradient(1px 1px at 57% 16%,rgba(230,232,237,.38) 98%,transparent),radial-gradient(1px 1px at 73% 62%,rgba(230,232,237,.42) 98%,transparent),radial-gradient(1px 1px at 89% 29%,rgba(230,232,237,.52) 98%,transparent),radial-gradient(1px 1px at 94% 83%,rgba(230,232,237,.35) 98%,transparent),linear-gradient(128deg,transparent 0 24%,rgba(190,193,200,.035) 24.08%,transparent 24.22% 68%,rgba(190,193,200,.025) 68.08%,transparent 68.24%),#050506!important;background-size:100% 100%!important}
+html body:has(.login-layout) .login-visual .visual-orbit{top:15%!important;left:7%!important;width:min(39vw,440px)!important;opacity:.17!important;border-color:rgba(190,193,200,.16)!important;box-shadow:0 0 80px rgba(190,193,200,.025),inset 0 0 55px rgba(190,193,200,.02)!important}
+html body:has(.login-layout) .login-visual .visual-orbit:before{border-color:rgba(205,207,213,.17)!important}
+html body:has(.login-layout) .login-visual .visual-orbit:after{border-color:rgba(218,220,225,.24)!important}
+html body main.app-shell>aside.sidebar .nav-item{font-size:12px!important;line-height:1.45!important;padding:8px 9px!important;gap:7px!important}
+html body main.app-shell>aside.sidebar .nav-icon{width:21px!important;flex:0 0 21px!important;font-size:14px!important}
+html body main.app-shell>.workspace>.top .tools button,
+html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
+@media(max-width:700px){html body:has(.login-layout) .login-visual .visual-orbit{top:4%!important;left:-10%!important;width:72vw!important;opacity:.13!important}}
 </style>"""
 LOGIN = LOGIN.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
 DASH = DASH.replace("<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>", ABYSS_THEME_CSS + ABYSS_THEME_POLISH_CSS + ABYSS_LAYOUT_REPAIR_CSS + "<style>html,body,button,input,select,textarea{font-family:'Vazirmatn',Tahoma,system-ui,sans-serif}</style></head>").replace("</body>", ABYSS_THEME_JS + ABYSS_LAYOUT_REPAIR_JS + ABYSS_FINAL_LAYOUT_CSS + "</body>")
