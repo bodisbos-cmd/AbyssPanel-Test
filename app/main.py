@@ -1788,12 +1788,21 @@ html body main.app-shell>.workspace>.top .tools input{font-size:12px!important}
  html body:has(.login-layout) .login-visual .visual-orbit{transform:translateX(-50%)!important}
 }
 
-/* Explicit visual ordering: usage chart left, service health center, quick details right. */
+/* Explicitly place all three dashboard zones on the same desktop grid row.
+   Older layout patches assigned separate grid rows and overrode auto-placement. */
 @media(min-width:1151px){
- html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){order:-1!important}
- html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){order:0!important}
- html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){order:1!important}
- html body main.app-shell>.workspace>#dashboardQuickCard{min-height:0!important}
+ html body main.app-shell>.workspace>#dashboardQuickCard:not(.nav-hidden){
+   order:-1!important;grid-column:span 4!important;grid-row:3!important;
+   min-width:0!important;min-height:0!important;width:auto!important;
+ }
+ html body main.app-shell>.workspace>#panelHealthCard:not(.nav-hidden){
+   order:0!important;grid-column:span 3!important;grid-row:3!important;
+   min-width:0!important;width:auto!important;
+ }
+ html body main.app-shell>.workspace>#dashboardUsageCard:not(.nav-hidden){
+   order:1!important;grid-column:span 5!important;grid-row:3!important;
+   min-width:0!important;width:auto!important;
+ }
  html body main.app-shell>.workspace>#dashboardQuickCard #recentActivityList{max-height:205px!important}
 }
 @media(min-width:851px) and (max-width:1150px){
