@@ -1820,7 +1820,7 @@ html body main.app-shell>aside.sidebar>.side-nav>.nav-item{
  position:relative!important;flex:0 0 auto!important;box-sizing:border-box!important;
  margin:0!important;transform:none!important;min-width:0!important;
 }
-html body main.app-shell>aside.sidebar>.side-caption:last-of-type{
+html body main.app-shell>aside.sidebar>.side-caption:nth-last-child(2){
  flex:0 0 auto!important;margin:14px 0 4px!important;padding-top:10px!important;
  border-top:1px solid var(--ab-line)!important;
 }
