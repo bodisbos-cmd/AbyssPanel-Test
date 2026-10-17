@@ -28,6 +28,36 @@ jobs:
           done
           docker logs void-visual
           exit 1
+      - name: Seed synthetic data for visual review only
+        run: |
+          docker exec -i void-visual python - <<'PY'
+          import json, secrets, sqlite3, uuid
+          from datetime import datetime, timedelta, timezone
+          db = sqlite3.connect("/data/panel.sqlite3")
+          now = datetime.now(timezone.utc)
+          fixtures = [
+              ("user123", 30, 100, 45.2),
+              ("samira", 22, 50, 18.4),
+              ("ali", 18, 30, 12.7),
+              ("mohammad", 12, 20, 6.1),
+              ("night", 8, 10, 3.6),
+              ("reza", 3, 5, 1.2),
+          ]
+          for i, (name, days, quota_gb, used_gb) in enumerate(fixtures):
+              created = (now - timedelta(days=i)).isoformat(timespec="seconds")
+              expires = (now + timedelta(days=days)).isoformat(timespec="seconds")
+              db.execute(
+                  "INSERT INTO clients(id,name,client_uuid,sub_token,enabled,created_at,note,expires_at,quota_bytes,used_bytes,profile_keys,owner_id) VALUES(?,?,?,?,1,?,?,?,?,?,?,NULL)",
+                  (f"visual-{i+1:02d}", name, str(uuid.uuid4()), secrets.token_urlsafe(24), created,
+                   "Visual preview fixture", expires, quota_gb * 1024**3, int(used_gb * 1024**3),
+                   json.dumps(["ws","httpupgrade","xhttp_auto"]))
+              )
+              db.execute("INSERT INTO events(at,level,message) VALUES(?,?,?)",
+                         (created, "INFO", f"Visual preview: service created for {name}"))
+          db.commit()
+          db.close()
+          print("Seeded 6 isolated visual-preview clients and events.")
+          PY
       - name: Install browser for real screenshots
         run: |
           python -m pip install playwright
@@ -53,28 +83,66 @@ jobs:
               page.locator("form button").last.click()
               page.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               page.wait_for_timeout(1200)
-              print("DASHBOARD_VISIBLE_SECTIONS=" + str(page.locator("[data-section-page]").evaluate_all("(els) => els.filter(e => getComputedStyle(e).display !== 'none').map(e => e.dataset.sectionPage)")))
-              html=page.content().splitlines()
-              print("INLINE_ERROR_CONTEXT=" + repr(html[654][11500:12500] if len(html)>654 else "HTML_LINES="+str(len(html))))
+              def visible_sections(target):
+                  return target.locator("[data-section-page]").evaluate_all("(els) => els.filter(e => getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0).map(e => e.dataset.sectionPage)")
+              def assert_active_section(name):
+                  page.wait_for_function("""expected => {
+                    const visible = [...document.querySelectorAll('[data-section-page]')].filter(e =>
+                      getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0);
+                    return visible.length > 0 && visible.every(e => e.dataset.sectionPage === expected);
+                  }""", arg=name, timeout=5000)
+                  actual = visible_sections(page)
+                  print("ACTIVE_SECTION_" + name.upper() + "=" + repr(actual))
+                  if not actual or any(section != name for section in actual):
+                      raise SystemExit("Navigation showed inactive sections for " + name + ": " + repr(actual))
+              assert_active_section("dashboard")
+              dashboard_layout = page.evaluate("""() => {
+                const rect = id => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return {x:r.x,y:r.y,width:r.width,height:r.height}; };
+                const a=rect('dashboardUsageCard'), b=rect('panelHealthCard');
+                return {viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,chart:a,health:b,
+                  overlap:!(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y)};
+              }""")
+              print("DASHBOARD_LAYOUT=" + repr(dashboard_layout))
+              if dashboard_layout["documentWidth"] > dashboard_layout["viewport"] + 1:
+                  raise SystemExit("Desktop layout has horizontal overflow: " + repr(dashboard_layout))
+              if dashboard_layout["overlap"]:
+                  raise SystemExit("Dashboard chart and service-status cards overlap: " + repr(dashboard_layout))
               page.screenshot(path=str(out / "02-dashboard-desktop.png"), full_page=False, animations="disabled")
               for nav, filename in [("clients","03-users-desktop.png"),("create","04-create-desktop.png"),("servers","05-servers-desktop.png"),("protocols","06-protocols-desktop.png"),("reports","07-reports-desktop.png"),("settings","08-settings-desktop.png")]:
                   locator = page.locator('[data-nav="' + nav + '"]').first
-                  if locator.count():
-                      locator.click()
-                      page.wait_for_timeout(350)
-                      page.screenshot(path=str(out / filename), full_page=False, animations="disabled")
+                  if not locator.count():
+                      raise SystemExit("Missing navigation item: " + nav)
+                  locator.click()
+                  assert_active_section(nav)
+                  page.screenshot(path=str(out / filename), full_page=False, animations="disabled")
               mobile = browser.new_page(viewport={"width":390,"height":844}, device_scale_factor=1, is_mobile=True, has_touch=True)
+              mobile.on("pageerror", lambda e: errors.append("mobile: " + str(e) + " | " + str(getattr(e, "stack", ""))))
               mobile.goto(base + "/login", wait_until="domcontentloaded")
               mobile.locator('input[name="username"]').fill("admin")
               mobile.locator('input[name="password"]').fill("admin")
               mobile.locator("form button").last.click()
               mobile.wait_for_url(lambda url: "/login" not in url, timeout=15000)
               mobile.wait_for_timeout(500)
+              mobile_overflow = mobile.evaluate("() => ({viewport:innerWidth,documentWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth})")
+              print("MOBILE_OVERFLOW=" + repr(mobile_overflow))
+              if max(mobile_overflow["documentWidth"],mobile_overflow["bodyWidth"]) > mobile_overflow["viewport"] + 1:
+                  raise SystemExit("Mobile layout has horizontal overflow: " + repr(mobile_overflow))
               mobile.screenshot(path=str(out / "09-dashboard-mobile.png"), full_page=False, animations="disabled")
               toggle = mobile.locator("#menuToggle")
-              if toggle.count():
-                  toggle.click()
-                  mobile.wait_for_timeout(250)
+              if not toggle.count():
+                  raise SystemExit("Mobile drawer toggle is missing")
+              toggle.click()
+              mobile.wait_for_function("document.body.classList.contains('abyss-menu-open') && document.querySelector('#sidebar').classList.contains('open')", timeout=3000)
+              mobile.wait_for_timeout(350)
+              drawer_layers = mobile.evaluate("""() => {
+                const sidebar=document.getElementById('sidebar'), shade=document.getElementById('abyssMenuShade');
+                return {shadeParent:shade?.parentElement?.className, shadeZ:shade?Number(getComputedStyle(shade).zIndex):null,
+                  sidebarZ:Number(getComputedStyle(sidebar).zIndex), sidebarFilter:getComputedStyle(sidebar).filter,
+                  menuOpen:document.body.classList.contains('abyss-menu-open')};
+              }""")
+              print("MOBILE_DRAWER_LAYERS=" + repr(drawer_layers))
+              if drawer_layers["shadeParent"] != "app-shell" or drawer_layers["shadeZ"] >= drawer_layers["sidebarZ"] or drawer_layers["sidebarFilter"] != "none":
+                  raise SystemExit("Mobile overlay obscures or blurs the drawer: " + repr(drawer_layers))
               mobile.screenshot(path=str(out / "10-mobile-menu.png"), full_page=False, animations="disabled")
               print("BROWSER_ERRORS=" + repr(errors))
               if errors:
